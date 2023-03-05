@@ -1,7 +1,7 @@
 import { isWinningWord } from '@/lib/words'
 import console from 'console'
 import { enUS } from 'date-fns/locale'
-
+import {  myImageList } from '../lib/words';
 
 
 
@@ -18,3 +18,4 @@ export const BLOWFISH_KEY = 'xcQUAHsik#Thq&LG*8es2DsZ$3bw^e'
 export const BLOWFISH_IV = '#45XmF^w'
 export const ENABLE_ARCHIVED_GAMES = false
 export const DATE_LOCALE = enUS
+

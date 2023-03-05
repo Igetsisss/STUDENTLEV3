@@ -33,6 +33,8 @@ export const isWordInWordList = (word: string) => {
 export const isWinningWord = (word: string) => {
   return solution === word
 }
+
+
 console.log(isWinningWord)
 console.log("Length "+isWinningWord.length)
 // build a set of previously revealed letters - present and correct
@@ -203,3 +205,12 @@ export const { solution, solutionGameDate, solutionIndex, tomorrow } =
 
 
 console.log(getWordOfDay + "fuck")
+var solutionn = getSolution(new Date()).solution; // assuming getSolution is imported properly
+var winningWordLength = solutionn.length;
+console.log(winningWordLength); // prints the length of the winning word to the console
+
+
+
+export function myImageList() {
+  return winningWordLength;
+}

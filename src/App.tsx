@@ -143,7 +143,16 @@ useEffect(() => {
     }
     
   })
-
+  useEffect(() => {
+    // if no game state on load,
+    // show the user the how-to info modal
+    if (grade == "undefined") {
+      setTimeout(() => {
+        setIsGradeModalOpen(true)
+      }, WELCOME_GRADE_MODAL_MS)
+    }
+    
+  })
 
   useEffect(() => {
     DISCOURAGE_INAPP_BROWSERS &&

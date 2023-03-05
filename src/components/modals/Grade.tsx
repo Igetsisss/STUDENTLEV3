@@ -71,11 +71,12 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </div>
       </form>
       <br></br>
-      <div className="enterbutton">
-        <button disabled={!selectedGrade} onClick={handleEnterButtonClick}>
-          Enter
-        </button>
-      </div>
+      <div className="enterbutton" onClick={handleEnterButtonClick}>
+  <button disabled={!selectedGrade}>
+    Enter
+  </button>
+</div>
+
     </BaseModal>
   );
 };
