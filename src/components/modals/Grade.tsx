@@ -57,11 +57,14 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       <form>
         <div className="select">
           <select name="format" id="format" value={selectedGrade} onChange={handleGradeChange}>
-            <option selected disabled>
-              Choose Your Grade
+          <option selected disabled>
+              6th - Out Soon!
             </option>
-             
-            <option value="7">7th</option>
+            <option selected disabled>
+              7th - Out Soon!
+            </option>
+            <option hidden disabled selected>  Choose Your Grade </option>
+            
             <option value="8">8th</option>
             
             
