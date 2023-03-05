@@ -47,7 +47,7 @@ export const SettingsModal = ({
           description={HIGH_CONTRAST_MODE_DESCRIPTION}
         />
           <p className="mt-6 text-sm italic text-gray-500 dark:text-gray-300">
-        ver 1.0
+        ver 3.0
         
        
       </p>
