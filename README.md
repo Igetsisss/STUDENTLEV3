@@ -1,4 +1,4 @@
-# Studenle
+# Studentle
 
 Forked From Reactle
 
