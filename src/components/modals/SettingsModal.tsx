@@ -68,7 +68,7 @@ export const SettingsModal = ({
           flag={false}
           handleFlag={handleChangeGrade}
           description={
-            'WARNING: When changing this your Local Storage will be cleared meaning ALL Statistics will be lost'
+            'WARNING: When changing this your Local Storage will be cleared meaning ALL Statistics will be lost!'
           }
         />
         <p className="mt-6 text-sm italic text-gray-500 dark:text-gray-300">
