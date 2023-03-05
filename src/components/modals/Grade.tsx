@@ -40,7 +40,9 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     localStorage.setItem(gradeStatKey, JSON.stringify(selectedGrade))
     const grade = localStorage.getItem(gradeStatKey)
     console.log("THERE GRADE IS" + grade)
+    handleClose()
     window.location.reload()
+    console.log("reloded")
     handleClose()
 
     

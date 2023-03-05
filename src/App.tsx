@@ -132,16 +132,6 @@ function App() {
 
 
 
-  useEffect(() => {
-    // if no game state on load,
-    // show the user the how-to info modal
-    if (!loadGameStateFromLocalStorage(true)) {
-      setTimeout(() => {
-        setIsGradeModalOpen(true)
-      }, WELCOME_GRADE_MODAL_MS)
-    }
-    
-  })
 
 useEffect(() => {
     // if no game state on load,
