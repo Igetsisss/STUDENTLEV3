@@ -62,7 +62,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
           <option value="6" disabled>6th - Out Soon!
             </option>
             <option value="7">
-              7th - For Will Bykay only
+              7th - For Will Bykat only!
             </option>
            
             
