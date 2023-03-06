@@ -15,7 +15,7 @@ const EIGHTGRADE = [
     'caroline',
     'marley',
     'will',
-    'lane',
+    'gerbi',
     'finn',
     'layla',
     'hannah',
