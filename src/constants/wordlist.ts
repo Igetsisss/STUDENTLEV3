@@ -87,7 +87,7 @@ const EIGHTGRADE = [
     'garrett',
     'ansley',
     'robbie',
-    'kadence',
+    'kade',
     'sophie',
     'jones',
     'gavin',
