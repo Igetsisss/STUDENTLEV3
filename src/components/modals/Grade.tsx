@@ -61,8 +61,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
           <option hidden disabled selected>  Choose Your Grade </option>
           <option value="6" disabled>6th - Out Soon!
             </option>
-            <option value="7" disabled>
-              7th - Out Soon!
+            <option value="7">
+              7th - Please Only Use if a Beta Tester
             </option>
            
             
