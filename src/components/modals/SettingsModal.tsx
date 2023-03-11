@@ -27,19 +27,24 @@ export const SettingsModal = ({
   handleHighContrastMode,
 }: Props) => {
   const handleChangeGrade = () => {
-    if (window.confirm('Are you sure you want to reset grade? All Statistics will be lost forever!')) {
+    if (
+      window.confirm(
+        'Are you sure you want to reset grade? All Statistics will be lost forever!'
+      )
+    ) {
       // Save it!
-      if (window.confirm('Are you SURE that your SURE you want to reset grade? ALL STATISTICS WILL BE GONE, OUT THE WINDOW FOREVER!!!!')) {
+      if (
+        window.confirm(
+          'Are you SURE that your SURE you want to reset grade? ALL STATISTICS WILL BE GONE, OUT THE WINDOW FOREVER!!!!'
+        )
+      ) {
         window.localStorage.clear()
         window.location.reload()
       } else {
         // Do nothing!
-        
       }
-    
     } else {
       // Do nothing!
-      
     }
   }
 

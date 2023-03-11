@@ -27,11 +27,9 @@ export const BaseModal = ({ title, children, isOpen, handleClose }: Props) => {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            
-            <Dialog.Overlay className="fixed inset-1000 min-h-screen bg-gray-500 bg-opacity-75 transition-opacity" />
-            
+            <Dialog.Overlay className="inset-1000 fixed min-h-screen bg-gray-500 bg-opacity-75 transition-opacity" />
           </Transition.Child>
-          
+
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -42,7 +40,6 @@ export const BaseModal = ({ title, children, isOpen, handleClose }: Props) => {
             leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
           >
             <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all dark:bg-gray-800 sm:my-8 sm:w-full sm:max-w-sm sm:p-6 sm:align-middle">
-             
               <div>
                 <div className="text-center">
                   <Dialog.Title

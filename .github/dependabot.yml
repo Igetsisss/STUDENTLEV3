@@ -4,16 +4,16 @@ version: 2
 
 updates:
   - package-ecosystem: github-actions
-    directory: "/" # Location of package manifests
+    directory: '/' # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: 'daily'
 
-  - package-ecosystem: "docker" # See documentation for possible values
-    directory: "/docker" # Location of package manifests
+  - package-ecosystem: 'docker' # See documentation for possible values
+    directory: '/docker' # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: 'daily'
 
-  - package-ecosystem: "npm" # see documentation for possible values
-    directory: "/" # location of package manifests
+  - package-ecosystem: 'npm' # see documentation for possible values
+    directory: '/' # location of package manifests
     schedule:
-      interval: "daily"
+      interval: 'daily'

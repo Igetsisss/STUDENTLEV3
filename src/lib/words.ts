@@ -6,13 +6,11 @@ import {
   parseISO,
   startOfDay,
 } from 'date-fns'
-
 import { default as GraphemeSplitter } from 'grapheme-splitter'
 import queryString from 'query-string'
 
 import { ENABLE_ARCHIVED_GAMES } from '../constants/settings'
 import { NOT_CONTAINED_MESSAGE, WRONG_SPOT_MESSAGE } from '../constants/strings'
-
 import { VALID_GUESSES } from '../constants/validGuesses'
 import { WORDS } from '../constants/wordlist'
 import { getToday } from './dateutils'
@@ -34,9 +32,8 @@ export const isWinningWord = (word: string) => {
   return solution === word
 }
 
-
 console.log(isWinningWord)
-console.log("Length "+isWinningWord.length)
+console.log('Length ' + isWinningWord.length)
 // build a set of previously revealed letters - present and correct
 // guess must use correct letters in that space and any other revealed letters
 // also check if all revealed instances of a letter are used (i.e. two C's)
@@ -148,19 +145,16 @@ export const getSolution = (gameDate: Date) => {
   console.log(wordOfTheDay)
 
   console.log(wordOfTheDay.length)
-  
-  
+
   return {
     solution: wordOfTheDay,
     solutionGameDate: gameDate,
     solutionIndex: index,
     tomorrow: nextGameDate.valueOf(),
-    
-
   }
 }
 
-export default getSolution;
+export default getSolution
 console.log(getSolution)
 export const getGameDate = () => {
   if (getIsLatestGame()) {
@@ -203,14 +197,11 @@ export const getIsLatestGame = () => {
 export const { solution, solutionGameDate, solutionIndex, tomorrow } =
   getSolution(getGameDate())
 
-
-console.log(getWordOfDay + "fuck")
-var solutionn = getSolution(new Date()).solution; // assuming getSolution is imported properly
-var winningWordLength = solutionn.length;
-console.log(winningWordLength); // prints the length of the winning word to the console
-
-
+console.log(getWordOfDay + 'fuck')
+var solutionn = getSolution(new Date()).solution // assuming getSolution is imported properly
+var winningWordLength = solutionn.length
+console.log(winningWordLength) // prints the length of the winning word to the console
 
 export function myImageList() {
-  return winningWordLength;
+  return winningWordLength
 }

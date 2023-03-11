@@ -1,19 +1,20 @@
-import React, { useState } from "react";
-import DropDown from "./DropDown";
+import React, { useState } from 'react'
+
+import DropDown from './DropDown'
 
 const Menu: React.FC = (): JSX.Element => {
-  const [showDropDown, setShowDropDown] = useState<boolean>(false);
-  const [selectCity, setSelectCity] = useState<string>("");
+  const [showDropDown, setShowDropDown] = useState<boolean>(false)
+  const [selectCity, setSelectCity] = useState<string>('')
   const cities = () => {
-    return ["Hong Kong", "London", "New York City", "Paris"];
-  };
+    return ['Hong Kong', 'London', 'New York City', 'Paris']
+  }
 
   /**
    * Toggle the drop down menu
    */
   const toggleDropDown = () => {
-    setShowDropDown(!showDropDown);
-  };
+    setShowDropDown(!showDropDown)
+  }
 
   /**
    * Hide the drop down menu if click occurs
@@ -23,9 +24,9 @@ const Menu: React.FC = (): JSX.Element => {
    */
   const dismissHandler = (event: React.FocusEvent<HTMLButtonElement>): void => {
     if (event.currentTarget === event.target) {
-      setShowDropDown(false);
+      setShowDropDown(false)
     }
-  };
+  }
 
   /**
    * Callback function to consume the
@@ -34,8 +35,8 @@ const Menu: React.FC = (): JSX.Element => {
    * @param city  The selected city
    */
   const citySelection = (city: string): void => {
-    setSelectCity(city);
-  };
+    setSelectCity(city)
+  }
 
   return (
     <>
@@ -43,17 +44,17 @@ const Menu: React.FC = (): JSX.Element => {
         <div>
           {selectCity
             ? `You selected ${selectCity} for your travel destination`
-            : "Select your travel destination"}
+            : 'Select your travel destination'}
         </div>
       </div>
       <button
-        className={showDropDown ? "active" : undefined}
+        className={showDropDown ? 'active' : undefined}
         onClick={(): void => toggleDropDown()}
         onBlur={(e: React.FocusEvent<HTMLButtonElement>): void =>
           dismissHandler(e)
         }
       >
-        <div>{selectCity ? "Select: " + selectCity : "Select ..."} </div>
+        <div>{selectCity ? 'Select: ' + selectCity : 'Select ...'} </div>
         {showDropDown && (
           <DropDown
             cities={cities()}
@@ -64,7 +65,7 @@ const Menu: React.FC = (): JSX.Element => {
         )}
       </button>
     </>
-  );
-};
+  )
+}
 
-export default Menu;
+export default Menu

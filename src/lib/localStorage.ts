@@ -23,7 +23,6 @@ export const loadGameStateFromLocalStorage = (isLatestGame: boolean) => {
 
 const gameStatKey = 'gameStats'
 
-
 const gradeStatKey = 'gradeNumber'
 
 export type GameStats = {
@@ -36,54 +35,25 @@ export type GameStats = {
 }
 export type GradeNumber = {
   gradeNumber: number
-  
 }
 
 export const saveStatsToLocalStorage = (gameStats: GameStats) => {
   localStorage.setItem(gameStatKey, JSON.stringify(gameStats))
 }
 
-
-
 export const loadStatsFromLocalStorage = () => {
   const stats = localStorage.getItem(gameStatKey)
   return stats ? (JSON.parse(stats) as GameStats) : null
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 export const saveGradeToLocalStorage = (gradenumber: GradeNumber) => {
   localStorage.setItem(gradeStatKey, JSON.stringify(gradenumber))
 }
-
-
-
-
-
 
 export const loadGradeFromLocalStorage = () => {
   const grade = localStorage.getItem(gradeStatKey)
   return grade ? (JSON.parse(grade) as GradeNumber) : null
 }
-
-
-
-
-
-
-
-
 
 export const setStoredIsHighContrastMode = (isHighContrast: boolean) => {
   if (isHighContrast) {

@@ -1,36 +1,33 @@
 .enterbutton {
-    border-color: #04AA6D;
-    border: 2px solid #04AA6D;
-    color: green;
-    border-radius: 5px;
-    box-sizing:border-box;
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-    text-align: center;
-   padding: 0.75rem 1.5rem;
-   pointer-events: auto;
-
+  border-color: #04aa6d;
+  border: 2px solid #04aa6d;
+  color: green;
+  border-radius: 5px;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 0.75rem 1.5rem;
+  pointer-events: auto;
 }
 
-  .enterbutton:hover {
-    background-color: #04AA6D;
-    color: white;
-    box-sizing: border-box;
-  }
-  .select{
-    border-radius:20px;
-    display:inline-block;
-    overflow:hidden;
-    background:#cccccc;
-    border:1px solid #cccccc;
-  }
-  #format{
-    
-  
-    border:0px;
-    outline:none;
-  }
+.enterbutton:hover {
+  background-color: #04aa6d;
+  color: white;
+  box-sizing: border-box;
+}
+.select {
+  border-radius: 20px;
+  display: inline-block;
+  overflow: hidden;
+  background: #cccccc;
+  border: 1px solid #cccccc;
+}
+#format {
+  border: 0px;
+  outline: none;
+}

@@ -10,8 +10,8 @@ import { AlertContainer } from './components/alerts/AlertContainer'
 import { Grid } from './components/grid/Grid'
 import { Keyboard } from './components/keyboard/Keyboard'
 import { DatePickerModal } from './components/modals/DatePickerModal'
-import { InfoModal } from './components/modals/InfoModal'
 import { GradeModal } from './components/modals/Grade'
+import { InfoModal } from './components/modals/InfoModal'
 import { MigrateStatsModal } from './components/modals/MigrateStatsModal'
 import { SettingsModal } from './components/modals/SettingsModal'
 import { StatsModal } from './components/modals/StatsModal'
@@ -43,6 +43,11 @@ import {
   saveGameStateToLocalStorage,
   setStoredIsHighContrastMode,
 } from './lib/localStorage'
+import {
+  GradeNumber,
+  loadGradeFromLocalStorage,
+  saveGradeToLocalStorage,
+} from './lib/localStorage'
 import { addStatsForCompletedGame, loadStats } from './lib/stats'
 import {
   findFirstUnusedReveal,
@@ -56,19 +61,13 @@ import {
   unicodeLength,
 } from './lib/words'
 
-import {
-  GradeNumber,
-  loadGradeFromLocalStorage,
-  saveGradeToLocalStorage,
-} from './lib/localStorage'
 const grade = loadGradeFromLocalStorage
 
 console.log(grade)
 function App() {
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
-  
-  
+
   const prefersDarkMode = window.matchMedia(
     '(prefers-color-scheme: dark)'
   ).matches
@@ -95,7 +94,7 @@ function App() {
   const [isHighContrastMode, setIsHighContrastMode] = useState(
     getStoredIsHighContrastMode()
   )
- 
+
   const [isRevealing, setIsRevealing] = useState(false)
   const [guesses, setGuesses] = useState<string[]>(() => {
     const loaded = loadGameStateFromLocalStorage(isLatestGame)
@@ -126,14 +125,7 @@ function App() {
   const gradeStatKey = 'gradeNumber'
   const grade = localStorage.getItem(gradeStatKey)
 
-
-
-
-
-
-
-
-useEffect(() => {
+  useEffect(() => {
     // if no game state on load,
     // show the user the how-to info modal
     if (grade == null) {
@@ -141,17 +133,15 @@ useEffect(() => {
         setIsGradeModalOpen(true)
       }, WELCOME_GRADE_MODAL_MS)
     }
-    
   })
   useEffect(() => {
     // if no game state on load,
     // show the user the how-to info modal
-    if (grade == "undefined") {
+    if (grade == 'undefined') {
       setTimeout(() => {
         setIsGradeModalOpen(true)
       }, WELCOME_GRADE_MODAL_MS)
     }
-    
   })
 
   useEffect(() => {
@@ -305,10 +295,10 @@ useEffect(() => {
       }
     }
   }
-function jack(){
-  setIsGradeModalOpen(false)
-  setIsInfoModalOpen(true)
-}
+  function jack() {
+    setIsGradeModalOpen(false)
+    setIsInfoModalOpen(true)
+  }
   return (
     <Div100vh>
       <div className="flex h-full flex-col">
@@ -351,10 +341,7 @@ function jack(){
             isOpen={isInfoModalOpen}
             handleClose={() => setIsInfoModalOpen(false)}
           />
-           <GradeModal
-            isOpen={isGradeModalOpen}
-            handleClose={() => jack()}
-          />
+          <GradeModal isOpen={isGradeModalOpen} handleClose={() => jack()} />
           <StatsModal
             isOpen={isStatsModalOpen}
             handleClose={() => setIsStatsModalOpen(false)}
