@@ -32,8 +32,7 @@ export const isWinningWord = (word: string) => {
   return solution === word
 }
 
-console.log(isWinningWord)
-console.log('Length ' + isWinningWord.length)
+
 // build a set of previously revealed letters - present and correct
 // guess must use correct letters in that space and any other revealed letters
 // also check if all revealed instances of a letter are used (i.e. two C's)
@@ -134,17 +133,7 @@ export const getSolution = (gameDate: Date) => {
   const nextGameDate = getNextGameDate(gameDate)
   const index = getIndex(gameDate)
   const wordOfTheDay = getWordOfDay(index)
-  console.log(wordOfTheDay)
-  console.log(wordOfTheDay)
 
-  console.log(wordOfTheDay)
-  console.log(wordOfTheDay)
-  console.log(wordOfTheDay)
-  console.log(wordOfTheDay)
-  console.log(wordOfTheDay)
-  console.log(wordOfTheDay)
-
-  console.log(wordOfTheDay.length)
 
   return {
     solution: wordOfTheDay,
@@ -155,7 +144,7 @@ export const getSolution = (gameDate: Date) => {
 }
 
 export default getSolution
-console.log(getSolution)
+
 export const getGameDate = () => {
   if (getIsLatestGame()) {
     return getToday()
@@ -169,7 +158,7 @@ export const getGameDate = () => {
     }
     return d
   } catch (e) {
-    console.log(e)
+    
     return getToday()
   }
 }
@@ -181,7 +170,7 @@ export const setGameDate = (d: Date) => {
       return
     }
   } catch (e) {
-    console.log(e)
+    
   }
   window.location.href = '/'
 }
@@ -197,10 +186,10 @@ export const getIsLatestGame = () => {
 export const { solution, solutionGameDate, solutionIndex, tomorrow } =
   getSolution(getGameDate())
 
-console.log(getWordOfDay + 'fuck')
+
 var solutionn = getSolution(new Date()).solution // assuming getSolution is imported properly
 var winningWordLength = solutionn.length
-console.log(winningWordLength) // prints the length of the winning word to the console
+
 
 export function myImageList() {
   return winningWordLength

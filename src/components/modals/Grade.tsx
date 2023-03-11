@@ -79,4 +79,4 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 }
 
 const grade = localStorage.getItem(gradeStatKey)
-console.log('THERE GRADE IS' + grade)
+

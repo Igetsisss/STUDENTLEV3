@@ -61,9 +61,9 @@ import {
   unicodeLength,
 } from './lib/words'
 
-const grade = loadGradeFromLocalStorage
 
-console.log(grade)
+
+
 function App() {
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
