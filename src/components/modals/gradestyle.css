@@ -26,8 +26,10 @@
   overflow: hidden;
   background: #cccccc;
   border: 1px solid #cccccc;
+  text-align: center;
 }
 #format {
   border: 0px;
   outline: none;
+  text-align: center;
 }
