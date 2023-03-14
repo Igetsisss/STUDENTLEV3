@@ -24,7 +24,7 @@ const EIGHTGRADE = [
   'lilly',
   'grant',
   'meriwether',
-  'daniel',
+  'luke',
   'andrew',
   'dean',
   'carter',
@@ -131,7 +131,7 @@ const EIGHTGRADE = [
   'emma',
   'beatrice',
   'tuck',
-  'luke',
+  'daniel',
 ]
 
 const SEVENGRADE = [
