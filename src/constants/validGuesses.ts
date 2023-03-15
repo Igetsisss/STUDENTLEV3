@@ -22,7 +22,7 @@ const EIGHTGRADE = [
   'margaret',
   'hayes',
   'lilly',
-  'aj',
+  'demarcus',
   'ryder',
   'daniel',
   'andrew',
