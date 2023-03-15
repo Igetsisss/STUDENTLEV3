@@ -53,7 +53,7 @@ const EIGHTGRADE = [
   'makayla',
   'caroline',
   'ryder',
-  'aj',
+  'demarcus',
   'scarlett',
   'chase',
   'christina',
