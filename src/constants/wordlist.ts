@@ -31,7 +31,7 @@ const EIGHTGRADE = [
   'john',
   'jackson',
   'william',
-  'hunter',
+  'moes',
   'mitchell',
   'emmy',
   'grace',
