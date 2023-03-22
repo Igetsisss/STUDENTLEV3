@@ -29,6 +29,7 @@ const EIGHTGRADE = [
   'dean',
   'carter',
   'john',
+  'moes',
   'jackson',
   'william',
   'hunter',
