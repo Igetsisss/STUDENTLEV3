@@ -84,7 +84,7 @@ const EIGHTGRADE = [
   'annabelle',
   'ella',
   'tyson',
-  'claire',
+  'emma',
   'garrett',
   'ansley',
   'robbie',
