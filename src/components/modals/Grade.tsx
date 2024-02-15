@@ -47,6 +47,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       <p className="text-sm text-gray-500 dark:text-gray-300">
         Since Studenle is not limited to one grade we have to ask you what grade
         you are in order to give you the correct Studentle
+
+        *Edit 2/15/24 I updated it to 9th and im not doing any others so don't ask
       </p>
       <br></br>
       <form>
@@ -61,12 +63,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
               {' '}
               Choose Your Grade{' '}
             </option>
-            <option value="6" disabled>
-              6th - Out Soon!
-            </option>
-            <option value="7">7th - Please Only Use if a Beta Tester</option>
+          
+            <option value="7" disabled>8th</option>
 
-            <option value="8">8th</option>
+            <option value="8">9th</option>
           </select>
         </div>
       </form>
