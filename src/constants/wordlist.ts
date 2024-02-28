@@ -10,7 +10,25 @@ const nogradeyet = ['error']
 
 var GRADEWORDS = nogradeyet
 const EIGHTGRADE = [
-  "avery", "ella", "joselyn", "grant", "havana", "sean", "william", "mitchell", "hannah", "cole", "ryan", "hunter", "hayes", "hailey", "scarlett", "blair", "nicole", "moses", "emma", "amelia", "annabelle", "brad", "emerson", "danny", "andrew", "robert", "sidney-ann", "mcvey", "lillian", "caroline", "aj", "jack", "cesar", "amara", "ray", "ansley", "sophia", "leah", "katherine", "nakhai", "sienna", "luke", "ria", "caroline", "evelyn", "avalina", "tanner", "gavin", "kaitlynne", "will", "chase", "collier", "franklin", "bobby", "hotoniel", "daniel", "sam", "tuck", "emmy", "finn", "jones", "juliana", "maxx", "lilliana", "sophia", "claire", "jules", "meriwether", "elizabeth", "andrew", "layla", "greg", "griffin", "eliana", "emma", "alexa", "ryder", "marley", "bryce", "tyson", "audrey", "brent", "sasha", "jackson", "bralyn", "brooke", "caroline", "eva", "mary", "emma", "felipe", "patrick", "gabriella", "dean", "sarah", "tommy", "margot", "garrett", "margaret", "madeline", "preston", "phillip", "rhodes", "robby", "charlotte", "beatrice", "diego", "christina", "jackson", "eli", "amaree", "george", "kenzo", "tyler", "logan", "nora", "grace", "emma", "brendan", "grayson", "greyson", "katlynn", "madeline", "christian", "davis", "kade", "colt", "claire", "bryce", "matthew", "braiden", "william", "chloe", "teagan", "jack", "betsy", "connor", "jon", "ella", "olivia", "nick", "makayla", "harley", "paige", "grant", "sammy", "grace", "carter", "graham", "jack", "ryder"
+  "avery", "ella", "joselyn", "grant", "havana", "sean", "william", "mitchell", "hannah", "cole", "ryan", "hunter", "hayes", "hailey", "scarlett", "blair", "nicole", "moses", "emma", "amelia", "annabelle", "brad", "emerson", "danny", "andrew", "robert", "sidney-ann", "tyson", "lillian", "caroline", "aj", "jack", "cesar", "amara", "ray", "ansley", "sophia", "leah", "katherine", "nakhai", "sienna", "luke", "ria", "caroline", "evelyn", "avalina", "tanner", "gavin", "kaitlynne", "will", "chase", "collier", "franklin", "bobby", "hotoniel", "daniel", "sam", "tuck", "emmy", "finn", "jones", "juliana", "maxx",
+  "lilliana", 
+  "sophia", 
+  "claire", 
+  "jules", 
+  "meriwether", 
+  "elizabeth", 
+  "andrew", 
+  "layla",
+  "greg", 
+  "griffin",
+  "eliana",
+  "emma", 
+  "alexa",
+  "ryder", 
+  "marley",
+  "bryce",
+  "mcvey", 
+  "audrey", "brent", "sasha", "jackson", "bralyn", "brooke", "caroline", "eva", "mary", "emma", "felipe", "patrick", "gabriella", "dean", "sarah", "tommy", "margot", "garrett", "margaret", "madeline", "preston", "phillip", "rhodes", "robby", "charlotte", "beatrice", "diego", "christina", "jackson", "eli", "amaree", "george", "kenzo", "tyler", "logan", "nora", "grace", "emma", "brendan", "grayson", "greyson", "katlynn", "madeline", "christian", "davis", "kade", "colt", "claire", "bryce", "matthew", "braiden", "william", "chloe", "teagan", "jack", "betsy", "connor", "jon", "ella", "olivia", "nick", "makayla", "harley", "paige", "grant", "sammy", "grace", "carter", "graham", "jack", "ryder"
 ];
 
 
