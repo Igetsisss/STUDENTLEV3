@@ -27,8 +27,8 @@ const EIGHTGRADE = [
   "ryder", 
   "marley",
   "bryce",
-  "mcvey", 
-  "audrey", "brent", "sasha", "jackson", "bralyn", "brooke", "caroline", "eva", "mary", "emma", "felipe", "patrick", "gabriella", "dean", "sarah", "tommy", "margot", "garrett", "margaret", "madeline", "preston", "phillip", "rhodes", "robby", "charlotte", "beatrice", "diego", "christina", "jackson", "eli", "amaree", "george", "kenzo", "tyler", "logan", "nora", "grace", "emma", "brendan", "grayson", "greyson", "katlynn", "madeline", "christian", "davis", "kade", "colt", "claire", "bryce", "matthew", "braiden", "william", "chloe", "teagan", "jack", "betsy", "connor", "jon", "ella", "olivia", "nick", "makayla", "harley", "paige", "grant", "sammy", "grace", "carter", "graham", "jack", "ryder"
+  "jack", 
+  "mcvey", "brent", "sasha", "jackson", "bralyn", "brooke", "caroline", "eva", "mary", "emma", "felipe", "patrick", "gabriella", "dean", "sarah", "tommy", "margot", "garrett", "margaret", "madeline", "preston", "phillip", "rhodes", "robby", "charlotte", "beatrice", "diego", "christina", "jackson", "eli", "amaree", "george", "kenzo", "tyler", "logan", "nora", "grace", "emma", "brendan", "grayson", "greyson", "katlynn", "madeline", "christian", "davis", "kade", "colt", "claire", "bryce", "matthew", "braiden", "william", "chloe", "teagan", "jack", "betsy", "connor", "jon", "ella", "olivia", "nick", "makayla", "harley", "paige", "grant", "sammy", "grace", "carter", "graham", "jack", "ryder"
 ];
 
 
