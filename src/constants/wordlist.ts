@@ -10,9 +10,9 @@ const nogradeyet = ['error']
 
 var GRADEWORDS = nogradeyet
 const EIGHTGRADE = [
-  "avery", "ella", "joselyn", "grant", "havana", "sean", "william", "mitchell", "hannah", "cole", "ryan", "hunter", "hayes", "hailey", "scarlett", "blair", "nicole", "moses", "emma", "amelia", "annabelle", "brad", "emerson", "danny", "andrew", "robert", "sidney-ann", "tyson", "lillian", "caroline", "aj", "jack", "cesar", "amara", "ray", "ansley", "sophia", "leah", "katherine", "nakhai", "sienna", "luke", "ria", "caroline", "evelyn", "avalina", "tanner", "gavin", "kaitlynne", "will", "chase", "collier", "franklin", "bobby", "hotoniel", "daniel", "sam", "tuck", "emmy", "finn", "jones", "juliana", "maxx",
+  "avery", "ella", "joselyn", "grant", "havana", "sean", "william", "mitchell", "hannah", "cole", "ryan", "hunter", "hayes", "hailey", "scarlett", "blair", "nicole", "moses", "emma", "sophia", "annabelle", "brad", "emerson", "danny", "andrew", "robert", "sidney-ann", "tyson", "lillian", "caroline", "aj", "jack", "cesar", "amara", "ray", "ansley", "sophia", "leah", "katherine", "nakhai", "sienna", "luke", "ria", "caroline", "evelyn", "avalina", "tanner", "gavin", "kaitlynne", "will", "chase", "collier", "franklin", "bobby", "hotoniel", "daniel", "sam", "tuck", "emmy", "finn", "jones", "juliana", "maxx",
   "lilliana", 
-  "sophia", 
+  "amelia", 
   "claire", 
   "jules", 
   "meriwether", 
