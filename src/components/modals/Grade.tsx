@@ -44,7 +44,6 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       isOpen={isOpen}
       handleClose={handleClose}
     >
-    
       <br></br>
       <form>
         <div className="select">
@@ -58,8 +57,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
               {' '}
               Choose Your Grade{' '}
             </option>
-          
-          
+
             <option value="8">11th</option>
           </select>
         </div>
@@ -73,4 +71,3 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 }
 
 const grade = localStorage.getItem(gradeStatKey)
-

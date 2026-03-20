@@ -32,7 +32,6 @@ export const isWinningWord = (word: string) => {
   return solution === word
 }
 
-
 // build a set of previously revealed letters - present and correct
 // guess must use correct letters in that space and any other revealed letters
 // also check if all revealed instances of a letter are used (i.e. two C's)
@@ -134,7 +133,6 @@ export const getSolution = (gameDate: Date) => {
   const index = getIndex(gameDate)
   const wordOfTheDay = getWordOfDay(index)
 
-
   return {
     solution: wordOfTheDay,
     solutionGameDate: gameDate,
@@ -158,7 +156,6 @@ export const getGameDate = () => {
     }
     return d
   } catch (e) {
-    
     return getToday()
   }
 }
@@ -169,9 +166,7 @@ export const setGameDate = (d: Date) => {
       window.location.href = '/?d=' + formatISO(d, { representation: 'date' })
       return
     }
-  } catch (e) {
-    
-  }
+  } catch (e) {}
   window.location.href = '/'
 }
 
@@ -186,10 +181,8 @@ export const getIsLatestGame = () => {
 export const { solution, solutionGameDate, solutionIndex, tomorrow } =
   getSolution(getGameDate())
 
-
 var solutionn = getSolution(new Date()).solution // assuming getSolution is imported properly
 var winningWordLength = solutionn.length
-
 
 export function myImageList() {
   return winningWordLength

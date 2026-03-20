@@ -61,9 +61,6 @@ import {
   unicodeLength,
 } from './lib/words'
 
-
-
-
 function App() {
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
@@ -143,11 +140,10 @@ function App() {
       }, WELCOME_GRADE_MODAL_MS)
     }
   })
-  
-  useEffect(() => {
-  window.setGameDate = setGameDate;
-  }, []);
 
+  useEffect(() => {
+    window.setGameDate = setGameDate
+  }, [])
 
   useEffect(() => {
     DISCOURAGE_INAPP_BROWSERS &&
