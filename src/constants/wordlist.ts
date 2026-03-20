@@ -268,7 +268,7 @@ const SEVENGRADE = [
 ]
 
 if (grade == null) {
-  GRADEWORDS = nogradeyet
+  GRADEWORDS = EIGHTGRADE
 } else if (grade == '"69"') {
   console.log('nah thats crazy ')
 } else if (grade == '"25"' || grade == '"8"') {

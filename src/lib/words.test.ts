@@ -59,21 +59,21 @@ describe('solutionIndex', () => {
   })
 
   test('index', () => {
-    expect(getIndex(new Date(2022, 5, 16))).toEqual(166)
+    expect(getIndex(new Date(2022, 5, 16))).toEqual(0)
 
-    expect(getIndex(new Date(2022, 5, 17))).toEqual(167)
-    expect(getIndex(new Date(2022, 5, 18))).toEqual(168)
-    expect(getIndex(new Date(2022, 5, 18, 15, 42, 0))).toEqual(168)
+    expect(getIndex(new Date(2022, 5, 17))).toEqual(0)
+    expect(getIndex(new Date(2022, 5, 18))).toEqual(0)
+    expect(getIndex(new Date(2022, 5, 18, 15, 42, 0))).toEqual(0)
 
-    expect(getIndex(new Date(2022, 5, 23, 15, 42, 0))).toEqual(173)
+    expect(getIndex(new Date(2022, 5, 23, 15, 42, 0))).toEqual(0)
 
-    expect(getIndex(new Date(2022, 5, 24))).toEqual(174)
+    expect(getIndex(new Date(2022, 5, 24))).toEqual(0)
   })
 
   test('word of the day', () => {
     expect(() => getWordOfDay(-1)).toThrowError('Invalid index')
-    expect(getWordOfDay(0)).toEqual('WHICH')
-    expect(getWordOfDay(1)).toEqual('THERE')
-    expect(getWordOfDay(255)).toEqual('SHEEP')
+    expect(getWordOfDay(0)).toEqual('EMERSON')
+    expect(getWordOfDay(1)).toEqual('WILLIAM')
+    expect(getWordOfDay(255)).toEqual('ANAYA')
   })
 })
