@@ -11,8 +11,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: npm install
-      - name: Prettify code
-        uses: creyD/prettier_action@v4.3
-        with:
-          prettier_options: --check src
-          prettier_plugins: '@trivago/prettier-plugin-sort-imports prettier-plugin-tailwindcss'
+      - name: Check formatting
+        run: npm run lint
