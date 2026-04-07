@@ -70,7 +70,7 @@ describe('solutionIndex', () => {
     expect(getIndex(new Date(2022, 5, 24))).toEqual(0)
   })
 
-  test('word of the day', () => {
+  test('word of the day1', () => {
     expect(() => getWordOfDay(-1)).toThrowError('Invalid index')
     expect(getWordOfDay(0)).toEqual('EMERSON')
     expect(getWordOfDay(1)).toEqual('WILLIAM')
