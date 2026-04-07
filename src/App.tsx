@@ -142,6 +142,7 @@ function App() {
   })
 
   useEffect(() => {
+    // @ts-ignore
     window.setGameDate = setGameDate
   }, [])
 
