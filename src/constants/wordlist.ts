@@ -47,7 +47,7 @@ const EIGHTGRADE = [
   'anaya',
   'patrick',
   'juliana',
-  'nicholas',
+  'nick',
   'finn',
   'connor',
   'andrew',
