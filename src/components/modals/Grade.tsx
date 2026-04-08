@@ -29,13 +29,14 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
     console.log(`Selected grade: ${selectedGrade}`)
     console.log(selectedGrade)
+    // Using JSON.stringify here wraps the string in quotes (e.g., "12" becomes '"12"') 
+    // which perfectly matches the logic in your word list file.
     localStorage.setItem(gradeStatKey, JSON.stringify(selectedGrade))
     const grade = localStorage.getItem(gradeStatKey)
-    console.log('THERE GRADE IS' + grade)
+    console.log('THERE GRADE IS ' + grade)
     handleClose()
     window.location.reload()
-    console.log('reloded')
-    handleClose()
+    console.log('reloaded')
   }
 
   return (
@@ -52,13 +53,17 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             id="format"
             value={selectedGrade}
             onChange={handleGradeChange}
+            defaultValue=""
           >
-            <option hidden disabled selected>
+            <option hidden disabled value="">
               {' '}
               Choose Your Grade{' '}
             </option>
 
-            <option value="8">11th</option>
+            <option value="9">Freshman (9th Grade)</option>
+            <option value="10">Sophomore (10th Grade)</option>
+            <option value="11">Junior (11th Grade)</option>
+            <option value="12">Senior (12th Grade)</option>
           </select>
         </div>
       </form>
