@@ -35,6 +35,52 @@ export type LeaderboardEntry = {
   totalDurationSec: number
 }
 
+export type MvpEntry = {
+  name: string
+  grade: number
+  totalGames: number
+  wins: number
+  winRate: number
+  avgGuesses: number
+  score: number
+}
+
+export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
+  const daily = entries.filter((e) => e.gameType === 'daily')
+  const map = new Map<string, LeaderboardEntry[]>()
+  for (const e of daily) {
+    map.set(e.name, [...(map.get(e.name) || []), e])
+  }
+
+  const stats: MvpEntry[] = []
+  map.forEach((games, name) => {
+    if (games.length < 3) return // require at least 3 games
+    const wins = games.filter((g) => g.won)
+    const winRate = wins.length / games.length
+    const avgGuesses =
+      wins.length > 0
+        ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
+        : 7
+    // Score: win rate (60pts) + avg guesses quality (30pts) + consistency (10pts)
+    const score =
+      winRate * 60 +
+      (Math.max(0, 6 - avgGuesses) / 6) * 30 +
+      (Math.min(games.length, 20) / 20) * 10
+    stats.push({
+      name,
+      grade: games[0].grade,
+      totalGames: games.length,
+      wins: wins.length,
+      winRate,
+      avgGuesses: wins.length > 0 ? avgGuesses : 0,
+      score,
+    })
+  })
+
+  if (stats.length === 0) return null
+  return stats.sort((a, b) => b.score - a.score)[0]
+}
+
 export const submitGameData = async (data: GameSubmission): Promise<void> => {
   try {
     await fetch(API_URL, {

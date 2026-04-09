@@ -16,6 +16,7 @@ type Props = {
   setIsDatePickerModalOpen: (value: boolean) => void
   setIsSettingsModalOpen: (value: boolean) => void
   setIsLeaderboardModalOpen: (value: boolean) => void
+  isMvp?: boolean
 }
 
 export const Navbar = ({
@@ -24,9 +25,10 @@ export const Navbar = ({
   setIsDatePickerModalOpen,
   setIsSettingsModalOpen,
   setIsLeaderboardModalOpen,
+  isMvp = false,
 }: Props) => {
   return (
-    <div className="navbar">
+    <div className={`navbar${isMvp ? ' navbar-mvp' : ''}`}>
       <div className="navbar-content px-5 short:h-auto">
         <div className="flex">
           <InformationCircleIcon
@@ -40,7 +42,12 @@ export const Navbar = ({
             />
           )}
         </div>
-        <p className="text-xl font-bold dark:text-white">{GAME_TITLE}</p>
+        <div className="flex items-center gap-1">
+          <p className={`text-xl font-bold${isMvp ? ' mvp-title' : ' dark:text-white'}`}>
+            {GAME_TITLE}
+          </p>
+          {isMvp && <span className="mvp-crown">👑</span>}
+        </div>
         <div className="right-icons">
           <StarIcon
             className="mr-3 h-6 w-6 cursor-pointer dark:stroke-white"

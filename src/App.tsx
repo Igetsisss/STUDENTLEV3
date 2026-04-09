@@ -14,6 +14,7 @@ import { DatePickerModal } from './components/modals/DatePickerModal'
 import { GradeModal } from './components/modals/Grade'
 import { InfoModal } from './components/modals/InfoModal'
 import { LeaderboardModal } from './components/modals/LeaderboardModal'
+import { MvpModal } from './components/modals/MvpModal'
 import { MigrateStatsModal } from './components/modals/MigrateStatsModal'
 import { SettingsModal } from './components/modals/SettingsModal'
 import { StatsModal } from './components/modals/StatsModal'
@@ -70,7 +71,7 @@ import {
   hasBonusBeenPlayedToday,
   setBonusPlayedToday,
 } from './utils/bonusRound'
-import { submitGameData } from './lib/api'
+import { submitGameData, fetchLeaderboard, computeMvp } from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
 
 function App() {
@@ -94,6 +95,9 @@ function App() {
   const [isMigrateStatsModalOpen, setIsMigrateStatsModalOpen] = useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false)
+  const [isMvpModalOpen, setIsMvpModalOpen] = useState(false)
+  const [isMvp, setIsMvp] = useState(false)
+  const [mvpData, setMvpData] = useState<{ name: string; winRate: number; avgGuesses: number; totalGames: number } | null>(null)
   const [currentRowClass, setCurrentRowClass] = useState('')
   const [isGameLost, setIsGameLost] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(
@@ -230,6 +234,37 @@ function App() {
         setIsInfoModalOpen(true)
       }, 500)
     }
+  }, [])
+
+  // On page load: check all-time MVP and see if current player has earned it
+  useEffect(() => {
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    if (!firstName) return // no name yet, skip
+    const displayName = lastInitial ? `${firstName} ${lastInitial}` : firstName
+
+    fetchLeaderboard()
+      .then((data) => {
+        const mvpEntry = computeMvp(data)
+        if (mvpEntry && mvpEntry.name === displayName) {
+          setIsMvp(true)
+          setMvpData({
+            name: mvpEntry.name,
+            winRate: mvpEntry.winRate,
+            avgGuesses: mvpEntry.avgGuesses,
+            totalGames: mvpEntry.totalGames,
+          })
+          const lastAwarded = localStorage.getItem('mvpAwardedTo')
+          if (lastAwarded !== displayName) {
+            localStorage.setItem('mvpAwardedTo', displayName)
+            setIsMvpModalOpen(true)
+          }
+        } else {
+          setIsMvp(false)
+        }
+      })
+      .catch(() => { /* silently ignore MVP check errors */ })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // On page load: if game is already complete, show stats after 1 second
@@ -531,6 +566,7 @@ function App() {
           setIsDatePickerModalOpen={setIsDatePickerModalOpen}
           setIsSettingsModalOpen={setIsSettingsModalOpen}
           setIsLeaderboardModalOpen={setIsLeaderboardModalOpen}
+          isMvp={isMvp}
         />
 
         {!isLatestGame && (
@@ -653,6 +689,16 @@ function App() {
             handleHighContrastMode={handleHighContrastMode}
           />
           <GradeModal isOpen={isGradeModalOpen} handleClose={() => jack()} />
+          {mvpData && (
+            <MvpModal
+              isOpen={isMvpModalOpen}
+              handleClose={() => setIsMvpModalOpen(false)}
+              playerName={mvpData.name}
+              winRate={mvpData.winRate}
+              avgGuesses={mvpData.avgGuesses}
+              totalGames={mvpData.totalGames}
+            />
+          )}
           <AlertContainer />
         </div>
       </div>

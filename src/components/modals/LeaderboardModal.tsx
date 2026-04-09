@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { fetchLeaderboard, LeaderboardEntry } from '../../lib/api'
+import { computeMvp, fetchLeaderboard, LeaderboardEntry, MvpEntry } from '../../lib/api'
 import { BaseModal } from './BaseModal'
 
 type Props = {
@@ -24,6 +24,7 @@ const formatTime = (sec: number): string => {
 
 export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
+  const [mvp, setMvp] = useState<MvpEntry | null>(null)
   const [loading, setLoading] = useState(false)
   const [filterGrade, setFilterGrade] = useState<string>('')
   const [filterType, setFilterType] = useState<'daily' | 'bonus'>('daily')
@@ -40,6 +41,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
           (e) => e.date && String(e.date).startsWith(today)
         )
         setEntries(todayEntries)
+        setMvp(computeMvp(data))
       })
       .finally(() => setLoading(false))
   }, [isOpen, filterGrade])
@@ -132,6 +134,40 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {mvp && (
+        <div className="mt-4 rounded-xl border-2 border-yellow-400 bg-yellow-50 px-4 py-3 dark:bg-yellow-900/20">
+          <p className="mb-1 text-center text-xs font-bold uppercase tracking-widest text-yellow-600 dark:text-yellow-500">
+            🏆 All-Time MVP
+          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold text-yellow-700 dark:text-yellow-400">{mvp.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {gradeLabels[String(mvp.grade)] || `Grade ${mvp.grade}`}
+              </p>
+            </div>
+            <div className="flex gap-4 text-center text-xs">
+              <div>
+                <p className="font-bold text-gray-800 dark:text-gray-200">
+                  {Math.round(mvp.winRate * 100)}%
+                </p>
+                <p className="text-gray-500 dark:text-gray-400">Win Rate</p>
+              </div>
+              <div>
+                <p className="font-bold text-gray-800 dark:text-gray-200">
+                  {mvp.avgGuesses > 0 ? mvp.avgGuesses.toFixed(1) : '-'}
+                </p>
+                <p className="text-gray-500 dark:text-gray-400">Avg</p>
+              </div>
+              <div>
+                <p className="font-bold text-gray-800 dark:text-gray-200">{mvp.totalGames}</p>
+                <p className="text-gray-500 dark:text-gray-400">Games</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </BaseModal>

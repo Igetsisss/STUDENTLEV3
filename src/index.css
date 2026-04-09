@@ -134,6 +134,47 @@
   animation: cellPopOut 0.35s cubic-bezier(0.36, 0, 0.66, -0.56) both;
 }
 
+/* ─── MVP Gold Theme ─── */
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(320px) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.navbar-mvp {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fffbeb 100%) !important;
+  border-bottom: 2px solid #f59e0b !important;
+}
+
+.mvp-title {
+  color: #d97706;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.dark .mvp-title {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+.mvp-crown {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+  animation: crownPulse 2s ease-in-out infinite;
+}
+
+@keyframes crownPulse {
+  0%, 100% { transform: scale(1) rotate(-5deg); }
+  50%       { transform: scale(1.15) rotate(5deg); }
+}
+
+
 @keyframes cellPopOut {
   0% {
     transform: scale(1) rotateZ(0deg);
