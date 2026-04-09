@@ -48,34 +48,29 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
   }
 }
 
-const fetchJsonp = (url: string): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    const callbackName = '_lb_cb_' + Date.now()
-    const script = document.createElement('script')
+const SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`
 
-    const cleanup = () => {
-      delete (window as any)[callbackName]
-      if (script.parentNode) script.parentNode.removeChild(script)
+const parseGvizResponse = (text: string): any[][] => {
+  // Response is: /*O_o*/\ngoogle.visualization.Query.setResponse({...})
+  const jsonStr = text
+    .replace(/^[^(]*\(/, '')
+    .replace(/\);?\s*$/, '')
+  const data = JSON.parse(jsonStr)
+  const rows: any[][] = []
+  if (data.table && data.table.rows) {
+    for (const row of data.table.rows) {
+      rows.push(
+        row.c.map((cell: any) => {
+          if (!cell) return null
+          // Prefer formatted value for dates, fall back to raw value
+          if (cell.f != null) return cell.f
+          return cell.v
+        })
+      )
     }
-
-    ;(window as any)[callbackName] = (data: any) => {
-      cleanup()
-      resolve(data)
-    }
-
-    script.src = url + '&callback=' + callbackName
-    script.onerror = () => {
-      cleanup()
-      reject(new Error('JSONP request failed'))
-    }
-
-    document.body.appendChild(script)
-
-    setTimeout(() => {
-      cleanup()
-      reject(new Error('JSONP timeout'))
-    }, 15000)
-  })
+  }
+  return rows
 }
 
 export const fetchLeaderboard = async (
@@ -83,17 +78,40 @@ export const fetchLeaderboard = async (
   grade?: string
 ): Promise<LeaderboardEntry[]> => {
   try {
-    const params = new URLSearchParams({ action: 'leaderboard' })
-    if (date) params.set('date', date)
-    if (grade) params.set('grade', grade)
+    const res = await fetch(GVIZ_URL)
+    const text = await res.text()
+    const rows = parseGvizResponse(text)
 
-    const url = `${API_URL}?${params.toString()}`
-    const json = await fetchJsonp(url)
+    const today = date || new Date().toISOString().split('T')[0]
+    const results: LeaderboardEntry[] = []
 
-    if (json.status === 'ok') {
-      return json.data || []
+    for (const r of rows) {
+      // Columns: 0=name, 1=grade, 2=date, 3=word, 4=won, 5=guessCount,
+      //          6=gameType, 7=startTime, 8=endTime, 9=totalDurationSec
+      const rowDate = r[2] ? String(r[2]) : ''
+      const rowGrade = r[1] != null ? String(r[1]) : ''
+
+      if (today && !rowDate.startsWith(today)) continue
+      if (grade && rowGrade !== grade) continue
+
+      results.push({
+        name: r[0] || '',
+        grade: Number(r[1]) || 0,
+        date: rowDate,
+        won: r[4] === true || r[4] === 'TRUE',
+        guessCount: Number(r[5]) || 0,
+        gameType: r[6] || 'daily',
+        totalDurationSec: Number(r[9]) || 0,
+      })
     }
-    return []
+
+    results.sort((a, b) => {
+      if (a.won !== b.won) return a.won ? -1 : 1
+      if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
+      return a.totalDurationSec - b.totalDurationSec
+    })
+
+    return results
   } catch (err) {
     console.error('Failed to fetch leaderboard:', err)
     return []
