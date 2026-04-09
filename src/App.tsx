@@ -234,11 +234,15 @@ function App() {
     hasLoadedRef.current = true
 
     const isComplete = isGameWon || isGameLost
+    const hasName = !!localStorage.getItem('playerName')
     if (isComplete && grade != null && grade !== 'undefined') {
       hasSubmittedRef.current = true // already done, don't re-submit
-      setTimeout(() => {
-        setIsStatsModalOpen(true)
-      }, 1000)
+      if (hasName) {
+        setTimeout(() => {
+          setIsStatsModalOpen(true)
+        }, 1000)
+      }
+      // If no name, the name-prompt modal will open instead; stats can be opened manually
     } else if (!isComplete) {
       tracker.startGame()
     }
