@@ -10,6 +10,8 @@ type Props = {
   isRevealing?: boolean
   isCompleted?: boolean
   position?: number
+  isClearing?: boolean
+  clearingDelay?: number
 }
 
 export const Cell = ({
@@ -18,10 +20,14 @@ export const Cell = ({
   isRevealing,
   isCompleted,
   position = 0,
+  isClearing,
+  clearingDelay = 0,
 }: Props) => {
   const isFilled = value && !isCompleted
   const shouldReveal = isRevealing && isCompleted
-  const animationDelay = `${position * REVEAL_TIME_MS}ms`
+  const animationDelay = isClearing
+    ? `${clearingDelay}ms`
+    : `${position * REVEAL_TIME_MS}ms`
   const isHighContrast = getStoredIsHighContrastMode()
 
   const classes = classnames(
@@ -42,6 +48,7 @@ export const Cell = ({
         status === 'present' && !isHighContrast,
       'cell-fill-animation': isFilled,
       'cell-reveal': shouldReveal,
+      'cell-clear': isClearing,
     }
   )
 

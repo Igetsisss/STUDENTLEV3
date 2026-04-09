@@ -38,6 +38,8 @@ type Props = {
   isDarkMode: boolean
   isHighContrastMode: boolean
   numberOfGuessesMade: number
+  handleBonusRound?: () => void
+  isBonusRoundAvailable?: boolean
 }
 
 export const StatsModal = ({
@@ -56,6 +58,8 @@ export const StatsModal = ({
   isDarkMode,
   isHighContrastMode,
   numberOfGuessesMade,
+  handleBonusRound,
+  isBonusRoundAvailable,
 }: Props) => {
   if (gameStats.totalGames <= 0) {
     return (
@@ -134,6 +138,17 @@ export const StatsModal = ({
               {SHARE_TEXT}
             </button>
           </div>
+        </div>
+      )}
+      {(isGameLost || isGameWon) && isBonusRoundAvailable && handleBonusRound && (
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            onClick={handleBonusRound}
+          >
+            Bonus Round!
+          </button>
         </div>
       )}
       {ENABLE_MIGRATE_STATS && (
