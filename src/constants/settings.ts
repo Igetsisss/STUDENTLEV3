@@ -1,9 +1,6 @@
-import console from 'console'
 import { enUS } from 'date-fns/locale'
 
 import { isWinningWord } from '@/lib/words'
-
-import { myImageList } from '../lib/words'
 
 export const MAX_CHALLENGES = 6
 export const MAX_BONUS_CHALLENGES = 4

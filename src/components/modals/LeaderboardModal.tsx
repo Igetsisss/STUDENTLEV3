@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { computeMvp, fetchLeaderboard, LeaderboardEntry, MvpEntry } from '../../lib/api'
+import { computeMvp, computeStreaks, fetchLeaderboard, LeaderboardEntry, MvpEntry } from '../../lib/api'
 import { BaseModal } from './BaseModal'
 
 type Props = {
@@ -89,6 +89,7 @@ const MvpExplainerModal = ({
 export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [mvp, setMvp] = useState<MvpEntry | null>(null)
+  const [streaks, setStreaks] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(false)
   const [filterGrade, setFilterGrade] = useState<string>('')
   const [filterType, setFilterType] = useState<'daily' | 'bonus'>('daily')
@@ -107,6 +108,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         )
         setEntries(todayEntries)
         setMvp(computeMvp(data))
+        setStreaks(computeStreaks(data))
       })
       .finally(() => setLoading(false))
   }, [isOpen, filterGrade])
@@ -185,7 +187,14 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                   }`}
                 >
                   <td className="py-1 pr-1">{i + 1}</td>
-                  <td className="truncate py-1 pr-1">{entry.name}</td>
+                  <td className="truncate py-1 pr-1">
+                    {entry.name}
+                    {(streaks.get(entry.name) ?? 0) >= 2 && (
+                      <span className="ml-1 text-xs text-orange-500">
+                        🔥{streaks.get(entry.name)}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-1 pr-1 text-xs">
                     {gradeLabels[String(entry.grade)] || entry.grade}
                   </td>

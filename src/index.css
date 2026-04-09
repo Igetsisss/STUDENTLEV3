@@ -131,7 +131,22 @@
 }
 
 .cell-clear {
-  animation: cellPopOut 0.35s cubic-bezier(0.36, 0, 0.66, -0.56) both;
+  animation: cellFallOff 0.45s cubic-bezier(0.55, 0, 1, 0.45) both;
+}
+
+@keyframes cellFallOff {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  15% {
+    transform: translateY(-8px) rotate(-3deg) scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(180px) rotate(12deg) scale(0.8);
+    opacity: 0;
+  }
 }
 
 /* ─── MVP Gold Theme ─── */
@@ -191,7 +206,7 @@
 }
 
 .cell-clear > .letter-container {
-  animation: cellPopOut 0.35s cubic-bezier(0.36, 0, 0.66, -0.56) both;
+  animation: none;
 }
 
 .cell-reveal {

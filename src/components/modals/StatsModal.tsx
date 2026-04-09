@@ -75,6 +75,7 @@ export const StatsModal = ({
 }: Props) => {
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null)
   const [leaderboardTotal, setLeaderboardTotal] = useState<number | null>(null)
+  const [solveRate, setSolveRate] = useState<number | null>(null)
 
   useEffect(() => {
     if (!isOpen || (!isGameWon && !isGameLost)) return
@@ -92,6 +93,10 @@ export const StatsModal = ({
       if (myIdx !== -1) {
         setLeaderboardRank(myIdx + 1)
         setLeaderboardTotal(todayDaily.length)
+      }
+      if (todayDaily.length >= 3) {
+        const wins = todayDaily.filter((e) => e.won).length
+        setSolveRate(Math.round((wins / todayDaily.length) * 100))
       }
     })
   }, [isOpen])
@@ -130,6 +135,57 @@ export const StatsModal = ({
         isGameWon={isGameWon}
         numberOfGuessesMade={numberOfGuessesMade}
       />
+      {/* Personal bests card */}
+      {(() => {
+        const bestIdx = gameStats.winDistribution.findIndex((c) => c > 0)
+        const bestGuessCount = bestIdx >= 0 ? bestIdx + 1 : null
+        return (
+          <div className="mt-4 flex justify-around rounded-lg border border-gray-200 bg-gray-50 px-2 py-3 dark:border-slate-600 dark:bg-slate-800">
+            <div className="text-center">
+              <div className="text-xl font-bold text-orange-500">
+                🔥 {gameStats.currentStreak}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Current Streak
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-yellow-500">
+                🏆 {gameStats.bestStreak}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Best Streak
+              </div>
+            </div>
+            {bestGuessCount !== null && (
+              <div className="text-center">
+                <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                  🎯 {bestGuessCount}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Best Solve
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+      {/* Hard word difficulty */}
+      {solveRate !== null && (isGameWon || isGameLost) && (
+        <div
+          className={`mt-3 rounded-lg border px-3 py-2 text-center text-sm ${
+            solveRate <= 40
+              ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300'
+              : 'border-gray-200 bg-gray-50 text-gray-600 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-300'
+          }`}
+        >
+          {solveRate <= 40
+            ? `🤔 Only ${solveRate}% of players solved this today — tough one!`
+            : solveRate >= 80
+            ? `✨ ${solveRate}% of students solved this today`
+            : `📊 ${solveRate}% of students solved this today`}
+        </div>
+      )}
       {isFirstToday && (isGameWon || isGameLost) && (
         <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-yellow-400 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-800 dark:border-yellow-500 dark:bg-yellow-900/30 dark:text-yellow-300">
           🥇 You were the first to play today!

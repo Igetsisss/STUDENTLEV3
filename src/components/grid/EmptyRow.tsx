@@ -22,7 +22,7 @@ export const EmptyRow = ({ solution, bonusEnter, bonusEnterBaseDelay = 0, isClea
             bonusEnter ? bonusEnterBaseDelay + i * 60 : 0
           }
           isClearing={isClearing}
-          clearingDelay={isClearing ? clearingBaseDelay + i * 60 : 0}
+          clearingDelay={isClearing ? clearingBaseDelay : 0}
         />
       ))}
     </div>

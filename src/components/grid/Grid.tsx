@@ -4,6 +4,7 @@ import { CurrentRow } from './CurrentRow'
 import { EmptyRow } from './EmptyRow'
 
 const CELL_STAGGER_MS = 60
+const FALL_ROW_STAGGER_MS = 80 // stagger between rows for the fall animation
 
 type Props = {
   solution: string
@@ -43,9 +44,9 @@ export const Grid = ({
   return (
     <>
       {guesses.map((guess, i) => {
-        // Top row first: row 0 starts at delay 0
+      // Fall: all cells in the same row fall at once, rows stagger top-to-bottom
         const clearingBaseDelay = isClearing
-          ? i * numCols * CELL_STAGGER_MS
+          ? i * FALL_ROW_STAGGER_MS
           : undefined
 
         return (
@@ -68,7 +69,7 @@ export const Grid = ({
           bonusEnterBaseDelay={currentRowEnterBase}
           isClearing={isClearing}
           clearingBaseDelay={
-            isClearing ? totalGuessRows * numCols * CELL_STAGGER_MS : 0
+            isClearing ? totalGuessRows * FALL_ROW_STAGGER_MS : 0
           }
         />
       )}
@@ -79,7 +80,7 @@ export const Grid = ({
           ? (i + 1) * numCols * CELL_STAGGER_MS
           : 0
         const clearBase = isClearing
-          ? rowIndex * numCols * CELL_STAGGER_MS
+          ? rowIndex * FALL_ROW_STAGGER_MS
           : 0
         return (
           <EmptyRow

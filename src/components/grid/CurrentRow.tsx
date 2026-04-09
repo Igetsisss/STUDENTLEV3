@@ -24,7 +24,7 @@ export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterB
           key={i}
           value={letter}
           isClearing={isClearing}
-          clearingDelay={isClearing ? clearingBaseDelay + i * 60 : 0}
+          clearingDelay={isClearing ? clearingBaseDelay : 0}
         />
       ))}
       {emptyCells.map((_, i) => {
@@ -37,7 +37,7 @@ export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterB
               bonusEnter ? bonusEnterBaseDelay + colIndex * 60 : 0
             }
             isClearing={isClearing}
-            clearingDelay={isClearing ? clearingBaseDelay + colIndex * 60 : 0}
+            clearingDelay={isClearing ? clearingBaseDelay : 0}
           />
         )
       })}

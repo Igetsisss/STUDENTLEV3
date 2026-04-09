@@ -7,8 +7,9 @@ import {
   loadGradeFromLocalStorage,
   saveGradeToLocalStorage,
   saveGameStateToLocalStorage,
+  loadStatsFromLocalStorage,
 } from '../../lib/localStorage'
-import { fetchLeaderboard, fetchTodayInProgress, LeaderboardEntry } from '../../lib/api'
+import { fetchLeaderboard, submitHistoricalStats, LeaderboardEntry } from '../../lib/api'
 import { getSolution, getGameDate } from '../../lib/words'
 import { Cell } from '../grid/Cell'
 import { BaseModal } from './BaseModal2'
@@ -66,11 +67,9 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
     setStep('checking')
 
-    Promise.all([
-      fetchLeaderboard(),
-      fetchTodayInProgress(displayName),
-    ])
-      .then(([data, inProgressGuesses]: [LeaderboardEntry[], string[]]) => {
+    fetchLeaderboard()
+      .then((data: LeaderboardEntry[]) => {
+        const inProgressGuesses: string[] = []
         // Look for any existing entries with this exact display name
         const matches = data.filter(
           (e) => e.name.toLowerCase() === displayName.toLowerCase()
@@ -127,6 +126,17 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
+
+    // Submit any locally accumulated historical stats (games played before account creation)
+    if (!localStorage.getItem('historicalStatsSubmitted')) {
+      const stats = loadStatsFromLocalStorage()
+      const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      if (stats && stats.totalGames > 0 && gradeRaw) {
+        localStorage.setItem('historicalStatsSubmitted', 'true')
+        submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
+      }
+    }
+
     handleClose()
     window.location.reload()
   }

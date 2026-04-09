@@ -423,9 +423,10 @@ function App() {
       } catch { /* ignore — don't block submission */ }
     }
 
-    const firstName = localStorage.getItem('playerName') || 'Anonymous'
+    const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''
     const playerName = lastInitial ? `${firstName} ${lastInitial}` : firstName
+    if (!firstName) return // don't submit nameless games
     const gradeRaw = localStorage.getItem('gradeNumber') || ''
     const gradeClean = gradeRaw.replace(/"/g, '')
     const trackingData = tracker.getSubmissionData()
@@ -539,13 +540,12 @@ function App() {
     // Save current daily guesses for side-by-side
     setDailyGuesses([...guesses])
 
-    // Start the reverse domino clearing animation (bottom-right to top-left)
+    // Start the fall-off-screen clearing animation
     setIsClearing(true)
 
-    // Calculate total clearing time: all rows (MAX_CHALLENGES), each cell 60ms stagger
-    const numCols = activeSolution.length
-    const totalCells = MAX_CHALLENGES * numCols
-    const totalClearTime = totalCells * 60 + 500
+    // Each row falls 80ms after the previous; last row needs 450ms to finish falling
+    const totalRows = MAX_CHALLENGES
+    const totalClearTime = totalRows * 80 + 450 + 150 // rows * stagger + fall duration + buffer
 
     setTimeout(() => {
       setIsClearing(false)

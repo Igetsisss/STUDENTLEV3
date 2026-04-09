@@ -127,6 +127,101 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
   return stats.sort((a, b) => b.score - a.score)[0]
 }
 
+// Per-player current win streak (consecutive daily wins ending today or yesterday)
+export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number> => {
+  const dailyWins = entries.filter(
+    (e) => e.gameType === 'daily' && e.won && e.name && !String(e.date).startsWith('1970')
+  )
+
+  const byPlayer = new Map<string, Set<string>>()
+  for (const e of dailyWins) {
+    const dateStr = String(e.date).slice(0, 10)
+    if (!byPlayer.has(e.name)) byPlayer.set(e.name, new Set())
+    byPlayer.get(e.name)!.add(dateStr)
+  }
+
+  const streaks = new Map<string, number>()
+  const todayStr = new Date().toISOString().split('T')[0]
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
+  byPlayer.forEach((winDates, name) => {
+    let startStr: string
+    if (winDates.has(todayStr)) {
+      startStr = todayStr
+    } else if (winDates.has(yesterdayStr)) {
+      startStr = yesterdayStr
+    } else {
+      streaks.set(name, 0)
+      return
+    }
+
+    let streak = 0
+    const check = new Date(startStr + 'T12:00:00Z')
+    while (streak < 365) {
+      const ds = check.toISOString().split('T')[0]
+      if (winDates.has(ds)) {
+        streak++
+        check.setUTCDate(check.getUTCDate() - 1)
+      } else {
+        break
+      }
+    }
+    streaks.set(name, streak)
+  })
+
+  return streaks
+}
+
+// Submit historical games reconstructed from localStorage stats when a player
+// creates a new account for the first time. winDistribution[i] = wins in i+1 guesses.
+// gamesFailed = total losses. Submitted with placeholder date/word since we only
+// have aggregate data. The Apps Script simply appends rows — duplicates are safe
+// because the leaderboard fetches by date and historical entries use a past placeholder.
+export const submitHistoricalStats = async (
+  name: string,
+  grade: string,
+  winDistribution: number[],
+  gamesFailed: number
+): Promise<void> => {
+  const placeholder = '1970-01-01'
+  const now = new Date().toISOString()
+  const base = {
+    gameType: 'daily' as const,
+    date: placeholder,
+    word: 'XXXXX',
+    gameStartTime: now,
+    gameEndTime: now,
+    totalDurationSec: 0,
+    timeToFirstGuessSec: 0,
+    device: 'historical',
+    screenWidth: 0,
+    guesses: [],
+  }
+
+  const submissions: GameSubmission[] = []
+
+  winDistribution.forEach((count, i) => {
+    for (let j = 0; j < count; j++) {
+      submissions.push({ ...base, name, grade, won: true, guessCount: i + 1 })
+    }
+  })
+  for (let j = 0; j < gamesFailed; j++) {
+    submissions.push({ ...base, name, grade, won: false, guessCount: 6 })
+  }
+
+  // Fire-and-forget each one; failures are silent so they don't block account creation
+  for (const data of submissions) {
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+    } catch { /* ignore */ }
+  }
+}
+
 export const submitGameData = async (data: GameSubmission): Promise<void> => {
   try {
     await fetch(API_URL, {

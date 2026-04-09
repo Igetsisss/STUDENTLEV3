@@ -181,9 +181,4 @@ export const getIsLatestGame = () => {
 export const { solution, solutionGameDate, solutionIndex, tomorrow } =
   getSolution(getGameDate())
 
-var solutionn = getSolution(new Date()).solution // assuming getSolution is imported properly
-var winningWordLength = solutionn.length
 
-export function myImageList() {
-  return winningWordLength
-}
