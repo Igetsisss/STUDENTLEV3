@@ -48,6 +48,36 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
   }
 }
 
+const fetchJsonp = (url: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const callbackName = '_lb_cb_' + Date.now()
+    const script = document.createElement('script')
+
+    const cleanup = () => {
+      delete (window as any)[callbackName]
+      if (script.parentNode) script.parentNode.removeChild(script)
+    }
+
+    ;(window as any)[callbackName] = (data: any) => {
+      cleanup()
+      resolve(data)
+    }
+
+    script.src = url + '&callback=' + callbackName
+    script.onerror = () => {
+      cleanup()
+      reject(new Error('JSONP request failed'))
+    }
+
+    document.body.appendChild(script)
+
+    setTimeout(() => {
+      cleanup()
+      reject(new Error('JSONP timeout'))
+    }, 15000)
+  })
+}
+
 export const fetchLeaderboard = async (
   date?: string,
   grade?: string
@@ -58,21 +88,11 @@ export const fetchLeaderboard = async (
     if (grade) params.set('grade', grade)
 
     const url = `${API_URL}?${params.toString()}`
-    const res = await fetch(url, { redirect: 'follow' })
+    const json = await fetchJsonp(url)
 
-    if (!res.ok) {
-      console.error('Leaderboard response not ok:', res.status, res.statusText)
-      return []
-    }
-
-    const text = await res.text()
-    console.log('Leaderboard raw response:', text.substring(0, 200))
-
-    const json = JSON.parse(text)
     if (json.status === 'ok') {
       return json.data || []
     }
-    console.error('Leaderboard status not ok:', json)
     return []
   } catch (err) {
     console.error('Failed to fetch leaderboard:', err)
