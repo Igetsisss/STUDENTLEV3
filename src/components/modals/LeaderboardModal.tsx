@@ -107,7 +107,12 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                 <tr
                   key={i}
                   className={`border-b border-gray-100 dark:border-gray-700 ${
-                    entry.name === localStorage.getItem('playerName')
+                    entry.name ===
+                      (() => {
+                        const fn = localStorage.getItem('playerName') || ''
+                        const li = localStorage.getItem('playerLastInitial') || ''
+                        return li ? `${fn} ${li}` : fn
+                      })()
                       ? 'font-bold text-blue-600 dark:text-blue-400'
                       : 'text-gray-800 dark:text-gray-200'
                   }`}

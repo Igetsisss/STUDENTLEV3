@@ -205,6 +205,18 @@ function App() {
     }
   })
 
+  // Prompt existing users (have grade but no name) to enter name
+  useEffect(() => {
+    const hasGrade = grade != null && grade !== 'undefined' && grade !== 'null'
+    const hasName = !!localStorage.getItem('playerName')
+    if (hasGrade && !hasName) {
+      setTimeout(() => {
+        setIsGradeModalOpen(true)
+      }, WELCOME_GRADE_MODAL_MS)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // On page load: show info modal if first time after grade selection
   useEffect(() => {
     if (localStorage.getItem('showInfoAfterReload')) {
@@ -341,7 +353,9 @@ function App() {
     if (hasSubmittedRef.current) return
     hasSubmittedRef.current = true
 
-    const playerName = localStorage.getItem('playerName') || 'Anonymous'
+    const firstName = localStorage.getItem('playerName') || 'Anonymous'
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const playerName = lastInitial ? `${firstName} ${lastInitial}` : firstName
     const gradeRaw = localStorage.getItem('gradeNumber') || ''
     const gradeClean = gradeRaw.replace(/"/g, '')
     const trackingData = tracker.getSubmissionData()
