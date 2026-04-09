@@ -21,6 +21,7 @@ type ExistingAccount = {
   wins: number
   grade: string
   avgGuesses: number
+  todayResult: 'won' | 'lost' | null
 }
 
 type Props = {
@@ -83,12 +84,17 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
               ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
               : 0
 
+          const today = new Date().toISOString().split('T')[0]
+          const todayEntry = matches.find(
+            (e) => e.gameType === 'daily' && String(e.date).startsWith(today)
+          )
           setExistingAccount({
             displayName: matches[0].name, // use exact casing from sheet
             totalGames: matches.length,
             wins: wins.length,
             grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
             avgGuesses,
+            todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
           })
           setStep('confirm')
         } else {
@@ -127,6 +133,12 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     if (initial) localStorage.setItem('playerLastInitial', initial)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
+    }
+    // If they already played today on another device, mark this device so they can't play again
+    if (existingAccount!.todayResult !== null) {
+      const today = new Date().toISOString().split('T')[0]
+      localStorage.setItem('alreadyPlayedDate', today)
+      localStorage.setItem('alreadyPlayedResult', existingAccount!.todayResult!)
     }
     handleClose()
     window.location.reload()

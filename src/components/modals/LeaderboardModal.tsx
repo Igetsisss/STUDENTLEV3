@@ -159,14 +159,14 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         </p>
       ) : (
         <div className="max-h-64 overflow-y-auto">
-          <table className="w-full text-sm">
+          <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="border-b border-gray-300 text-left dark:border-gray-600">
-                <th className="py-1 pr-2">#</th>
-                <th className="py-1 pr-2">Name</th>
-                <th className="py-1 pr-2">Grade</th>
-                <th className="py-1 pr-2">Guesses</th>
-                <th className="py-1">Time</th>
+                <th className="w-7 py-1 pr-1">#</th>
+                <th className="py-1 pr-1">Name</th>
+                <th className="w-16 py-1 pr-1">Grade</th>
+                <th className="w-14 py-1 pr-1 text-center">Guesses</th>
+                <th className="w-12 py-1 text-right">Time</th>
               </tr>
             </thead>
             <tbody>
@@ -184,15 +184,15 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                       : 'text-gray-800 dark:text-gray-200'
                   }`}
                 >
-                  <td className="py-1 pr-2">{i + 1}</td>
-                  <td className="py-1 pr-2">{entry.name}</td>
-                  <td className="py-1 pr-2">
+                  <td className="py-1 pr-1">{i + 1}</td>
+                  <td className="truncate py-1 pr-1">{entry.name}</td>
+                  <td className="py-1 pr-1 text-xs">
                     {gradeLabels[String(entry.grade)] || entry.grade}
                   </td>
-                  <td className="py-1 pr-2">
+                  <td className="py-1 pr-1 text-center">
                     {entry.won ? entry.guessCount : 'X'}
                   </td>
-                  <td className="py-1">
+                  <td className="py-1 text-right">
                     {formatTime(entry.totalDurationSec)}
                   </td>
                 </tr>

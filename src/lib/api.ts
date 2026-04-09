@@ -101,7 +101,6 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
 
   const stats: MvpEntry[] = []
   map.forEach((games, name) => {
-    if (games.length < 3) return // require at least 3 games
     const wins = games.filter((g) => g.won)
     const winRate = wins.length / games.length
     const avgGuesses =
