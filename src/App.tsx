@@ -3,11 +3,12 @@ import './App.css'
 import { ClockIcon } from '@heroicons/react/outline'
 import { format } from 'date-fns'
 import { default as GraphemeSplitter } from 'grapheme-splitter'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Div100vh from 'react-div-100vh'
 
 import { AlertContainer } from './components/alerts/AlertContainer'
 import { Grid } from './components/grid/Grid'
+import { CompletedGrid } from './components/grid/CompletedGrid'
 import { Keyboard } from './components/keyboard/Keyboard'
 import { DatePickerModal } from './components/modals/DatePickerModal'
 import { GradeModal } from './components/modals/Grade'
@@ -40,6 +41,8 @@ import { isInAppBrowser } from './lib/browser'
 import {
   getStoredIsHighContrastMode,
   loadGameStateFromLocalStorage,
+  loadBonusGameStateFromLocalStorage,
+  saveBonusGameStateToLocalStorage,
   saveGameStateToLocalStorage,
   setStoredIsHighContrastMode,
 } from './lib/localStorage'
@@ -69,6 +72,8 @@ import {
 function App() {
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
+  const bonusSolution = getBonusSolution()
+  const hasLoadedRef = useRef(false)
 
   const prefersDarkMode = window.matchMedia(
     '(prefers-color-scheme: dark)'
@@ -78,8 +83,8 @@ function App() {
     useAlert()
   const [currentGuess, setCurrentGuess] = useState('')
   const [isGameWon, setIsGameWon] = useState(false)
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false) // change later
-  const [isGradeModalOpen, setIsGradeModalOpen] = useState(false) // change later
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
+  const [isGradeModalOpen, setIsGradeModalOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false)
   const [isMigrateStatsModalOpen, setIsMigrateStatsModalOpen] = useState(false)
@@ -102,7 +107,54 @@ function App() {
   const [activeSolution, setActiveSolution] = useState(dailySolution)
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
+
+  // Store completed daily game for side-by-side display
+  const [dailyGuesses, setDailyGuesses] = useState<string[]>([])
+  const [bonusGuesses, setBonusGuesses] = useState<string[]>([])
+  const [bothComplete, setBothComplete] = useState(false)
+
   const [guesses, setGuesses] = useState<string[]>(() => {
+    // Check if there's a bonus round in progress
+    const bonusLoaded = loadBonusGameStateFromLocalStorage()
+    if (bonusLoaded && bonusLoaded.solution === bonusSolution) {
+      // Bonus round was in progress — restore it
+      const dailyLoaded = loadGameStateFromLocalStorage(isLatestGame)
+      if (dailyLoaded) {
+        setDailyGuesses(dailyLoaded.guesses)
+      }
+
+      setIsBonusRound(true)
+      setActiveSolution(bonusSolution)
+
+      const bonusWon = bonusLoaded.guesses.includes(bonusSolution)
+      const bonusLost =
+        bonusLoaded.guesses.length === MAX_CHALLENGES && !bonusWon
+
+      if (bonusWon) {
+        setIsGameWon(true)
+        setBonusGuesses(bonusLoaded.guesses)
+        // Check if both are done for side-by-side
+        if (dailyLoaded) {
+          const dailyDone =
+            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.length === MAX_CHALLENGES
+          if (dailyDone) setBothComplete(true)
+        }
+      }
+      if (bonusLost) {
+        setIsGameLost(true)
+        setBonusGuesses(bonusLoaded.guesses)
+        if (dailyLoaded) {
+          const dailyDone =
+            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.length === MAX_CHALLENGES
+          if (dailyDone) setBothComplete(true)
+        }
+      }
+      return bonusLoaded.guesses
+    }
+
+    // Normal daily game load
     const loaded = loadGameStateFromLocalStorage(isLatestGame)
     if (loaded?.solution !== dailySolution) {
       return []
@@ -110,12 +162,11 @@ function App() {
     const gameWasWon = loaded.guesses.includes(dailySolution)
     if (gameWasWon) {
       setIsGameWon(true)
+      setDailyGuesses(loaded.guesses)
     }
     if (loaded.guesses.length === MAX_CHALLENGES && !gameWasWon) {
       setIsGameLost(true)
-      showErrorAlert(CORRECT_WORD_MESSAGE(dailySolution), {
-        persist: true,
-      })
+      setDailyGuesses(loaded.guesses)
     }
     return loaded.guesses
   })
@@ -132,8 +183,6 @@ function App() {
   const grade = localStorage.getItem(gradeStatKey)
 
   useEffect(() => {
-    // if no game state on load,
-    // show the user the how-to info modal
     if (grade == null) {
       setTimeout(() => {
         setIsGradeModalOpen(true)
@@ -141,14 +190,25 @@ function App() {
     }
   })
   useEffect(() => {
-    // if no game state on load,
-    // show the user the how-to info modal
     if (grade == 'undefined') {
       setTimeout(() => {
         setIsGradeModalOpen(true)
       }, WELCOME_GRADE_MODAL_MS)
     }
   })
+
+  // On page load: if game is already complete, show stats after 1 second
+  useEffect(() => {
+    if (hasLoadedRef.current) return
+    hasLoadedRef.current = true
+
+    const isComplete = isGameWon || isGameLost
+    if (isComplete && grade != null && grade !== 'undefined') {
+      setTimeout(() => {
+        setIsStatsModalOpen(true)
+      }, 1000)
+    }
+  }, [])
 
   useEffect(() => {
     // @ts-ignore
@@ -201,8 +261,14 @@ function App() {
     setCurrentRowClass('')
   }
 
+  // Persist game state
   useEffect(() => {
-    if (!isBonusRound) {
+    if (isBonusRound) {
+      saveBonusGameStateToLocalStorage({
+        guesses,
+        solution: bonusSolution,
+      })
+    } else {
       saveGameStateToLocalStorage(getIsLatestGame(), {
         guesses,
         solution: dailySolution,
@@ -278,8 +344,6 @@ function App() {
     }
 
     setIsRevealing(true)
-    // turn this back off after all
-    // chars have been revealed
     setTimeout(() => {
       setIsRevealing(false)
     }, REVEAL_TIME_MS * activeSolution.length)
@@ -291,15 +355,20 @@ function App() {
       guesses.length < MAX_CHALLENGES &&
       !isGameWon
     ) {
-      setGuesses([...guesses, currentGuess])
+      const newGuesses = [...guesses, currentGuess]
+      setGuesses(newGuesses)
       setCurrentGuess('')
 
       if (winningWord) {
         if (isLatestGame && !isBonusRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length))
+          setDailyGuesses(newGuesses)
         }
         if (isBonusRound) {
           setBonusPlayedToday()
+          setBonusGuesses(newGuesses)
+          // Both complete if daily was also done
+          if (dailyGuesses.length > 0) setBothComplete(true)
         }
         return setIsGameWon(true)
       }
@@ -307,9 +376,12 @@ function App() {
       if (guesses.length === MAX_CHALLENGES - 1) {
         if (isLatestGame && !isBonusRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length + 1))
+          setDailyGuesses(newGuesses)
         }
         if (isBonusRound) {
           setBonusPlayedToday()
+          setBonusGuesses(newGuesses)
+          if (dailyGuesses.length > 0) setBothComplete(true)
         }
         setIsGameLost(true)
         showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
@@ -319,6 +391,7 @@ function App() {
       }
     }
   }
+
   function jack() {
     setIsGradeModalOpen(false)
     setIsInfoModalOpen(true)
@@ -328,42 +401,45 @@ function App() {
     // Close the stats modal
     setIsStatsModalOpen(false)
 
-    // Start the reverse domino clearing animation
+    // Save current daily guesses for side-by-side
+    setDailyGuesses([...guesses])
+
+    // Start the reverse domino clearing animation (bottom-right to top-left)
     setIsClearing(true)
 
-    // Calculate total clearing time based on filled cells
+    // Calculate total clearing time: each cell 40ms stagger
     const numRows = guesses.length
     const numCols = numRows > 0 ? activeSolution.length : 0
     const totalCells = numRows * numCols
-    const totalClearTime = totalCells * 50 + 400
+    const totalClearTime = totalCells * 40 + 350
 
     setTimeout(() => {
       setIsClearing(false)
 
-      // Get the bonus solution and start the bonus round
-      const bonusSol = getBonusSolution()
-
-      // Determine enter animation based on word length difference
-      const enterType = bonusSol.length > activeSolution.length ? 'shrink' : 'grow'
-
-      setActiveSolution(bonusSol)
+      // Set up the bonus round
+      setActiveSolution(bonusSolution)
       setIsBonusRound(true)
       setGuesses([])
       setCurrentGuess('')
       setIsGameWon(false)
       setIsGameLost(false)
-      setBonusEnter(enterType)
+      setBothComplete(false)
 
-      // Show toast
-      showSuccessAlert('Bonus Round!', {
-        delayMs: 300,
-      })
-
-      // Clear the enter animation after it finishes
-      const totalEnterTime = MAX_CHALLENGES * bonusSol.length * 60 + 500
+      // Wait 500ms then start the fill animation (top-left to bottom-right)
       setTimeout(() => {
-        setBonusEnter(null)
-      }, totalEnterTime)
+        setBonusEnter('grow')
+
+        // Show toast
+        showSuccessAlert('Bonus Round!', {
+          delayMs: 100,
+        })
+
+        // Clear the enter animation after it finishes
+        const totalEnterTime = MAX_CHALLENGES * bonusSolution.length * 50 + 400
+        setTimeout(() => {
+          setBonusEnter(null)
+        }, totalEnterTime)
+      }, 500)
     }, totalClearTime)
   }
 
@@ -388,17 +464,34 @@ function App() {
         )}
 
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 sm:px-6 md:max-w-7xl lg:px-8 short:pb-2 short:pt-2">
-          <div className="flex grow flex-col justify-center pb-6 short:pb-2">
-            <Grid
-              solution={activeSolution}
-              guesses={guesses}
-              currentGuess={currentGuess}
-              isRevealing={isRevealing}
-              currentRowClassName={currentRowClass}
-              isClearing={isClearing}
-              bonusEnter={bonusEnter}
-            />
-          </div>
+          {bothComplete ? (
+            <div className="flex grow flex-col justify-center pb-6 short:pb-2">
+              <div className="flex justify-center gap-4">
+                <CompletedGrid
+                  solution={dailySolution}
+                  guesses={dailyGuesses}
+                  label="Daily"
+                />
+                <CompletedGrid
+                  solution={bonusSolution}
+                  guesses={bonusGuesses}
+                  label="Bonus"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex grow flex-col justify-center pb-6 short:pb-2">
+              <Grid
+                solution={activeSolution}
+                guesses={guesses}
+                currentGuess={currentGuess}
+                isRevealing={isRevealing}
+                currentRowClassName={currentRowClass}
+                isClearing={isClearing}
+                bonusEnter={bonusEnter}
+              />
+            </div>
+          )}
           <Keyboard
             onChar={onChar}
             onDelete={onDelete}
@@ -442,6 +535,7 @@ function App() {
               isLatestGame &&
               (isGameWon || isGameLost)
             }
+            isBonusRound={isBonusRound}
           />
           <DatePickerModal
             isOpen={isDatePickerModalOpen}

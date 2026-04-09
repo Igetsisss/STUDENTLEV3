@@ -40,6 +40,7 @@ type Props = {
   numberOfGuessesMade: number
   handleBonusRound?: () => void
   isBonusRoundAvailable?: boolean
+  isBonusRound?: boolean
 }
 
 export const StatsModal = ({
@@ -60,6 +61,7 @@ export const StatsModal = ({
   numberOfGuessesMade,
   handleBonusRound,
   isBonusRoundAvailable,
+  isBonusRound,
 }: Props) => {
   if (gameStats.totalGames <= 0) {
     return (
@@ -81,6 +83,11 @@ export const StatsModal = ({
       isOpen={isOpen}
       handleClose={handleClose}
     >
+      {isBonusRound && (
+        <p className="glisten-text mb-2 text-center text-sm font-bold text-blue-600 dark:text-blue-400">
+          Bonus Round
+        </p>
+      )}
       <StatBar gameStats={gameStats} />
       <h4 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
         {GUESS_DISTRIBUTION_TEXT}
@@ -144,10 +151,10 @@ export const StatsModal = ({
         <div className="mt-3 flex justify-center">
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             onClick={handleBonusRound}
           >
-            ✨ Bonus Round! ✨
+            Bonus Round!
           </button>
         </div>
       )}

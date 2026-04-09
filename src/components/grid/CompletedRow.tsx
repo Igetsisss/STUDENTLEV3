@@ -33,7 +33,7 @@ export const CompletedRow = ({
           isCompleted
           isClearing={isClearing}
           clearingDelay={
-            isClearing ? clearingBaseDelay + (numCols - 1 - i) * 50 : 0
+            isClearing ? clearingBaseDelay + (numCols - 1 - i) * 40 : 0
           }
         />
       ))}
