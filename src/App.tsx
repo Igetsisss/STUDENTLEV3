@@ -394,7 +394,10 @@ function App() {
 
   function jack() {
     setIsGradeModalOpen(false)
-    setIsInfoModalOpen(true)
+    if (!localStorage.getItem('hasSeenInfo')) {
+      localStorage.setItem('hasSeenInfo', 'true')
+      setIsInfoModalOpen(true)
+    }
   }
 
   const handleBonusRound = () => {
