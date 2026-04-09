@@ -1,5 +1,5 @@
 const API_URL =
-  'https://script.google.com/macros/s/AKfycbxbYPQRTcYSwX8YxAwid56_jkC6U4wBYAjZFP9jzkeXtewyw0tiW9CYtqDMgri-v29f/exec'
+  'https://script.google.com/macros/s/AKfycbz7Q2SSXWC3yuT2TdsMN10X-YwKIEIZlBTXAp_C30YEy22wcwRzOYAlmLjSP97KAzna/exec'
 
 export type GuessData = {
   word: string

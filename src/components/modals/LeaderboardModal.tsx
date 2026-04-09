@@ -33,9 +33,13 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   useEffect(() => {
     if (!isOpen) return
     setLoading(true)
-    fetchLeaderboard(today, filterGrade)
+    fetchLeaderboard('', filterGrade)
       .then((data) => {
-        setEntries(data)
+        // Filter to today client-side (sheet dates may be full ISO strings)
+        const todayEntries = data.filter(
+          (e) => e.date && String(e.date).startsWith(today)
+        )
+        setEntries(todayEntries)
       })
       .finally(() => setLoading(false))
   }, [isOpen, filterGrade])
