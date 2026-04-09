@@ -101,6 +101,7 @@ function App() {
   const [isBonusRound, setIsBonusRound] = useState(false)
   const [activeSolution, setActiveSolution] = useState(dailySolution)
   const [isClearing, setIsClearing] = useState(false)
+  const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
   const [guesses, setGuesses] = useState<string[]>(() => {
     const loaded = loadGameStateFromLocalStorage(isLatestGame)
     if (loaded?.solution !== dailySolution) {
@@ -333,12 +334,17 @@ function App() {
 
       // Get the bonus solution and start the bonus round
       const bonusSol = getBonusSolution()
+
+      // Determine enter animation based on word length difference
+      const enterType = bonusSol.length > activeSolution.length ? 'shrink' : 'grow'
+
       setActiveSolution(bonusSol)
       setIsBonusRound(true)
       setGuesses([])
       setCurrentGuess('')
       setIsGameWon(false)
       setIsGameLost(false)
+      setBonusEnter(enterType)
 
       // Mark bonus as played today
       setBonusPlayedToday()
@@ -347,6 +353,12 @@ function App() {
       showSuccessAlert('Bonus Round!', {
         delayMs: 300,
       })
+
+      // Clear the enter animation after it finishes
+      const totalEnterTime = MAX_CHALLENGES * bonusSol.length * 60 + 500
+      setTimeout(() => {
+        setBonusEnter(null)
+      }, totalEnterTime)
     }, totalClearTime)
   }
 
@@ -379,6 +391,7 @@ function App() {
               isRevealing={isRevealing}
               currentRowClassName={currentRowClass}
               isClearing={isClearing}
+              bonusEnter={bonusEnter}
             />
           </div>
           <Keyboard

@@ -12,6 +12,8 @@ type Props = {
   position?: number
   isClearing?: boolean
   clearingDelay?: number
+  bonusEnter?: 'grow' | 'shrink' | null
+  bonusEnterDelay?: number
 }
 
 export const Cell = ({
@@ -22,11 +24,15 @@ export const Cell = ({
   position = 0,
   isClearing,
   clearingDelay = 0,
+  bonusEnter,
+  bonusEnterDelay = 0,
 }: Props) => {
   const isFilled = value && !isCompleted
   const shouldReveal = isRevealing && isCompleted
   const animationDelay = isClearing
     ? `${clearingDelay}ms`
+    : bonusEnter
+    ? `${bonusEnterDelay}ms`
     : `${position * REVEAL_TIME_MS}ms`
   const isHighContrast = getStoredIsHighContrastMode()
 
@@ -49,6 +55,8 @@ export const Cell = ({
       'cell-fill-animation': isFilled,
       'cell-reveal': shouldReveal,
       'cell-clear': isClearing,
+      'cell-bonus-enter-grow': bonusEnter === 'grow',
+      'cell-bonus-enter-shrink': bonusEnter === 'shrink',
     }
   )
 

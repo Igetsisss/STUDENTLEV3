@@ -147,7 +147,7 @@ export const StatsModal = ({
             className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             onClick={handleBonusRound}
           >
-            Bonus Round!
+            ✨ Bonus Round! ✨
           </button>
         </div>
       )}

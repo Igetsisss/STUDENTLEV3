@@ -13,6 +13,7 @@ type Props = {
   isRevealing?: boolean
   currentRowClassName: string
   isClearing?: boolean
+  bonusEnter?: 'grow' | 'shrink' | null
 }
 
 export const Grid = ({
@@ -22,6 +23,7 @@ export const Grid = ({
   isRevealing,
   currentRowClassName,
   isClearing,
+  bonusEnter,
 }: Props) => {
   const empties =
     guesses.length < MAX_CHALLENGES - 1
@@ -52,10 +54,17 @@ export const Grid = ({
           guess={currentGuess}
           className={currentRowClassName}
           solution={solution}
+          bonusEnter={bonusEnter}
+          bonusEnterBaseDelay={bonusEnter ? 0 : 0}
         />
       )}
       {empties.map((_, i) => (
-        <EmptyRow key={i} solution={solution} />
+        <EmptyRow
+          key={i}
+          solution={solution}
+          bonusEnter={bonusEnter}
+          bonusEnterBaseDelay={bonusEnter ? (i + 1) * solution.length * 60 : 0}
+        />
       ))}
     </>
   )
