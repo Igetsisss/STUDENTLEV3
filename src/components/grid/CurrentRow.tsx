@@ -7,9 +7,11 @@ type Props = {
   solution: string
   bonusEnter?: 'grow' | 'shrink' | null
   bonusEnterBaseDelay?: number
+  isClearing?: boolean
+  clearingBaseDelay?: number
 }
 
-export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterBaseDelay = 0 }: Props) => {
+export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterBaseDelay = 0, isClearing, clearingBaseDelay = 0 }: Props) => {
   const splitGuess = unicodeSplit(guess)
   const numCols = solution.length
   const emptyCells = Array.from(Array(numCols - splitGuess.length))
@@ -18,7 +20,12 @@ export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterB
   return (
     <div className={classes}>
       {splitGuess.map((letter, i) => (
-        <Cell key={i} value={letter} />
+        <Cell
+          key={i}
+          value={letter}
+          isClearing={isClearing}
+          clearingDelay={isClearing ? clearingBaseDelay + i * 60 : 0}
+        />
       ))}
       {emptyCells.map((_, i) => {
         const colIndex = splitGuess.length + i
@@ -29,6 +36,8 @@ export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterB
             bonusEnterDelay={
               bonusEnter ? bonusEnterBaseDelay + colIndex * 60 : 0
             }
+            isClearing={isClearing}
+            clearingDelay={isClearing ? clearingBaseDelay + colIndex * 60 : 0}
           />
         )
       })}

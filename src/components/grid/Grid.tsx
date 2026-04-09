@@ -64,12 +64,20 @@ export const Grid = ({
           solution={solution}
           bonusEnter={bonusEnter}
           bonusEnterBaseDelay={currentRowEnterBase}
+          isClearing={isClearing}
+          clearingBaseDelay={
+            isClearing ? totalGuessRows * numCols * CELL_STAGGER_MS : 0
+          }
         />
       )}
       {empties.map((_, i) => {
         // CurrentRow is row 0, EmptyRow[0] is row 1, etc.
+        const rowIndex = totalGuessRows + 1 + i
         const enterBase = bonusEnter
           ? (i + 1) * numCols * CELL_STAGGER_MS
+          : 0
+        const clearBase = isClearing
+          ? rowIndex * numCols * CELL_STAGGER_MS
           : 0
         return (
           <EmptyRow
@@ -77,6 +85,8 @@ export const Grid = ({
             solution={solution}
             bonusEnter={bonusEnter}
             bonusEnterBaseDelay={enterBase}
+            isClearing={isClearing}
+            clearingBaseDelay={clearBase}
           />
         )
       })}

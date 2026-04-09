@@ -407,10 +407,9 @@ function App() {
     // Start the reverse domino clearing animation (bottom-right to top-left)
     setIsClearing(true)
 
-    // Calculate total clearing time: each cell 60ms stagger + 400ms animation
-    const numRows = guesses.length
-    const numCols = numRows > 0 ? activeSolution.length : 0
-    const totalCells = numRows * numCols
+    // Calculate total clearing time: all rows (MAX_CHALLENGES), each cell 60ms stagger
+    const numCols = activeSolution.length
+    const totalCells = MAX_CHALLENGES * numCols
     const totalClearTime = totalCells * 60 + 500
 
     setTimeout(() => {
