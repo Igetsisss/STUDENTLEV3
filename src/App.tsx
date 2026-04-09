@@ -107,6 +107,7 @@ function App() {
   const [activeSolution, setActiveSolution] = useState(dailySolution)
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
+  const [isGridHidden, setIsGridHidden] = useState(false)
 
   // Store completed daily game for side-by-side display
   const [dailyGuesses, setDailyGuesses] = useState<string[]>([])
@@ -428,6 +429,7 @@ function App() {
 
     setTimeout(() => {
       setIsClearing(false)
+      setIsGridHidden(true)
 
       // Set up the bonus round
       setActiveSolution(bonusSolution)
@@ -438,8 +440,9 @@ function App() {
       setIsGameLost(false)
       setBothComplete(false)
 
-      // Wait 600ms pause then start the fill animation (bottom-right to top-left)
+      // Wait 1 second with nothing visible, then start the fill animation
       setTimeout(() => {
+        setIsGridHidden(false)
         setBonusEnter('grow')
 
         // Show toast
@@ -452,7 +455,7 @@ function App() {
         setTimeout(() => {
           setBonusEnter(null)
         }, totalEnterTime)
-      }, 600)
+      }, 1000)
     }, totalClearTime)
   }
 
@@ -492,6 +495,8 @@ function App() {
                 />
               </div>
             </div>
+          ) : isGridHidden ? (
+            <div className="flex grow flex-col justify-center pb-6 short:pb-2" />
           ) : (
             <div className="flex grow flex-col justify-center pb-6 short:pb-2">
               <Grid
