@@ -185,6 +185,7 @@ export const fetchLeaderboard = async (
 
       if (today && !rowDate.startsWith(today)) continue
       if (grade && rowGrade !== grade) continue
+      if (!r[0] || !String(r[0]).trim()) continue // skip nameless entries
 
       results.push({
         name: r[0] || '',

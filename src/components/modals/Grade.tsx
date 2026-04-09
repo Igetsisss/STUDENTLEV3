@@ -24,6 +24,7 @@ type ExistingAccount = {
   grade: string
   avgGuesses: number
   todayResult: 'won' | 'lost' | null
+  todayGuessCount: number | null
   inProgressGuesses: string[]
 }
 
@@ -101,6 +102,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
             avgGuesses,
             todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
+            todayGuessCount: todayEntry ? todayEntry.guessCount : null,
             inProgressGuesses,
           })
           setStep('confirm')
@@ -143,19 +145,30 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
 
-    // Restore their game state from the other device's keystroke data.
-    // This covers all cases: in-progress (1-5 guesses), won, or lost (6 guesses).
-    // App.tsx reads this on reload and naturally treats it identically to local play.
-    if (account.inProgressGuesses.length > 0) {
-      try {
-        const todaySolution = getSolution(getGameDate()).solution
+    // Restore their game state so App.tsx treats this reload identically to local play.
+    // Priority: use actual keystroke data; fall back to constructing a minimal complete state.
+    try {
+      const todaySolution = getSolution(getGameDate()).solution
+      let guessesToSave: string[] = account.inProgressGuesses
+
+      if (guessesToSave.length === 0 && account.todayResult === 'won') {
+        // No keystroke data but we know they won — write solution as the only guess.
+        // App.tsx sees guesses.includes(solution) → isGameWon = true.
+        guessesToSave = [todaySolution]
+      } else if (guessesToSave.length === 0 && account.todayResult === 'lost') {
+        // No keystroke data but we know they lost — write 6 non-solution guesses.
+        // App.tsx sees length === MAX_CHALLENGES && !includes(solution) → isGameLost = true.
+        guessesToSave = Array(6).fill('AAAAA')
+      }
+
+      if (guessesToSave.length > 0) {
         saveGameStateToLocalStorage(true, {
-          guesses: account.inProgressGuesses,
+          guesses: guessesToSave,
           solution: todaySolution,
         })
-      } catch {
-        // If we can't resolve the solution, just skip — game starts fresh
       }
+    } catch {
+      // If we can't resolve the solution, just skip — game starts fresh
     }
 
     handleClose()
@@ -304,7 +317,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
                 : 'border-red-300 bg-red-50 text-red-800 dark:border-red-600 dark:bg-red-900/20 dark:text-red-300'
             }`}>
               {existingAccount.todayResult === 'won'
-                ? `✅ You already won today's game in ${existingAccount.inProgressGuesses.length || '?'} guess${existingAccount.inProgressGuesses.length === 1 ? '' : 'es'}!`
+                ? `✅ You already won today's game in ${existingAccount.todayGuessCount ?? '?'} guess${existingAccount.todayGuessCount === 1 ? '' : 'es'}!`
                 : '❌ You already played today — better luck tomorrow!'}
             </div>
           )}

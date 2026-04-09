@@ -46,6 +46,7 @@ type Props = {
   onOpenLeaderboard?: () => void
   bonusSolution?: string
   bonusGuesses?: string[]
+  isFirstToday?: boolean
 }
 
 export const StatsModal = ({
@@ -70,6 +71,7 @@ export const StatsModal = ({
   onOpenLeaderboard,
   bonusSolution,
   bonusGuesses,
+  isFirstToday,
 }: Props) => {
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null)
   const [leaderboardTotal, setLeaderboardTotal] = useState<number | null>(null)
@@ -128,6 +130,11 @@ export const StatsModal = ({
         isGameWon={isGameWon}
         numberOfGuessesMade={numberOfGuessesMade}
       />
+      {isFirstToday && (isGameWon || isGameLost) && (
+        <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-yellow-400 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-800 dark:border-yellow-500 dark:bg-yellow-900/30 dark:text-yellow-300">
+          🥇 You were the first to play today!
+        </div>
+      )}
       {(isGameLost || isGameWon) && (
         <div className="mt-5 columns-2 items-center items-stretch justify-center text-center dark:text-white sm:mt-6">
           <div className="inline-block w-full text-left">
