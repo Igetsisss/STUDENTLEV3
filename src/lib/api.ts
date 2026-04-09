@@ -57,11 +57,22 @@ export const fetchLeaderboard = async (
     if (date) params.set('date', date)
     if (grade) params.set('grade', grade)
 
-    const res = await fetch(`${API_URL}?${params.toString()}`)
-    const json = await res.json()
+    const url = `${API_URL}?${params.toString()}`
+    const res = await fetch(url, { redirect: 'follow' })
+
+    if (!res.ok) {
+      console.error('Leaderboard response not ok:', res.status, res.statusText)
+      return []
+    }
+
+    const text = await res.text()
+    console.log('Leaderboard raw response:', text.substring(0, 200))
+
+    const json = JSON.parse(text)
     if (json.status === 'ok') {
       return json.data || []
     }
+    console.error('Leaderboard status not ok:', json)
     return []
   } catch (err) {
     console.error('Failed to fetch leaderboard:', err)
