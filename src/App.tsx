@@ -210,9 +210,11 @@ function App() {
     const hasGrade = grade != null && grade !== 'undefined' && grade !== 'null'
     const hasName = !!localStorage.getItem('playerName')
     if (hasGrade && !hasName) {
+      // Delay past stats modal (1000ms) so name prompt always appears on top
       setTimeout(() => {
+        setIsStatsModalOpen(false)
         setIsGradeModalOpen(true)
-      }, WELCOME_GRADE_MODAL_MS)
+      }, 1200)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -580,7 +582,6 @@ function App() {
             isOpen={isInfoModalOpen}
             handleClose={() => setIsInfoModalOpen(false)}
           />
-          <GradeModal isOpen={isGradeModalOpen} handleClose={() => jack()} />
           <StatsModal
             isOpen={isStatsModalOpen}
             handleClose={() => setIsStatsModalOpen(false)}
@@ -598,6 +599,7 @@ function App() {
             }
             handleMigrateStatsButton={() => {
               setIsStatsModalOpen(false)
+
               setIsMigrateStatsModalOpen(true)
             }}
             isHardMode={isHardMode}
@@ -640,6 +642,7 @@ function App() {
             isHighContrastMode={isHighContrastMode}
             handleHighContrastMode={handleHighContrastMode}
           />
+          <GradeModal isOpen={isGradeModalOpen} handleClose={() => jack()} />
           <AlertContainer />
         </div>
       </div>
