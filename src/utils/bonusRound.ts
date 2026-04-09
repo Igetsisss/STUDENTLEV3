@@ -15,6 +15,10 @@ export const setBonusPlayedToday = (): void => {
   localStorage.setItem(BONUS_PLAYED_KEY, today)
 }
 
+export const clearBonusPlayedToday = (): void => {
+  localStorage.removeItem(BONUS_PLAYED_KEY)
+}
+
 export const getBonusSolution = (): string => {
   const gameDate = getGameDate()
   const index = getIndex(gameDate)

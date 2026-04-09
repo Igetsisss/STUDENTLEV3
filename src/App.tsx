@@ -233,20 +233,22 @@ function App() {
     if (
       unicodeLength(`${currentGuess}${value}`) <= activeSolution.length &&
       guesses.length < MAX_CHALLENGES &&
-      !isGameWon
+      !isGameWon &&
+      !isClearing
     ) {
       setCurrentGuess(`${currentGuess}${value}`)
     }
   }
 
   const onDelete = () => {
+    if (isClearing) return
     setCurrentGuess(
       new GraphemeSplitter().splitGraphemes(currentGuess).slice(0, -1).join('')
     )
   }
 
   const onEnter = () => {
-    if (isGameWon || isGameLost) {
+    if (isGameWon || isGameLost || isClearing) {
       return
     }
 
@@ -296,12 +298,18 @@ function App() {
         if (isLatestGame && !isBonusRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length))
         }
+        if (isBonusRound) {
+          setBonusPlayedToday()
+        }
         return setIsGameWon(true)
       }
 
       if (guesses.length === MAX_CHALLENGES - 1) {
         if (isLatestGame && !isBonusRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length + 1))
+        }
+        if (isBonusRound) {
+          setBonusPlayedToday()
         }
         setIsGameLost(true)
         showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
@@ -345,9 +353,6 @@ function App() {
       setIsGameWon(false)
       setIsGameLost(false)
       setBonusEnter(enterType)
-
-      // Mark bonus as played today
-      setBonusPlayedToday()
 
       // Show toast
       showSuccessAlert('Bonus Round!', {
@@ -432,7 +437,10 @@ function App() {
             numberOfGuessesMade={guesses.length}
             handleBonusRound={handleBonusRound}
             isBonusRoundAvailable={
-              !isBonusRound && !hasBonusBeenPlayedToday() && isLatestGame
+              !isBonusRound &&
+              !hasBonusBeenPlayedToday() &&
+              isLatestGame &&
+              (isGameWon || isGameLost)
             }
           />
           <DatePickerModal
