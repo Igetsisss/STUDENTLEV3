@@ -22,12 +22,77 @@ const formatTime = (sec: number): string => {
   return m > 0 ? `${m}m ${s}s` : `${s}s`
 }
 
+const MvpExplainerModal = ({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean
+  onClose: () => void
+}) => {
+  if (!isOpen) return null
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* backdrop */}
+      <div className="absolute inset-0 bg-black/50" />
+      <div
+        className="relative z-10 max-w-sm rounded-2xl border-2 border-yellow-400 bg-white px-6 py-5 shadow-2xl dark:bg-slate-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ✕
+        </button>
+        <p className="mb-1 text-center text-lg font-extrabold text-yellow-600 dark:text-yellow-400">
+          🏆 What is the MVP?
+        </p>
+        <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-yellow-500">
+          Most Valuable Player
+        </p>
+        <p className="mb-4 text-sm text-gray-700 dark:text-gray-300">
+          The <strong>MVP</strong> is the best overall Studentle player at the
+          school, based on <em>all-time</em> stats — not just today. To qualify
+          you need at least <strong>3 games</strong> played.
+        </p>
+        <div className="mb-4 rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 dark:bg-yellow-900/20">
+          <p className="mb-2 text-xs font-bold uppercase text-yellow-700 dark:text-yellow-400">
+            How the score is calculated
+          </p>
+          <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li>
+              <span className="font-semibold text-yellow-600">60 pts</span> — Win
+              rate (% of games solved)
+            </li>
+            <li>
+              <span className="font-semibold text-yellow-600">30 pts</span> —
+              Guess efficiency (fewer guesses = higher score)
+            </li>
+            <li>
+              <span className="font-semibold text-yellow-600">10 pts</span> —
+              Consistency (up to 20 games played)
+            </li>
+          </ul>
+        </div>
+        <p className="text-center text-xs italic text-gray-400 dark:text-gray-500">
+          Recalculated live from all-time data. Anyone can take the crown — keep playing!
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [mvp, setMvp] = useState<MvpEntry | null>(null)
   const [loading, setLoading] = useState(false)
   const [filterGrade, setFilterGrade] = useState<string>('')
   const [filterType, setFilterType] = useState<'daily' | 'bonus'>('daily')
+  const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -139,9 +204,18 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
 
       {mvp && (
         <div className="mt-4 rounded-xl border-2 border-yellow-400 bg-yellow-50 px-4 py-3 dark:bg-yellow-900/20">
-          <p className="mb-1 text-center text-xs font-bold uppercase tracking-widest text-yellow-600 dark:text-yellow-500">
-            🏆 All-Time MVP
+          {/* Header row: "All-Time" + clickable MVP */}
+          <p className="mb-2 text-center text-xs font-bold uppercase tracking-widest text-yellow-600 dark:text-yellow-500">
+            🏆 All-Time{' '}
+            <button
+              onClick={() => setIsMvpExplainerOpen(true)}
+              className="underline decoration-dotted underline-offset-2 hover:text-yellow-800 dark:hover:text-yellow-300"
+              title="What is MVP? Click to learn more"
+            >
+              MVP
+            </button>
           </p>
+
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-yellow-700 dark:text-yellow-400">{mvp.name}</p>
@@ -160,7 +234,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                 <p className="font-bold text-gray-800 dark:text-gray-200">
                   {mvp.avgGuesses > 0 ? mvp.avgGuesses.toFixed(1) : '-'}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">Avg</p>
+                <p className="text-gray-500 dark:text-gray-400">Avg Guesses</p>
               </div>
               <div>
                 <p className="font-bold text-gray-800 dark:text-gray-200">{mvp.totalGames}</p>
@@ -168,8 +242,23 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
               </div>
             </div>
           </div>
+
+          <p className="mt-2 text-center text-xs italic text-gray-400 dark:text-gray-500">
+            Calculated from all-time stats across every game they've played.{' '}
+            <button
+              onClick={() => setIsMvpExplainerOpen(true)}
+              className="underline decoration-dotted underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              How is this calculated?
+            </button>
+          </p>
         </div>
       )}
+
+      <MvpExplainerModal
+        isOpen={isMvpExplainerOpen}
+        onClose={() => setIsMvpExplainerOpen(false)}
+      />
     </BaseModal>
   )
 }

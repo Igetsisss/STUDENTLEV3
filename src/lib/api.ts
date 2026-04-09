@@ -8,6 +8,53 @@ export type GuessData = {
   deletes: number
 }
 
+// ─── Live Keystroke Tracking ────────────────────────────────────────────────
+
+export type KeystrokeEvent = {
+  timestamp: string
+  keyType:
+    | 'char'           // letter successfully added to current guess
+    | 'char_blocked'   // letter pressed but couldn't be added
+    | 'delete'         // backspace, removed a character
+    | 'delete_empty'   // backspace pressed when input was already empty
+    | 'delete_blocked' // backspace blocked by modal/animation
+    | 'enter_submit'   // valid guess submitted
+    | 'enter_blocked'  // enter pressed but rejected
+  keyValue: string     // the actual letter, 'BACKSPACE', or 'ENTER'
+  reason?: string      // why blocked: 'word_full'|'game_over'|'clearing'|'modal_open'|'too_short'|'invalid_word'|'hard_mode'
+  guessNum: number     // which guess row (0-based)
+  inputBefore: string  // current guess before the keypress
+  inputAfter: string   // current guess after the keypress
+}
+
+export type KeystrokeBatchPayload = {
+  action: 'keystrokes'
+  sessionId: string
+  playerName: string
+  grade: string
+  date: string
+  gameType: string
+  events: KeystrokeEvent[]
+}
+
+export const sendKeystrokeBatch = async (
+  sessionId: string,
+  meta: { playerName: string; grade: string; date: string; gameType: string },
+  events: KeystrokeEvent[]
+): Promise<void> => {
+  if (!events.length) return
+  try {
+    fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'keystrokes', sessionId, ...meta, events }),
+    })
+  } catch {
+    // fire-and-forget, never block the game
+  }
+}
+
 export type GameSubmission = {
   name: string
   grade: string

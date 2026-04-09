@@ -11,6 +11,7 @@
 // ===========================================================
 
 const SHEET_NAME = 'GameData'
+const KEYSTROKE_SHEET_NAME = 'KeystrokeLogs'
 
 function getOrCreateSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet()
@@ -27,11 +28,69 @@ function getOrCreateSheet() {
   return sheet
 }
 
+function getOrCreateKeystrokeSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(KEYSTROKE_SHEET_NAME)
+  if (!sheet) {
+    sheet = ss.insertSheet(KEYSTROKE_SHEET_NAME)
+    sheet.appendRow([
+      'receivedAt',    // when the server got the batch
+      'sessionId',     // unique per game session
+      'playerName',
+      'grade',
+      'date',
+      'gameType',
+      'eventTimestamp', // exact moment the key was pressed (client time)
+      'seq',           // order within the batch (1-based)
+      'keyType',       // char | char_blocked | delete | delete_empty | delete_blocked | enter_submit | enter_blocked
+      'keyValue',      // the actual letter, BACKSPACE, or ENTER
+      'reason',        // why it was blocked (if applicable)
+      'guessNum',      // which guess row (0-based)
+      'inputBefore',   // what was typed before the key
+      'inputAfter'     // what was typed after the key
+    ])
+  }
+  return sheet
+}
+
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents)
-    const sheet = getOrCreateSheet()
 
+    // ── Live keystroke batch ──────────────────────────────
+    if (data.action === 'keystrokes') {
+      const sheet = getOrCreateKeystrokeSheet()
+      const receivedAt = new Date().toISOString()
+      const { sessionId, playerName, grade, date, gameType, events } = data
+      const rows = (events || []).map((ev, idx) => [
+        receivedAt,
+        sessionId || '',
+        playerName || '',
+        grade || '',
+        date || '',
+        gameType || '',
+        ev.timestamp || '',
+        idx + 1,
+        ev.keyType || '',
+        ev.keyValue || '',
+        ev.reason || '',
+        ev.guessNum != null ? ev.guessNum : '',
+        ev.inputBefore || '',
+        ev.inputAfter || ''
+      ])
+      if (rows.length > 0) {
+        sheet.getRange(
+          sheet.getLastRow() + 1, 1,
+          rows.length, rows[0].length
+        ).setValues(rows)
+      }
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON)
+    }
+
+    // ── End-of-game summary ───────────────────────────────
+    const sheet = getOrCreateSheet()
     sheet.appendRow([
       new Date().toISOString(),
       data.name || '',

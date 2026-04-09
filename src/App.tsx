@@ -73,6 +73,7 @@ import {
 } from './utils/bonusRound'
 import { submitGameData, fetchLeaderboard, computeMvp } from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
+import { useKeystrokeLogger } from './hooks/useKeystrokeLogger'
 
 function App() {
   const isLatestGame = getIsLatestGame()
@@ -120,6 +121,7 @@ function App() {
   const [isGridHidden, setIsGridHidden] = useState(false)
 
   const tracker = useGameTracker()
+  const keystroke = useKeystrokeLogger()
   const hasSubmittedRef = useRef(false)
 
   // Store completed daily game for side-by-side display
@@ -284,8 +286,17 @@ function App() {
       // If no name, the name-prompt modal will open instead; stats can be opened manually
     } else if (!isComplete) {
       tracker.startGame()
+      const fn = localStorage.getItem('playerName') || ''
+      const li = localStorage.getItem('playerLastInitial') || ''
+      const gradeRaw = localStorage.getItem('gradeNumber') || ''
+      keystroke.startSession({
+        playerName: li ? `${fn} ${li}` : fn,
+        grade: gradeRaw.replace(/"/g, ''),
+        date: new Date().toISOString().split('T')[0],
+        gameType: 'daily',
+      })
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // @ts-ignore
@@ -373,24 +384,78 @@ function App() {
   }, [isGameWon, isGameLost, showSuccessAlert])
 
   const onChar = (value: string) => {
-    if (
+    const canAdd =
       unicodeLength(`${currentGuess}${value}`) <= activeSolution.length &&
       guesses.length < currentMaxChallenges &&
       !isGameWon &&
       !isClearing &&
       !isGradeModalOpen
-    ) {
-      setCurrentGuess(`${currentGuess}${value}`)
+
+    if (canAdd) {
+      const newGuess = `${currentGuess}${value}`
+      setCurrentGuess(newGuess)
       tracker.recordKeystroke()
+      keystroke.log({
+        keyType: 'char',
+        keyValue: value,
+        guessNum: guesses.length,
+        inputBefore: currentGuess,
+        inputAfter: newGuess,
+      })
+    } else {
+      const reason = isGradeModalOpen
+        ? 'modal_open'
+        : isGameWon || isGameLost
+        ? 'game_over'
+        : isClearing
+        ? 'clearing'
+        : 'word_full'
+      keystroke.log({
+        keyType: 'char_blocked',
+        keyValue: value,
+        reason,
+        guessNum: guesses.length,
+        inputBefore: currentGuess,
+        inputAfter: currentGuess,
+      })
     }
   }
 
   const onDelete = () => {
-    if (isClearing || isGradeModalOpen) return
-    setCurrentGuess(
-      new GraphemeSplitter().splitGraphemes(currentGuess).slice(0, -1).join('')
-    )
+    if (isClearing || isGradeModalOpen) {
+      keystroke.log({
+        keyType: 'delete_blocked',
+        keyValue: 'BACKSPACE',
+        reason: isGradeModalOpen ? 'modal_open' : 'clearing',
+        guessNum: guesses.length,
+        inputBefore: currentGuess,
+        inputAfter: currentGuess,
+      })
+      return
+    }
+    if (currentGuess.length === 0) {
+      keystroke.log({
+        keyType: 'delete_empty',
+        keyValue: 'BACKSPACE',
+        guessNum: guesses.length,
+        inputBefore: '',
+        inputAfter: '',
+      })
+      return
+    }
+    const newGuess = new GraphemeSplitter()
+      .splitGraphemes(currentGuess)
+      .slice(0, -1)
+      .join('')
+    setCurrentGuess(newGuess)
     tracker.recordDelete()
+    keystroke.log({
+      keyType: 'delete',
+      keyValue: 'BACKSPACE',
+      guessNum: guesses.length,
+      inputBefore: currentGuess,
+      inputAfter: newGuess,
+    })
   }
 
   const submitGame = (won: boolean, guessCount: number) => {
@@ -418,10 +483,26 @@ function App() {
 
   const onEnter = () => {
     if (isGameWon || isGameLost || isClearing || isGradeModalOpen) {
+      keystroke.log({
+        keyType: 'enter_blocked',
+        keyValue: 'ENTER',
+        reason: isGradeModalOpen ? 'modal_open' : isClearing ? 'clearing' : 'game_over',
+        guessNum: guesses.length,
+        inputBefore: currentGuess,
+        inputAfter: currentGuess,
+      })
       return
     }
 
     if (!(unicodeLength(currentGuess) === activeSolution.length)) {
+      keystroke.log({
+        keyType: 'enter_blocked',
+        keyValue: 'ENTER',
+        reason: 'too_short',
+        guessNum: guesses.length,
+        inputBefore: currentGuess,
+        inputAfter: currentGuess,
+      })
       setCurrentRowClass('jiggle')
       return showErrorAlert(NOT_ENOUGH_LETTERS_MESSAGE, {
         onClose: clearCurrentRowClass,
@@ -429,6 +510,14 @@ function App() {
     }
 
     if (!isWordInWordList(currentGuess)) {
+      keystroke.log({
+        keyType: 'enter_blocked',
+        keyValue: 'ENTER',
+        reason: 'invalid_word',
+        guessNum: guesses.length,
+        inputBefore: currentGuess,
+        inputAfter: currentGuess,
+      })
       setCurrentRowClass('jiggle')
       return showErrorAlert(WORD_NOT_FOUND_MESSAGE, {
         onClose: clearCurrentRowClass,
@@ -439,6 +528,14 @@ function App() {
     if (isHardMode) {
       const firstMissingReveal = findFirstUnusedReveal(currentGuess, guesses)
       if (firstMissingReveal) {
+        keystroke.log({
+          keyType: 'enter_blocked',
+          keyValue: 'ENTER',
+          reason: 'hard_mode',
+          guessNum: guesses.length,
+          inputBefore: currentGuess,
+          inputAfter: currentGuess,
+        })
         setCurrentRowClass('jiggle')
         return showErrorAlert(firstMissingReveal, {
           onClose: clearCurrentRowClass,
@@ -458,6 +555,13 @@ function App() {
       guesses.length < currentMaxChallenges &&
       !isGameWon
     ) {
+      keystroke.log({
+        keyType: 'enter_submit',
+        keyValue: 'ENTER',
+        guessNum: guesses.length,
+        inputBefore: currentGuess,
+        inputAfter: '',
+      })
       tracker.recordGuess(currentGuess)
       const newGuesses = [...guesses, currentGuess]
       setGuesses(newGuesses)
@@ -535,6 +639,15 @@ function App() {
       setBothComplete(false)
       tracker.reset()
       tracker.startGame()
+      const _fn = localStorage.getItem('playerName') || ''
+      const _li = localStorage.getItem('playerLastInitial') || ''
+      const _gr = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      keystroke.startSession({
+        playerName: _li ? `${_fn} ${_li}` : _fn,
+        grade: _gr,
+        date: new Date().toISOString().split('T')[0],
+        gameType: 'bonus',
+      })
       hasSubmittedRef.current = false
 
       // Wait 1 second with nothing visible, then start the fill animation
