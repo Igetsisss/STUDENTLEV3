@@ -106,50 +106,51 @@
   animation-duration: 0.35s;
 }
 
-.cell-bonus-enter-grow {
-  animation: bonusCellPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
+.cell-bonus-enter-grow,
 .cell-bonus-enter-shrink {
-  animation: bonusCellPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: bonusCellPopIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 @keyframes bonusCellPopIn {
   0% {
-    transform: scale(0);
+    transform: scale(0) rotateZ(-8deg);
     opacity: 0;
   }
-  70% {
-    transform: scale(1.1);
+  60% {
+    transform: scale(1.08) rotateZ(2deg);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.97) rotateZ(0deg);
     opacity: 1;
   }
   100% {
-    transform: scale(1);
+    transform: scale(1) rotateZ(0deg);
     opacity: 1;
   }
 }
 
 .cell-clear {
-  animation: clearCell 0.25s ease-in forwards;
+  animation: clearCell 0.4s ease-in-out forwards;
 }
 
 @keyframes clearCell {
   0% {
-    transform: scale(1);
+    transform: scale(1) rotateZ(0deg);
     opacity: 1;
   }
-  50% {
-    transform: scale(0.8);
-    opacity: 0.5;
+  40% {
+    transform: scale(0.85) rotateZ(3deg);
+    opacity: 0.7;
   }
   100% {
-    transform: scale(0);
+    transform: scale(0) rotateZ(-10deg);
     opacity: 0;
   }
 }
 
 .cell-clear > .letter-container {
-  animation: clearLetterFlip 0.25s ease-in forwards;
+  animation: clearLetterFlip 0.4s ease-in-out forwards;
 }
 
 @keyframes clearLetterFlip {

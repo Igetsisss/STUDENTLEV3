@@ -7,7 +7,8 @@ type Props = {
 }
 
 export const EmptyRow = ({ solution, bonusEnter, bonusEnterBaseDelay = 0 }: Props) => {
-  const emptyCells = Array.from(Array(solution.length))
+  const numCols = solution.length
+  const emptyCells = Array.from(Array(numCols))
 
   return (
     <div className="mb-1 flex justify-center">
@@ -15,7 +16,9 @@ export const EmptyRow = ({ solution, bonusEnter, bonusEnterBaseDelay = 0 }: Prop
         <Cell
           key={i}
           bonusEnter={bonusEnter}
-          bonusEnterDelay={bonusEnter ? bonusEnterBaseDelay + i * 60 : 0}
+          bonusEnterDelay={
+            bonusEnter ? bonusEnterBaseDelay + (numCols - 1 - i) * 60 : 0
+          }
         />
       ))}
     </div>

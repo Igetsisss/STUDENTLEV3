@@ -1,10 +1,9 @@
 import { MAX_CHALLENGES } from '../../constants/settings'
-import { unicodeSplit } from '../../lib/words'
 import { CompletedRow } from './CompletedRow'
 import { CurrentRow } from './CurrentRow'
 import { EmptyRow } from './EmptyRow'
 
-const CLEARING_STAGGER_MS = 40
+const CELL_STAGGER_MS = 60
 
 type Props = {
   solution: string
@@ -30,19 +29,28 @@ export const Grid = ({
       ? Array.from(Array(MAX_CHALLENGES - 1 - guesses.length))
       : []
 
-  // For clearing: bottom-right to top-left domino
-  // Last row clears first, and within each row right-to-left
-  const totalRows = guesses.length
-  const numCols = totalRows > 0 ? unicodeSplit(guesses[0]).length : solution.length
+  const numCols = solution.length
+
+  // Clearing: bottom-right → top-left (right-to-left per row, then up)
+  const totalGuessRows = guesses.length
+
+  // Enter: also bottom-right → top-left
+  // Total enter rows = MAX_CHALLENGES (1 CurrentRow + empties)
+  // CurrentRow is rowIndex 0 (top), EmptyRow[i] is rowIndex i+1
+  // Bottom row appears first, top row appears last
+  const totalEnterRows = MAX_CHALLENGES
+  // CurrentRow is at the top → appears last
+  const currentRowEnterBase = bonusEnter
+    ? (totalEnterRows - 1) * numCols * CELL_STAGGER_MS
+    : 0
 
   return (
     <>
       {guesses.map((guess, i) => {
-        const cols = unicodeSplit(guess).length
-        // Bottom rows start first (row index from bottom: totalRows-1-i = 0 for last row)
-        const rowFromBottom = totalRows - 1 - i
+        // Row from bottom: 0 = bottom row (appears first)
+        const rowFromBottom = totalGuessRows - 1 - i
         const clearingBaseDelay = isClearing
-          ? rowFromBottom * cols * CLEARING_STAGGER_MS
+          ? rowFromBottom * numCols * CELL_STAGGER_MS
           : undefined
 
         return (
@@ -62,17 +70,25 @@ export const Grid = ({
           className={currentRowClassName}
           solution={solution}
           bonusEnter={bonusEnter}
-          bonusEnterBaseDelay={bonusEnter ? 0 : 0}
+          bonusEnterBaseDelay={currentRowEnterBase}
         />
       )}
-      {empties.map((_, i) => (
-        <EmptyRow
-          key={i}
-          solution={solution}
-          bonusEnter={bonusEnter}
-          bonusEnterBaseDelay={bonusEnter ? (i + 1) * solution.length * 50 : 0}
-        />
-      ))}
+      {empties.map((_, i) => {
+        // EmptyRow[i] is at rowIndex i+1 from top
+        // Row from bottom = totalEnterRows - 1 - (i + 1) = totalEnterRows - 2 - i
+        const rowFromBottom = totalEnterRows - 2 - i
+        const enterBase = bonusEnter
+          ? rowFromBottom * numCols * CELL_STAGGER_MS
+          : 0
+        return (
+          <EmptyRow
+            key={i}
+            solution={solution}
+            bonusEnter={bonusEnter}
+            bonusEnterBaseDelay={enterBase}
+          />
+        )
+      })}
     </>
   )
 }

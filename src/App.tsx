@@ -407,11 +407,11 @@ function App() {
     // Start the reverse domino clearing animation (bottom-right to top-left)
     setIsClearing(true)
 
-    // Calculate total clearing time: each cell 40ms stagger
+    // Calculate total clearing time: each cell 60ms stagger + 400ms animation
     const numRows = guesses.length
     const numCols = numRows > 0 ? activeSolution.length : 0
     const totalCells = numRows * numCols
-    const totalClearTime = totalCells * 40 + 350
+    const totalClearTime = totalCells * 60 + 500
 
     setTimeout(() => {
       setIsClearing(false)
@@ -425,7 +425,7 @@ function App() {
       setIsGameLost(false)
       setBothComplete(false)
 
-      // Wait 500ms then start the fill animation (top-left to bottom-right)
+      // Wait 600ms pause then start the fill animation (bottom-right to top-left)
       setTimeout(() => {
         setBonusEnter('grow')
 
@@ -435,11 +435,11 @@ function App() {
         })
 
         // Clear the enter animation after it finishes
-        const totalEnterTime = MAX_CHALLENGES * bonusSolution.length * 50 + 400
+        const totalEnterTime = MAX_CHALLENGES * bonusSolution.length * 60 + 500
         setTimeout(() => {
           setBonusEnter(null)
         }, totalEnterTime)
-      }, 500)
+      }, 600)
     }, totalClearTime)
   }
 
