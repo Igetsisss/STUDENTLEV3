@@ -21,15 +21,13 @@ export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterB
         <Cell key={i} value={letter} />
       ))}
       {emptyCells.map((_, i) => {
-        // Right-to-left: rightmost empty cell first
         const colIndex = splitGuess.length + i
-        const colFromRight = numCols - 1 - colIndex
         return (
           <Cell
             key={i}
             bonusEnter={bonusEnter}
             bonusEnterDelay={
-              bonusEnter ? bonusEnterBaseDelay + colFromRight * 60 : 0
+              bonusEnter ? bonusEnterBaseDelay + colIndex * 60 : 0
             }
           />
         )

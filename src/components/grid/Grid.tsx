@@ -31,26 +31,19 @@ export const Grid = ({
 
   const numCols = solution.length
 
-  // Clearing: bottom-right → top-left (right-to-left per row, then up)
+  // Clearing: top-left → bottom-right (left-to-right per row, top row first)
   const totalGuessRows = guesses.length
 
-  // Enter: also bottom-right → top-left
-  // Total enter rows = MAX_CHALLENGES (1 CurrentRow + empties)
-  // CurrentRow is rowIndex 0 (top), EmptyRow[i] is rowIndex i+1
-  // Bottom row appears first, top row appears last
-  const totalEnterRows = MAX_CHALLENGES
-  // CurrentRow is at the top → appears last
-  const currentRowEnterBase = bonusEnter
-    ? (totalEnterRows - 1) * numCols * CELL_STAGGER_MS
-    : 0
+  // Enter: top-left → bottom-right
+  // CurrentRow is row 0 (top), EmptyRow[i] is row i+1
+  const currentRowEnterBase = bonusEnter ? 0 : 0
 
   return (
     <>
       {guesses.map((guess, i) => {
-        // Row from bottom: 0 = bottom row (appears first)
-        const rowFromBottom = totalGuessRows - 1 - i
+        // Top row first: row 0 starts at delay 0
         const clearingBaseDelay = isClearing
-          ? rowFromBottom * numCols * CELL_STAGGER_MS
+          ? i * numCols * CELL_STAGGER_MS
           : undefined
 
         return (
@@ -74,11 +67,9 @@ export const Grid = ({
         />
       )}
       {empties.map((_, i) => {
-        // EmptyRow[i] is at rowIndex i+1 from top
-        // Row from bottom = totalEnterRows - 1 - (i + 1) = totalEnterRows - 2 - i
-        const rowFromBottom = totalEnterRows - 2 - i
+        // CurrentRow is row 0, EmptyRow[0] is row 1, etc.
         const enterBase = bonusEnter
-          ? rowFromBottom * numCols * CELL_STAGGER_MS
+          ? (i + 1) * numCols * CELL_STAGGER_MS
           : 0
         return (
           <EmptyRow

@@ -17,7 +17,7 @@ export const EmptyRow = ({ solution, bonusEnter, bonusEnterBaseDelay = 0 }: Prop
           key={i}
           bonusEnter={bonusEnter}
           bonusEnterDelay={
-            bonusEnter ? bonusEnterBaseDelay + (numCols - 1 - i) * 60 : 0
+            bonusEnter ? bonusEnterBaseDelay + i * 60 : 0
           }
         />
       ))}
