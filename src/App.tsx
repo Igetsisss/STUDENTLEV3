@@ -197,6 +197,17 @@ function App() {
     }
   })
 
+  // On page load: show info modal if first time after grade selection
+  useEffect(() => {
+    if (localStorage.getItem('showInfoAfterReload')) {
+      localStorage.removeItem('showInfoAfterReload')
+      localStorage.setItem('hasSeenInfo', 'true')
+      setTimeout(() => {
+        setIsInfoModalOpen(true)
+      }, 500)
+    }
+  }, [])
+
   // On page load: if game is already complete, show stats after 1 second
   useEffect(() => {
     if (hasLoadedRef.current) return
