@@ -23,6 +23,7 @@ import {
   DISCOURAGE_INAPP_BROWSERS,
   LONG_ALERT_TIME_MS,
   MAX_CHALLENGES,
+  MAX_BONUS_CHALLENGES,
   REVEAL_TIME_MS,
   WELCOME_GRADE_MODAL_MS,
   WELCOME_INFO_MODAL_MS,
@@ -108,6 +109,7 @@ function App() {
 
   const [isRevealing, setIsRevealing] = useState(false)
   const [isBonusRound, setIsBonusRound] = useState(false)
+  const currentMaxChallenges = isBonusRound ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
   const [activeSolution, setActiveSolution] = useState(dailySolution)
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
@@ -338,9 +340,10 @@ function App() {
   const onChar = (value: string) => {
     if (
       unicodeLength(`${currentGuess}${value}`) <= activeSolution.length &&
-      guesses.length < MAX_CHALLENGES &&
+      guesses.length < currentMaxChallenges &&
       !isGameWon &&
-      !isClearing
+      !isClearing &&
+      !isGradeModalOpen
     ) {
       setCurrentGuess(`${currentGuess}${value}`)
       tracker.recordKeystroke()
@@ -348,7 +351,7 @@ function App() {
   }
 
   const onDelete = () => {
-    if (isClearing) return
+    if (isClearing || isGradeModalOpen) return
     setCurrentGuess(
       new GraphemeSplitter().splitGraphemes(currentGuess).slice(0, -1).join('')
     )
@@ -379,7 +382,7 @@ function App() {
   }
 
   const onEnter = () => {
-    if (isGameWon || isGameLost || isClearing) {
+    if (isGameWon || isGameLost || isClearing || isGradeModalOpen) {
       return
     }
 
@@ -417,7 +420,7 @@ function App() {
 
     if (
       unicodeLength(currentGuess) === activeSolution.length &&
-      guesses.length < MAX_CHALLENGES &&
+      guesses.length < currentMaxChallenges &&
       !isGameWon
     ) {
       tracker.recordGuess(currentGuess)
@@ -440,7 +443,7 @@ function App() {
         return setIsGameWon(true)
       }
 
-      if (guesses.length === MAX_CHALLENGES - 1) {
+      if (guesses.length === currentMaxChallenges - 1) {
         if (isLatestGame && !isBonusRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length + 1))
           setDailyGuesses(newGuesses)
@@ -567,6 +570,7 @@ function App() {
                 currentRowClassName={currentRowClass}
                 isClearing={isClearing}
                 bonusEnter={bonusEnter}
+                maxChallenges={currentMaxChallenges}
               />
             </div>
           )}
@@ -614,6 +618,12 @@ function App() {
               (isGameWon || isGameLost)
             }
             isBonusRound={isBonusRound}
+            bonusSolution={getBonusSolution()}
+            bonusGuesses={bonusGuesses}
+            onOpenLeaderboard={() => {
+              setIsStatsModalOpen(false)
+              setIsLeaderboardModalOpen(true)
+            }}
           />
           <DatePickerModal
             isOpen={isDatePickerModalOpen}

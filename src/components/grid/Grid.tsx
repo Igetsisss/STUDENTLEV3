@@ -13,6 +13,7 @@ type Props = {
   currentRowClassName: string
   isClearing?: boolean
   bonusEnter?: 'grow' | 'shrink' | null
+  maxChallenges?: number
 }
 
 export const Grid = ({
@@ -23,10 +24,11 @@ export const Grid = ({
   currentRowClassName,
   isClearing,
   bonusEnter,
+  maxChallenges = MAX_CHALLENGES,
 }: Props) => {
   const empties =
-    guesses.length < MAX_CHALLENGES - 1
-      ? Array.from(Array(MAX_CHALLENGES - 1 - guesses.length))
+    guesses.length < maxChallenges - 1
+      ? Array.from(Array(maxChallenges - 1 - guesses.length))
       : []
 
   const numCols = solution.length
@@ -57,7 +59,7 @@ export const Grid = ({
           />
         )
       })}
-      {guesses.length < MAX_CHALLENGES && (
+      {guesses.length < maxChallenges && (
         <CurrentRow
           guess={currentGuess}
           className={currentRowClassName}

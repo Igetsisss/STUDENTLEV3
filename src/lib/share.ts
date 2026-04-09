@@ -1,6 +1,6 @@
 import { UAParser } from 'ua-parser-js'
 
-import { MAX_CHALLENGES } from '../constants/settings'
+import { MAX_CHALLENGES, MAX_BONUS_CHALLENGES } from '../constants/settings'
 import { GAME_TITLE } from '../constants/strings'
 import { getGuessStatuses } from './statuses'
 import { solutionIndex, unicodeSplit } from './words'
@@ -18,17 +18,26 @@ export const shareStatus = (
   isDarkMode: boolean,
   isHighContrastMode: boolean,
   handleShareToClipboard: () => void,
-  handleShareFailure: () => void
+  handleShareFailure: () => void,
+  bonusSolution?: string,
+  bonusGuesses?: string[]
 ) => {
-  const textToShare =
+  const tiles = getEmojiTiles(isDarkMode, isHighContrastMode)
+
+  let textToShare =
     `${GAME_TITLE} ${solutionIndex} ${
       lost ? 'X' : guesses.length
     }/${MAX_CHALLENGES}${isHardMode ? '*' : ''}\n\n` +
-    generateEmojiGrid(
-      solution,
-      guesses,
-      getEmojiTiles(isDarkMode, isHighContrastMode)
-    )
+    generateEmojiGrid(solution, guesses, tiles)
+
+  if (bonusSolution && bonusGuesses && bonusGuesses.length > 0) {
+    const bonusWon = bonusGuesses[bonusGuesses.length - 1] === bonusSolution
+    textToShare +=
+      `\n\nBonus Round ${bonusWon ? bonusGuesses.length : 'X'}/${MAX_BONUS_CHALLENGES}\n` +
+      generateEmojiGrid(bonusSolution, bonusGuesses, tiles)
+  }
+
+  textToShare += '\n\nstudentle.org'
 
   const shareData = { text: textToShare }
 

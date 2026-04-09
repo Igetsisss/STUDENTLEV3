@@ -1,6 +1,7 @@
-import { ClockIcon, ShareIcon } from '@heroicons/react/outline'
+import { ClockIcon, ShareIcon, StarIcon } from '@heroicons/react/outline'
 import { format } from 'date-fns'
 import Countdown from 'react-countdown'
+import { useEffect, useState } from 'react'
 
 import {
   DATE_LOCALE,
@@ -15,6 +16,7 @@ import {
   STATISTICS_TITLE,
 } from '../../constants/strings'
 import { GameStats } from '../../lib/localStorage'
+import { fetchLeaderboard } from '../../lib/api'
 import { shareStatus } from '../../lib/share'
 import { solutionGameDate, tomorrow } from '../../lib/words'
 import { Histogram } from '../stats/Histogram'
@@ -41,6 +43,9 @@ type Props = {
   handleBonusRound?: () => void
   isBonusRoundAvailable?: boolean
   isBonusRound?: boolean
+  onOpenLeaderboard?: () => void
+  bonusSolution?: string
+  bonusGuesses?: string[]
 }
 
 export const StatsModal = ({
@@ -62,7 +67,32 @@ export const StatsModal = ({
   handleBonusRound,
   isBonusRoundAvailable,
   isBonusRound,
+  onOpenLeaderboard,
+  bonusSolution,
+  bonusGuesses,
 }: Props) => {
+  const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null)
+  const [leaderboardTotal, setLeaderboardTotal] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!isOpen || (!isGameWon && !isGameLost)) return
+    const fn = localStorage.getItem('playerName') || ''
+    const li = localStorage.getItem('playerLastInitial') || ''
+    const myName = li ? `${fn} ${li}` : fn
+    if (!myName) return
+
+    fetchLeaderboard().then((entries) => {
+      const today = new Date().toISOString().split('T')[0]
+      const todayDaily = entries.filter(
+        (e) => e.gameType === 'daily' && String(e.date).startsWith(today)
+      )
+      const myIdx = todayDaily.findIndex((e) => e.name === myName)
+      if (myIdx !== -1) {
+        setLeaderboardRank(myIdx + 1)
+        setLeaderboardTotal(todayDaily.length)
+      }
+    })
+  }, [isOpen])
   if (gameStats.totalGames <= 0) {
     return (
       <BaseModal
@@ -137,7 +167,9 @@ export const StatsModal = ({
                   isDarkMode,
                   isHighContrastMode,
                   handleShareToClipboard,
-                  handleShareFailure
+                  handleShareFailure,
+                  bonusSolution,
+                  bonusGuesses
                 )
               }}
             >
@@ -147,8 +179,26 @@ export const StatsModal = ({
           </div>
         </div>
       )}
-      {(isGameLost || isGameWon) && isBonusRoundAvailable && handleBonusRound && (
-        <div className="mt-3 flex justify-center">
+      {(isGameLost || isGameWon) && onOpenLeaderboard && (
+        <div
+          className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 hover:bg-yellow-100 dark:border-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50"
+          onClick={onOpenLeaderboard}
+        >
+          <StarIcon className="h-4 w-4 flex-shrink-0" />
+          {leaderboardRank !== null && leaderboardTotal !== null ? (
+            <span>
+              You're <strong>#{leaderboardRank}</strong> out of {leaderboardTotal} today —{' '}
+              <span className="underline">see full leaderboard</span>
+            </span>
+          ) : (
+            <span>
+              See how you compare —{' '}
+              <span className="underline">view today's leaderboard</span>
+            </span>
+          )}
+        </div>
+      )}
+      {(isGameLost || isGameWon) && isBonusRoundAvailable && handleBonusRound && (        <div className="mt-3 flex justify-center">
           <button
             type="button"
             className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
