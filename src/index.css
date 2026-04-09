@@ -131,35 +131,26 @@
 }
 
 .cell-clear {
-  animation: clearCell 0.4s ease-in-out forwards;
+  animation: cellPopOut 0.35s cubic-bezier(0.36, 0, 0.66, -0.56) both;
 }
 
-@keyframes clearCell {
+@keyframes cellPopOut {
   0% {
     transform: scale(1) rotateZ(0deg);
     opacity: 1;
   }
-  40% {
-    transform: scale(0.85) rotateZ(3deg);
-    opacity: 0.7;
+  20% {
+    transform: scale(1.05) rotateZ(2deg);
+    opacity: 1;
   }
   100% {
-    transform: scale(0) rotateZ(-10deg);
+    transform: scale(0) rotateZ(-8deg);
     opacity: 0;
   }
 }
 
 .cell-clear > .letter-container {
-  animation: clearLetterFlip 0.4s ease-in-out forwards;
-}
-
-@keyframes clearLetterFlip {
-  0% {
-    transform: scale(1);
-  }
-  100% {
-    transform: scale(0);
-  }
+  animation: cellPopOut 0.35s cubic-bezier(0.36, 0, 0.66, -0.56) both;
 }
 
 .cell-reveal {
