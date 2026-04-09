@@ -121,6 +121,7 @@ function App() {
 
   const tracker = useGameTracker()
   const hasSubmittedRef = useRef(false)
+  const alreadyCompleteOnLoadRef = useRef(false)
 
   const [isFirstToday, setIsFirstToday] = useState(() => {
     const stored = localStorage.getItem('firstToPlayDate')
@@ -281,6 +282,7 @@ function App() {
     const hasName = !!localStorage.getItem('playerName')
     if (isComplete && grade != null && grade !== 'undefined') {
       hasSubmittedRef.current = true // already done, don't re-submit
+      alreadyCompleteOnLoadRef.current = true
       if (hasName) {
         setTimeout(() => {
           setIsStatsModalOpen(true)
@@ -359,7 +361,7 @@ function App() {
   }, [guesses, isBonusRound])
 
   useEffect(() => {
-    if (isGameWon) {
+    if (isGameWon && !alreadyCompleteOnLoadRef.current) {
       const winMessage =
         WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)]
       const delayMs = REVEAL_TIME_MS * activeSolution.length
@@ -370,7 +372,7 @@ function App() {
       })
     }
 
-    if (isGameLost) {
+    if (isGameLost && !alreadyCompleteOnLoadRef.current) {
       setTimeout(() => {
         setIsStatsModalOpen(true)
       }, (activeSolution.length + 1) * REVEAL_TIME_MS)

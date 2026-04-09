@@ -4,9 +4,11 @@ import { useState } from 'react'
 
 import {
   GradeNumber,
+  GameStats,
   loadGradeFromLocalStorage,
   saveGradeToLocalStorage,
   saveGameStateToLocalStorage,
+  saveStatsToLocalStorage,
   loadStatsFromLocalStorage,
 } from '../../lib/localStorage'
 import { fetchLeaderboard, submitHistoricalStats, LeaderboardEntry } from '../../lib/api'
@@ -27,6 +29,7 @@ type ExistingAccount = {
   todayResult: 'won' | 'lost' | null
   todayGuessCount: number | null
   inProgressGuesses: string[]
+  reconstructedStats: GameStats
 }
 
 type Props = {
@@ -94,6 +97,60 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
           const todayEntry = matches.find(
             (e) => e.gameType === 'daily' && String(e.date).startsWith(today)
           )
+
+          // Reconstruct GameStats from sheet history so localStorage isn't empty on new devices
+          const dailyMatches = matches.filter(
+            (e) => e.gameType === 'daily' && !String(e.date).startsWith('1970')
+          )
+          const dailyWins = dailyMatches.filter((e) => e.won)
+          const dailyLosses = dailyMatches.filter((e) => !e.won)
+          const winDist = Array(6).fill(0)
+          dailyWins.forEach((e) => {
+            const idx = Math.min(e.guessCount - 1, 5)
+            if (idx >= 0) winDist[idx]++
+          })
+          const totalDailyGames = dailyWins.length + dailyLosses.length
+          const successRate =
+            totalDailyGames > 0
+              ? Math.round((dailyWins.length / totalDailyGames) * 100)
+              : 0
+          // Compute streaks from sorted win dates
+          const winDatesSet = new Set(
+            dailyWins.map((e) => String(e.date).slice(0, 10))
+          )
+          const winDatesSorted = Array.from(winDatesSet).sort()
+          let currentStreak = 0
+          const checkDate = new Date(today + 'T12:00:00Z')
+          while (winDatesSet.has(checkDate.toISOString().split('T')[0])) {
+            currentStreak++
+            checkDate.setUTCDate(checkDate.getUTCDate() - 1)
+          }
+          let bestStreak = 0
+          let runStreak = 0
+          for (let i = 0; i < winDatesSorted.length; i++) {
+            if (i === 0) {
+              runStreak = 1
+            } else {
+              const prev = new Date(winDatesSorted[i - 1] + 'T12:00:00Z')
+              prev.setUTCDate(prev.getUTCDate() + 1)
+              runStreak =
+                prev.toISOString().split('T')[0] === winDatesSorted[i]
+                  ? runStreak + 1
+                  : 1
+            }
+            bestStreak = Math.max(bestStreak, runStreak)
+          }
+          bestStreak = Math.max(bestStreak, currentStreak)
+
+          const reconstructedStats: GameStats = {
+            winDistribution: winDist,
+            gamesFailed: dailyLosses.length,
+            currentStreak,
+            bestStreak,
+            totalGames: totalDailyGames,
+            successRate,
+          }
+
           setExistingAccount({
             displayName: matches[0].name, // use exact casing from sheet
             totalGames: matches.length,
@@ -103,6 +160,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
             todayGuessCount: todayEntry ? todayEntry.guessCount : null,
             inProgressGuesses,
+            reconstructedStats,
           })
           setStep('confirm')
         } else {
@@ -154,6 +212,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
+
+    // Write reconstructed stats to localStorage so the stats modal shows real data
+    saveStatsToLocalStorage(account.reconstructedStats)
+    localStorage.setItem('historicalStatsSubmitted', 'true') // no need to re-backfill
 
     // Restore their game state so App.tsx treats this reload identically to local play.
     // Priority: use actual keystroke data; fall back to constructing a minimal complete state.
