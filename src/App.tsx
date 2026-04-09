@@ -13,6 +13,7 @@ import { Keyboard } from './components/keyboard/Keyboard'
 import { DatePickerModal } from './components/modals/DatePickerModal'
 import { GradeModal } from './components/modals/Grade'
 import { InfoModal } from './components/modals/InfoModal'
+import { LeaderboardModal } from './components/modals/LeaderboardModal'
 import { MigrateStatsModal } from './components/modals/MigrateStatsModal'
 import { SettingsModal } from './components/modals/SettingsModal'
 import { StatsModal } from './components/modals/StatsModal'
@@ -68,6 +69,8 @@ import {
   hasBonusBeenPlayedToday,
   setBonusPlayedToday,
 } from './utils/bonusRound'
+import { submitGameData } from './lib/api'
+import { useGameTracker } from './hooks/useGameTracker'
 
 function App() {
   const isLatestGame = getIsLatestGame()
@@ -89,6 +92,7 @@ function App() {
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false)
   const [isMigrateStatsModalOpen, setIsMigrateStatsModalOpen] = useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false)
   const [currentRowClass, setCurrentRowClass] = useState('')
   const [isGameLost, setIsGameLost] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(
@@ -108,6 +112,9 @@ function App() {
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
   const [isGridHidden, setIsGridHidden] = useState(false)
+
+  const tracker = useGameTracker()
+  const hasSubmittedRef = useRef(false)
 
   // Store completed daily game for side-by-side display
   const [dailyGuesses, setDailyGuesses] = useState<string[]>([])
@@ -216,9 +223,12 @@ function App() {
 
     const isComplete = isGameWon || isGameLost
     if (isComplete && grade != null && grade !== 'undefined') {
+      hasSubmittedRef.current = true // already done, don't re-submit
       setTimeout(() => {
         setIsStatsModalOpen(true)
       }, 1000)
+    } else if (!isComplete) {
+      tracker.startGame()
     }
   }, [])
 
@@ -315,6 +325,7 @@ function App() {
       !isClearing
     ) {
       setCurrentGuess(`${currentGuess}${value}`)
+      tracker.recordKeystroke()
     }
   }
 
@@ -323,6 +334,28 @@ function App() {
     setCurrentGuess(
       new GraphemeSplitter().splitGraphemes(currentGuess).slice(0, -1).join('')
     )
+    tracker.recordDelete()
+  }
+
+  const submitGame = (won: boolean, guessCount: number) => {
+    if (hasSubmittedRef.current) return
+    hasSubmittedRef.current = true
+
+    const playerName = localStorage.getItem('playerName') || 'Anonymous'
+    const gradeRaw = localStorage.getItem('gradeNumber') || ''
+    const gradeClean = gradeRaw.replace(/"/g, '')
+    const trackingData = tracker.getSubmissionData()
+
+    submitGameData({
+      name: playerName,
+      grade: gradeClean,
+      date: new Date().toISOString().split('T')[0],
+      word: activeSolution,
+      won,
+      guessCount,
+      gameType: isBonusRound ? 'bonus' : 'daily',
+      ...trackingData,
+    })
   }
 
   const onEnter = () => {
@@ -367,6 +400,7 @@ function App() {
       guesses.length < MAX_CHALLENGES &&
       !isGameWon
     ) {
+      tracker.recordGuess(currentGuess)
       const newGuesses = [...guesses, currentGuess]
       setGuesses(newGuesses)
       setCurrentGuess('')
@@ -382,6 +416,7 @@ function App() {
           // Both complete if daily was also done
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
+        submitGame(true, newGuesses.length)
         return setIsGameWon(true)
       }
 
@@ -395,6 +430,7 @@ function App() {
           setBonusGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
+        submitGame(false, newGuesses.length)
         setIsGameLost(true)
         showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
           persist: true,
@@ -439,6 +475,9 @@ function App() {
       setIsGameWon(false)
       setIsGameLost(false)
       setBothComplete(false)
+      tracker.reset()
+      tracker.startGame()
+      hasSubmittedRef.current = false
 
       // Wait 1 second with nothing visible, then start the fill animation
       setTimeout(() => {
@@ -468,6 +507,7 @@ function App() {
           setIsStatsModalOpen={setIsStatsModalOpen}
           setIsDatePickerModalOpen={setIsDatePickerModalOpen}
           setIsSettingsModalOpen={setIsSettingsModalOpen}
+          setIsLeaderboardModalOpen={setIsLeaderboardModalOpen}
         />
 
         {!isLatestGame && (
@@ -567,6 +607,10 @@ function App() {
           <MigrateStatsModal
             isOpen={isMigrateStatsModalOpen}
             handleClose={() => setIsMigrateStatsModalOpen(false)}
+          />
+          <LeaderboardModal
+            isOpen={isLeaderboardModalOpen}
+            handleClose={() => setIsLeaderboardModalOpen(false)}
           />
           <SettingsModal
             isOpen={isSettingsModalOpen}

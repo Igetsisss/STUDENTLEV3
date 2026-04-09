@@ -19,19 +19,21 @@ type Props = {
 
 export const GradeModal = ({ isOpen, handleClose }: Props) => {
   const [selectedGrade, setSelectedGrade] = useState<string>()
+  const [playerName, setPlayerName] = useState(
+    localStorage.getItem('playerName') || ''
+  )
 
   const handleGradeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedGrade(event.target.value)
   }
 
   const handleEnterButtonClick = () => {
-    // Do something with the selected grade, such as sending it to a server or updating the app state
-
     console.log(`Selected grade: ${selectedGrade}`)
     console.log(selectedGrade)
-    // Using JSON.stringify here wraps the string in quotes (e.g., "12" becomes '"12"') 
-    // which perfectly matches the logic in your word list file.
     localStorage.setItem(gradeStatKey, JSON.stringify(selectedGrade))
+    if (playerName.trim()) {
+      localStorage.setItem('playerName', playerName.trim())
+    }
     const grade = localStorage.getItem(gradeStatKey)
     console.log('THERE GRADE IS ' + grade)
     if (!localStorage.getItem('hasSeenInfo')) {
@@ -42,6 +44,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     console.log('reloaded')
   }
 
+  const hasExistingName = !!localStorage.getItem('playerName')
+
   return (
     <BaseModal
       title="What Grade are you in?"
@@ -49,6 +53,18 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       handleClose={handleClose}
     >
       <br></br>
+      {!hasExistingName && (
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Enter your name"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            maxLength={20}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-center text-lg focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
+          />
+        </div>
+      )}
       <form>
         <div className="select">
           <select
@@ -72,7 +88,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       </form>
       <br></br>
       <div className="enterbutton" onClick={handleEnterButtonClick}>
-        <button disabled={!selectedGrade}>Enter</button>
+        <button disabled={!selectedGrade || (!hasExistingName && !playerName.trim())}>Enter</button>
       </div>
     </BaseModal>
   )
