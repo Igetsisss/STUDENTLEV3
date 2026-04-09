@@ -341,6 +341,23 @@ function showTab(name) {
 }
 
 // ── GViz parser ───────────────────────────────────────────────────────────
+// Robust timestamp parser — handles GViz locale-formatted strings AND ISO
+function parseTs(v) {
+  if (!v) return 0
+  const s = String(v)
+  let d = new Date(s)
+  if (!isNaN(d.getTime())) return d.getTime()
+  // US locale M/D/YYYY H:MM:SS [AM|PM]
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2}):?(\d{2})?\s*(AM|PM)?/i)
+  if (m) {
+    let h = parseInt(m[4])
+    if (m[7] && m[7].toUpperCase() === 'PM' && h < 12) h += 12
+    if (m[7] && m[7].toUpperCase() === 'AM' && h === 12) h = 0
+    d = new Date(parseInt(m[3]), parseInt(m[1])-1, parseInt(m[2]), h, parseInt(m[5]), parseInt(m[6]||0))
+    if (!isNaN(d.getTime())) return d.getTime()
+  }
+  return 0
+}
 function parseGviz(txt) {
   try {
     const json = JSON.parse(txt.replace(/^[^(]+\(/,'').replace(/\);\s*$/,''))
@@ -418,16 +435,21 @@ function updateHeaderStats(tg) {
 
 // ── Live tab ──────────────────────────────────────────────────────────────
 function getLiveSessions() {
-  const cutoff = Date.now() - 10 * 60 * 1000
+  const cutoff = Date.now() - 15 * 60 * 1000  // 15-minute activity window
   const map = {}
   for (const ev of keystrokeData) {
-    const ts = new Date(ev.receivedAt).getTime()
+    const ts = parseTs(ev.receivedAt) || parseTs(ev.eventTimestamp)
     if (!ts || ts < cutoff) continue
-    if (!map[ev.sessionId]) map[ev.sessionId] = { latest: ev, events: [], firstTs: ts }
-    if (ts > new Date(map[ev.sessionId].latest.receivedAt).getTime()) map[ev.sessionId].latest = ev
-    map[ev.sessionId].events.push(ev)
+    const sid = ev.sessionId || 'unknown'
+    if (!map[sid]) map[sid] = { latest: ev, latestTs: 0, events: [], firstTs: Infinity }
+    if (ts > map[sid].latestTs) { map[sid].latestTs = ts; map[sid].latest = ev }
+    if (ts < map[sid].firstTs) map[sid].firstTs = ts
+    map[sid].events.push(ev)
   }
-  return Object.values(map).sort((a,b) => new Date(b.latest.receivedAt) - new Date(a.latest.receivedAt))
+  for (const s of Object.values(map)) {
+    if (s.firstTs === Infinity) s.firstTs = s.latestTs
+  }
+  return Object.values(map).sort((a,b) => b.latestTs - a.latestTs)
 }
 
 function updateLiveTab() {
@@ -435,7 +457,7 @@ function updateLiveTab() {
   sv('active-cnt', sessions.length > 0 ? `(${sessions.length})` : '')
   const grid = document.getElementById('sess-grid')
   if (!sessions.length) {
-    grid.innerHTML = '<div class="no-data">No activity in the last 10 minutes.</div>'
+    grid.innerHTML = '<div class="no-data" style="padding:40px 20px">🎮 No active sessions right now.<br><span style="font-size:11px;opacity:.6">Students appear here within 15 minutes of activity.</span></div>'
   } else {
     grid.innerHTML = sessions.map(buildSessionCard).join('')
   }
@@ -451,31 +473,38 @@ function buildSessionCard(s) {
   const wlen    = 5
   const max     = ev.gameType === 'bonus' ? 4 : 6
   const submits = s.events.filter(e => e.keyType === 'enter_submit').length
-  const sec     = Math.floor((Date.now() - new Date(ev.receivedAt).getTime()) / 1000)
-  const ago     = sec < 5 ? 'just now' : sec < 60 ? `${sec}s ago` : `${Math.floor(sec/60)}m ago`
-  const kpm     = (s.events.length / Math.max(1,(Date.now()-s.firstTs)/60000)).toFixed(1)
+  const secAgo  = Math.floor((Date.now() - s.latestTs) / 1000)
+  const ago     = secAgo < 5 ? 'just now' : secAgo < 60 ? `${secAgo}s ago` : `${Math.floor(secAgo/60)}m ago`
+  const durSec  = Math.max(0, Math.floor((s.latestTs - s.firstTs) / 1000))
+  const dur     = durSec < 60 ? `${durSec}s` : `${Math.floor(durSec/60)}m ${durSec % 60}s`
+  const kpm     = durSec > 5 ? (s.events.length / Math.max(1, durSec / 60)).toFixed(1) : '—'
+  const isHot   = secAgo < 30
   const boxes   = Array.from({length:wlen},(_,i) => `<div class="lb ${input[i]?'fill':''}">${escH(input[i]||'')}</div>`).join('')
   const dots    = Array.from({length:max},(_,i) => `<div class="dot ${i<submits?'done':i===submits?'cur':''}"></div>`).join('')
-  return `<div class="sc ${sec<30?'hot':''}">
+  return `<div class="sc ${isHot?'hot':''}">
     <div class="sc-head"><span class="sc-name">${name}</span><span class="sc-grade">${grade}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:10px">
+      <span style="color:var(--text3)">⏱ Playing for <strong style="color:var(--text2)">${dur}</strong></span>
+      <span style="color:${isHot?'var(--green)':'var(--text3)'}">${ago}</span>
+    </div>
     <div class="sc-boxes">${boxes}</div>
     <div class="sc-dots">${dots}</div>
-    <div class="sc-meta"><span>${ev.gameType==='bonus'?'⭐ Bonus':'📅 Daily'} · guess ${submits+1}/${max}</span><span class="ago">${ago}</span></div>
-    <div class="sc-meta" style="margin-top:4px"><span style="color:var(--text3)">${kpm} keys/min</span><span style="color:var(--text3)">${s.events.length} events</span></div>
+    <div class="sc-meta"><span>${ev.gameType==='bonus'?'⭐ Bonus':'📅 Daily'} · guess ${submits+1}/${max}</span><span style="color:var(--text3)">${kpm} keys/min</span></div>
   </div>`
 }
 
 function renderActivityFeed() {
   const feed   = document.getElementById('afeed')
   const recent = [...keystrokeData]
-    .filter(e => e.receivedAt)
-    .sort((a,b) => new Date(b.receivedAt) - new Date(a.receivedAt))
+    .map(e => ({...e, _ts: parseTs(e.receivedAt) || parseTs(e.eventTimestamp)}))
+    .filter(e => e._ts > 0)
+    .sort((a,b) => b._ts - a._ts)
     .slice(0, 50)
   if (!recent.length) { feed.innerHTML = '<div class="no-data">No keystroke activity yet.</div>'; return }
   feed.innerHTML = recent.map(ev => {
     const {icon,cls,txt} = describeEv(ev)
-    const sec = Math.floor((Date.now() - new Date(ev.receivedAt).getTime()) / 1000)
-    const ago = sec < 60 ? `${sec}s` : `${Math.floor(sec/60)}m`
+    const sec = Math.floor((Date.now() - ev._ts) / 1000)
+    const ago = sec < 5 ? 'just now' : sec < 60 ? `${sec}s` : `${Math.floor(sec/60)}m`
     return `<div class="aitem"><div class="aicon ${cls}">${icon}</div><div class="atext">${txt}</div><div class="aago">${ago}</div></div>`
   }).join('')
 }

@@ -209,3 +209,54 @@ export const fetchLeaderboard = async (
     return []
   }
 }
+
+// Reads KeystrokeLogs sheet and returns the list of words submitted today
+// for a given player's daily game, in guess order. Uses the most-recent session
+// when multiple sessions exist (e.g. they started on one device then switched).
+export const fetchTodayInProgress = async (
+  displayName: string
+): Promise<string[]> => {
+  const GVIZ_KEYS = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=KeystrokeLogs`
+  try {
+    const res = await fetch(GVIZ_KEYS)
+    const text = await res.text()
+    const rows = parseGvizResponse(text)
+    const today = new Date().toISOString().split('T')[0]
+    const name = displayName.toLowerCase()
+
+    // All today's daily events for this player
+    // Columns: [0]=receivedAt [1]=sessionId [2]=playerName [3]=grade
+    //          [4]=date [5]=gameType [6]=eventTimestamp [7]=seq
+    //          [8]=keyType [9]=keyValue [10]=reason [11]=guessNum
+    //          [12]=inputBefore [13]=inputAfter
+    const todayRows = rows.filter(
+      (r) =>
+        r[2] && r[2].toString().toLowerCase() === name &&
+        r[4] && String(r[4]).startsWith(today) &&
+        r[5] === 'daily'
+    )
+    if (!todayRows.length) return []
+
+    // Group by sessionId, pick the most-recent session
+    const bySession: Record<string, { rows: any[]; latestTs: number }> = {}
+    for (const r of todayRows) {
+      const sid = String(r[1] || 'default')
+      const ts = r[0] ? new Date(r[0]).getTime() : 0
+      if (!bySession[sid]) bySession[sid] = { rows: [], latestTs: 0 }
+      bySession[sid].rows.push(r)
+      if (ts > bySession[sid].latestTs) bySession[sid].latestTs = ts
+    }
+    const latestSession = Object.values(bySession).sort(
+      (a, b) => b.latestTs - a.latestTs
+    )[0]
+
+    // Extract enter_submit events in seq order; inputBefore = the submitted word
+    return latestSession.rows
+      .filter((r) => r[8] === 'enter_submit')
+      .sort((a, b) => (Number(a[7]) || 0) - (Number(b[7]) || 0))
+      .map((r) => String(r[12] || '').toUpperCase())
+      .filter((w) => w.length === 5)
+  } catch {
+    return []
+  }
+}

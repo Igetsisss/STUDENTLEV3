@@ -274,19 +274,6 @@ function App() {
     if (hasLoadedRef.current) return
     hasLoadedRef.current = true
 
-    // Check if they already played today via another device (set when claiming an existing account)
-    const todayStr = new Date().toISOString().split('T')[0]
-    const playedElsewhere = localStorage.getItem('alreadyPlayedDate')
-    if (playedElsewhere === todayStr && !isGameWon && !isGameLost) {
-      const result = localStorage.getItem('alreadyPlayedResult')
-      if (result === 'won') setIsGameWon(true)
-      else setIsGameLost(true)
-      hasSubmittedRef.current = true
-      const hasName = !!localStorage.getItem('playerName')
-      if (hasName) setTimeout(() => setIsStatsModalOpen(true), 1000)
-      return
-    }
-
     const isComplete = isGameWon || isGameLost
     const hasName = !!localStorage.getItem('playerName')
     if (isComplete && grade != null && grade !== 'undefined') {

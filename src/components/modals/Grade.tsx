@@ -6,8 +6,10 @@ import {
   GradeNumber,
   loadGradeFromLocalStorage,
   saveGradeToLocalStorage,
+  saveGameStateToLocalStorage,
 } from '../../lib/localStorage'
-import { fetchLeaderboard, LeaderboardEntry } from '../../lib/api'
+import { fetchLeaderboard, fetchTodayInProgress, LeaderboardEntry } from '../../lib/api'
+import { getSolution, getGameDate } from '../../lib/words'
 import { Cell } from '../grid/Cell'
 import { BaseModal } from './BaseModal2'
 
@@ -22,6 +24,7 @@ type ExistingAccount = {
   grade: string
   avgGuesses: number
   todayResult: 'won' | 'lost' | null
+  inProgressGuesses: string[]
 }
 
 type Props = {
@@ -62,8 +65,11 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
     setStep('checking')
 
-    fetchLeaderboard()
-      .then((data: LeaderboardEntry[]) => {
+    Promise.all([
+      fetchLeaderboard(),
+      fetchTodayInProgress(displayName),
+    ])
+      .then(([data, inProgressGuesses]: [LeaderboardEntry[], string[]]) => {
         // Look for any existing entries with this exact display name
         const matches = data.filter(
           (e) => e.name.toLowerCase() === displayName.toLowerCase()
@@ -95,6 +101,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
             avgGuesses,
             todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
+            inProgressGuesses,
           })
           setStep('confirm')
         } else {
@@ -124,7 +131,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
   const handleClaimAccount = () => {
     // "Yes, that's me" — use the exact name from the sheet
-    const name = existingAccount!.displayName
+    const account = existingAccount!
+    const name = account.displayName
     const parts = name.split(' ')
     const initial = parts.length > 1 ? parts[parts.length - 1] : ''
     const firstName = initial ? parts.slice(0, -1).join(' ') : name
@@ -134,12 +142,22 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
-    // If they already played today on another device, mark this device so they can't play again
-    if (existingAccount!.todayResult !== null) {
-      const today = new Date().toISOString().split('T')[0]
-      localStorage.setItem('alreadyPlayedDate', today)
-      localStorage.setItem('alreadyPlayedResult', existingAccount!.todayResult!)
+
+    // Restore their game state from the other device's keystroke data.
+    // This covers all cases: in-progress (1-5 guesses), won, or lost (6 guesses).
+    // App.tsx reads this on reload and naturally treats it identically to local play.
+    if (account.inProgressGuesses.length > 0) {
+      try {
+        const todaySolution = getSolution(getGameDate()).solution
+        saveGameStateToLocalStorage(true, {
+          guesses: account.inProgressGuesses,
+          solution: todaySolution,
+        })
+      } catch {
+        // If we can't resolve the solution, just skip — game starts fresh
+      }
     }
+
     handleClose()
     window.location.reload()
   }
@@ -272,6 +290,24 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
           <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
             We found an account with that name. Is this you?
           </p>
+
+          {existingAccount.todayResult === null && existingAccount.inProgressGuesses.length > 0 && (
+            <div className="mb-3 rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:border-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-300">
+              🔄 You're on guess {existingAccount.inProgressGuesses.length + 1} of 6 today — logging in will pick up where you left off!
+            </div>
+          )}
+
+          {existingAccount.todayResult !== null && (
+            <div className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
+              existingAccount.todayResult === 'won'
+                ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-600 dark:bg-green-900/20 dark:text-green-300'
+                : 'border-red-300 bg-red-50 text-red-800 dark:border-red-600 dark:bg-red-900/20 dark:text-red-300'
+            }`}>
+              {existingAccount.todayResult === 'won'
+                ? `✅ You already won today's game in ${existingAccount.inProgressGuesses.length || '?'} guess${existingAccount.inProgressGuesses.length === 1 ? '' : 'es'}!`
+                : '❌ You already played today — better luck tomorrow!'}
+            </div>
+          )}
 
           <div className="mb-5 rounded-xl border-2 border-blue-400 bg-blue-50 px-4 py-4 text-left dark:bg-blue-900/20">
             <p className="mb-1 text-base font-extrabold text-blue-700 dark:text-blue-300">
