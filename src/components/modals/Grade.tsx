@@ -93,8 +93,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     setPlayerName(capitalized)
     localStorage.setItem('playerName', capitalized)
     setNameError('')
-    // Teachers pick a prefix instead of an initial
-    setStep(isTeacherFlow ? 'prefix' : 'initial')
+    // Re-read grade from localStorage directly to avoid any stale closure value
+    const gradeCheck = (selectedGrade || (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')).trim()
+    const teacherRoute = gradeCheck === '0'
+    setStep(teacherRoute ? 'prefix' : 'initial')
   }
 
   const handlePrefixDone = () => {
@@ -328,7 +330,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         isChecking ? 'Just a moment...' :
         isSaving ? 'Restoring your account...' :
         step === 'grade' ? 'What Grade are you in?' :
-        step === 'name' ? 'What is your last name?' :
+        step === 'name' ? (isTeacherFlow ? 'What is your last name?' : 'What is your first name?') :
         step === 'prefix' ? 'What is your title?' :
         step === 'initial' ? 'Last name initial?' :
         'Is this you?'
