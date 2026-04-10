@@ -51,7 +51,7 @@ const SOPHOMORE = [
   'fisher', 'ronan', 'bentley', 'mackenzie', 'liam', 'garrett', 'brody', 
   'dyer', 'marshall', 'grayden', 'emily', 'sam', 'jackie', 'lila', 
   'elizabeth', 'teddy', 'violet', 'sky', 'bella', 'sloane', 'martin', 
-  'landen', 'cooper', 'cathryn-rose', 'whitney', 'ellison', 'charlie', 
+  'landen', 'cooper', 'whitney', 'ellison', 'charlie', 
   'mary brooks', 'addison', 'crosby', 'townsend', 'belle', 'alexa', 
   'merrick', 'amaya', 'jackson', 'bobby', 'maia', 'emme', 'caroline', 
   'turner', 'ava', 'mia', 'kaylee', 'logan', 'maddie', 'molly', 'shane', 

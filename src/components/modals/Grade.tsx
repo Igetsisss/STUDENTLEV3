@@ -99,33 +99,37 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
   const handlePrefixDone = () => {
     if (!selectedPrefix) return
-    // Save prefix now so the initial step can use it for the preview
+    const lastName = capitalizeName(playerName)
+    const displayName = `${selectedPrefix} ${lastName}`
+    localStorage.setItem('playerName', lastName)
     localStorage.setItem('playerPrefix', selectedPrefix)
-    setStep('initial')
+    localStorage.removeItem('playerLastInitial')
+    if (!localStorage.getItem('hasSeenInfo')) {
+      localStorage.setItem('showInfoAfterReload', 'true')
+    }
+    if (!localStorage.getItem('historicalStatsSubmitted')) {
+      const stats = loadStatsFromLocalStorage()
+      const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      if (stats && stats.totalGames > 0 && gradeRaw) {
+        localStorage.setItem('historicalStatsSubmitted', 'true')
+        submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
+      }
+    }
+    localStorage.setItem('pendingAccountCheck', displayName)
+    handleClose()
+    window.location.reload()
   }
 
   const handleInitialDone = () => {
-    const prefix = localStorage.getItem('playerPrefix') || ''
-    let displayName: string
-    if (isTeacherFlow && prefix) {
-      // Teacher: "Mr. Smith J"
-      const lastName = capitalizeName(playerName)
-      displayName = lastInitial.trim()
-        ? `${prefix} ${lastName} ${lastInitial.trim().toUpperCase()}`
-        : `${prefix} ${lastName}`
-      localStorage.setItem('playerName', lastName)
-      if (lastInitial.trim()) localStorage.setItem('playerLastInitial', lastInitial.trim().toUpperCase())
-    } else {
-      // Student: "Jack S"
-      displayName = lastInitial.trim()
-        ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
-        : capitalizeName(playerName)
-      const parts = displayName.split(' ')
-      const initial = parts.length > 1 ? parts[parts.length - 1] : ''
-      const name = initial ? parts.slice(0, -1).join(' ') : displayName
-      localStorage.setItem('playerName', name)
-      if (initial) localStorage.setItem('playerLastInitial', initial)
-    }
+    // Student only: "Jack S"
+    const displayName = lastInitial.trim()
+      ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
+      : capitalizeName(playerName)
+    const parts = displayName.split(' ')
+    const initial = parts.length > 1 ? parts[parts.length - 1] : ''
+    const name = initial ? parts.slice(0, -1).join(' ') : displayName
+    localStorage.setItem('playerName', name)
+    if (initial) localStorage.setItem('playerLastInitial', initial)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
@@ -326,7 +330,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         step === 'grade' ? 'What Grade are you in?' :
         step === 'name' ? 'What is your last name?' :
         step === 'prefix' ? 'What is your title?' :
-        step === 'initial' ? (isTeacherFlow ? 'First name initial?' : 'Last name initial?') :
+        step === 'initial' ? 'Last name initial?' :
         'Is this you?'
       }
       isOpen={isOpen || forceOpen}
@@ -363,7 +367,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
                 <option value="10">Sophomore (10th Grade)</option>
                 <option value="11">Junior (11th Grade)</option>
                 <option value="12">Senior (12th Grade)</option>
-                <option value="0">Teachers</option>
+                <option value="0">Teacher</option>
               </select>
             </div>
           </form>
@@ -420,9 +424,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             />
           </div>
           <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-            {isTeacherFlow
-              ? `Your first initial (e.g. "J") tells apart teachers with the same last name. You'll show as "${selectedPrefix || localStorage.getItem('playerPrefix') || 'Mr.'} ${capitalizeName(playerName)} ${lastInitial.toUpperCase() || 'J'}" on the leaderboard.`
-              : 'Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.'}
+            Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.
           </p>
           <div className="enterbutton" onClick={handleInitialDone}>
             <button>Done</button>
@@ -432,25 +434,25 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
       {!isChecking && !isSaving && step === 'prefix' && (
         <>
-          <p className="mb-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-            You'll appear on the leaderboard as <strong>{selectedPrefix || 'Mr.'} {capitalizeName(playerName)} J</strong>
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 mb-5">
-            {['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Coach', 'Prof.'].map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setSelectedPrefix(p)}
-                className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition-colors ${
-                  selectedPrefix === p
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-indigo-400 dark:border-gray-600 dark:bg-slate-800 dark:text-gray-200'
-                }`}
+          <form>
+            <div className="select">
+              <select
+                value={selectedPrefix}
+                onChange={(e) => setSelectedPrefix(e.target.value)}
+                defaultValue=""
               >
-                {p}
-              </button>
-            ))}
-          </div>
+                <option hidden disabled value="">Choose Your Title</option>
+                <option value="Mr.">Mr.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Ms.">Ms.</option>
+                <option value="Miss">Miss</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Coach">Coach</option>
+                <option value="Prof.">Prof.</option>
+              </select>
+            </div>
+          </form>
+          <br />
           <div className="enterbutton" onClick={handlePrefixDone}>
             <button disabled={!selectedPrefix}>Done</button>
           </div>
