@@ -287,10 +287,30 @@ export const StatsModal = ({
         </div>
       )}
       {/* ── TEACHER FLOW ─────────────────────────────────────────────── */}
+      {/* ── TEACHER FLOW ─────────────────────────────────────────────── */}
+      {(isGameLost || isGameWon) && isLatestGame && isTeacherPlayer && (
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          {/* Teacher bonus — available right after daily, exclusive to teachers */}
+          {isBonusRoundAvailable && handleBonusRound ? (
+            <button
+              type="button"
+              className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-5 py-2.5 text-center text-sm font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              onClick={handleBonusRound}
+            >
+              🎉 Teacher Bonus!
+            </button>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-600 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+              ✓ Bonus Done
+            </div>
+          )}
+        </div>
+      )}
+      {/* Teacher grade picker — available right after daily */}
       {(isGameLost || isGameWon) && isLatestGame && isTeacherPlayer && handleGradeRound && (
         <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
           <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
-            🎓 Play a Grade!
+            🎓 Try a Grade!
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {(['9', '10', '11', '12'] as string[]).map((g) => {
@@ -320,24 +340,6 @@ export const StatsModal = ({
               )
             })}
           </div>
-        </div>
-      )}
-      {/* Teacher: Bonus unlocks after all 4 grade rounds */}
-      {(isGameLost || isGameWon) && isLatestGame && isTeacherPlayer && (
-        <div className="mt-3 flex justify-center">
-          {isBonusRoundAvailable && handleBonusRound ? (
-            <button
-              type="button"
-              className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-5 py-2.5 text-center text-sm font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              onClick={handleBonusRound}
-            >
-              🎉 Bonus Round Unlocked!
-            </button>
-          ) : allRoundsComplete ? (
-            <div className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-600 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-              ✓ Bonus Done
-            </div>
-          ) : null}
         </div>
       )}
 

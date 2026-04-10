@@ -139,7 +139,12 @@ function App() {
     )
   })
   const currentMaxChallenges = isBonusRound ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
-  const [activeSolution, setActiveSolution] = useState(dailySolution)
+  // Teachers' daily IS the teacher-names word (same as students' Teachers Round)
+  const effectiveDailySolution = (() => {
+    const g = localStorage.getItem('gradeNumber')
+    return g === '"0"' ? teachersSolution : dailySolution
+  })()
+  const [activeSolution, setActiveSolution] = useState(effectiveDailySolution)
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
   const [isGridHidden, setIsGridHidden] = useState(false)
@@ -181,8 +186,9 @@ function App() {
         setIsGameWon(true)
         setTeachersGuesses(teachersLoaded.guesses)
         if (dailyLoaded) {
+          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
           const dailyDone =
-            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.includes(effectiveSol) ||
             dailyLoaded.guesses.length === MAX_CHALLENGES
           if (dailyDone) setBothComplete(true)
         }
@@ -191,8 +197,9 @@ function App() {
         setIsGameLost(true)
         setTeachersGuesses(teachersLoaded.guesses)
         if (dailyLoaded) {
+          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
           const dailyDone =
-            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.includes(effectiveSol) ||
             dailyLoaded.guesses.length === MAX_CHALLENGES
           if (dailyDone) setBothComplete(true)
         }
@@ -221,8 +228,9 @@ function App() {
         setBonusGuesses(bonusLoaded.guesses)
         // Check if both are done for side-by-side
         if (dailyLoaded) {
+          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
           const dailyDone =
-            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.includes(effectiveSol) ||
             dailyLoaded.guesses.length === MAX_CHALLENGES
           if (dailyDone) setBothComplete(true)
         }
@@ -231,8 +239,9 @@ function App() {
         setIsGameLost(true)
         setBonusGuesses(bonusLoaded.guesses)
         if (dailyLoaded) {
+          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
           const dailyDone =
-            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.includes(effectiveSol) ||
             dailyLoaded.guesses.length === MAX_CHALLENGES
           if (dailyDone) setBothComplete(true)
         }
@@ -240,12 +249,13 @@ function App() {
       return bonusLoaded.guesses
     }
 
-    // Normal daily game load
+    // Normal daily game load (use teacher solution for teacher players)
+    const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
     const loaded = loadGameStateFromLocalStorage(isLatestGame)
-    if (loaded?.solution !== dailySolution) {
+    if (loaded?.solution !== effectiveSol) {
       return []
     }
-    const gameWasWon = loaded.guesses.includes(dailySolution)
+    const gameWasWon = loaded.guesses.includes(effectiveSol)
     if (gameWasWon) {
       setIsGameWon(true)
       setDailyGuesses(loaded.guesses)
@@ -350,17 +360,19 @@ function App() {
       const bLost = bLoaded.guesses.length >= MAX_BONUS_CHALLENGES && !bWon
       if (bWon || bLost) setBonusGuesses(bLoaded.guesses)
     }
-    // Load teachers guesses if teachers was finished today
-    const tLoaded = loadTeachersGameStateFromLocalStorage()
-    if (tLoaded && tLoaded.solution === teachersSolution) {
-      const tWon = tLoaded.guesses.includes(teachersSolution)
-      const tLost = tLoaded.guesses.length >= MAX_CHALLENGES && !tWon
-      if (tWon || tLost) setTeachersGuesses(tLoaded.guesses)
+    // Load teachers guesses if teachers was finished today (students only — teachers play daily as their teacher-word game)
+    if (!isTeacherPlayer) {
+      const tLoaded = loadTeachersGameStateFromLocalStorage()
+      if (tLoaded && tLoaded.solution === teachersSolution) {
+        const tWon = tLoaded.guesses.includes(teachersSolution)
+        const tLost = tLoaded.guesses.length >= MAX_CHALLENGES && !tWon
+        if (tWon || tLost) setTeachersGuesses(tLoaded.guesses)
+      }
     }
     // Load daily guesses if daily was finished today
     const dLoaded = loadGameStateFromLocalStorage(isLatestGame)
-    if (dLoaded && dLoaded.solution === dailySolution) {
-      const dWon = dLoaded.guesses.includes(dailySolution)
+    if (dLoaded && dLoaded.solution === effectiveDailySolution) {
+      const dWon = dLoaded.guesses.includes(effectiveDailySolution)
       const dLost = dLoaded.guesses.length >= MAX_CHALLENGES && !dWon
       if (dWon || dLost) setDailyGuesses(dLoaded.guesses)
     }
@@ -480,7 +492,7 @@ function App() {
     } else {
       saveGameStateToLocalStorage(getIsLatestGame(), {
         guesses,
-        solution: dailySolution,
+        solution: effectiveDailySolution,
       })
     }
   }, [guesses, isBonusRound, isTeachersRound, isGradeRound, gradeRoundGrade])
@@ -856,7 +868,7 @@ function App() {
             <div className="flex grow flex-col justify-center pb-6 short:pb-2">
               <div className="flex flex-wrap justify-center gap-4">
                 <CompletedGrid
-                  solution={dailySolution}
+                  solution={effectiveDailySolution}
                   guesses={dailyGuesses}
                   label="Daily"
                 />
@@ -933,18 +945,10 @@ function App() {
             numberOfGuessesMade={guesses.length}
             handleBonusRound={handleBonusRound}
             isBonusRoundAvailable={
-              isTeacherPlayer
-                ? // Teachers: bonus unlocks only after all 4 grade rounds are done
-                  !isBonusRound &&
-                  !hasBonusBeenPlayedToday() &&
-                  isLatestGame &&
-                  (isGameWon || isGameLost) &&
-                  ['9', '10', '11', '12'].every((g) => gradeRoundsPlayed.includes(g))
-                : // Students: bonus available right after daily
-                  !isBonusRound &&
-                  !hasBonusBeenPlayedToday() &&
-                  isLatestGame &&
-                  (isGameWon || isGameLost)
+              !isBonusRound &&
+              !hasBonusBeenPlayedToday() &&
+              isLatestGame &&
+              (isGameWon || isGameLost)
             }
             isBonusRound={isBonusRound}
             bonusSolution={getBonusSolution()}
@@ -964,10 +968,10 @@ function App() {
             isTeacherPlayer={isTeacherPlayer}
             allRoundsComplete={
               isTeacherPlayer
-                ? // Teachers: "all rounds" means all 4 student grades played
+                ? // Teachers: "all rounds" means bonus has been played
                   isLatestGame &&
                   (isGameWon || isGameLost || dailyGuesses.length > 0) &&
-                  ['9', '10', '11', '12'].every((g) => gradeRoundsPlayed.includes(g))
+                  hasBonusBeenPlayedToday()
                 : // Students: bonus + teachers both done
                   isLatestGame &&
                   (isGameWon || isGameLost || dailyGuesses.length > 0) &&
