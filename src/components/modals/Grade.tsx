@@ -18,6 +18,19 @@ import { BaseModal } from './BaseModal2'
 
 const gradeStatKey = 'gradeNumber'
 
+const BLOCKED_WORDS = [
+  'nigger', 'nigga', 'n1gger', 'n1gga', 'faggot', 'fag', 'chink', 'spic',
+  'kike', 'wetback', 'beaner', 'gook', 'cunt', 'retard', 'tranny',
+]
+
+const containsProfanity = (text: string): boolean => {
+  const normalized = text.toLowerCase().replace(/[^a-z]/g, '')
+  return BLOCKED_WORDS.some((w) => normalized.includes(w))
+}
+
+const capitalizeName = (name: string): string =>
+  name.trim().replace(/\b\w/g, (c) => c.toUpperCase())
+
 type Step = 'grade' | 'name' | 'initial' | 'checking' | 'confirm'
 
 type ExistingAccount = {
@@ -50,6 +63,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   const [playerName, setPlayerName] = useState('')
   const [lastInitial, setLastInitial] = useState('')
   const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null)
+  const [nameError, setNameError] = useState('')
 
   const handleGradeNext = () => {
     if (!selectedGrade) return
@@ -59,14 +73,21 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
   const handleNameNext = () => {
     if (!playerName.trim()) return
-    localStorage.setItem('playerName', playerName.trim())
+    if (containsProfanity(playerName)) {
+      setNameError('That name is not allowed. Please use your real name.')
+      return
+    }
+    const capitalized = capitalizeName(playerName)
+    setPlayerName(capitalized)
+    localStorage.setItem('playerName', capitalized)
+    setNameError('')
     setStep('initial')
   }
 
   const handleInitialDone = () => {
     const displayName = lastInitial.trim()
-      ? `${playerName.trim()} ${lastInitial.trim().toUpperCase()}`
-      : playerName.trim()
+      ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
+      : capitalizeName(playerName)
 
     setStep('checking')
 
@@ -309,11 +330,21 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
               type="text"
               placeholder="First name"
               value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
+              onChange={(e) => {
+                setPlayerName(e.target.value)
+                if (nameError) setNameError('')
+              }}
               maxLength={20}
               autoFocus
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-center text-lg focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
+              className={`w-full rounded-md border px-3 py-2 text-center text-lg focus:outline-none focus:ring-1 dark:bg-slate-800 dark:text-white ${
+                nameError
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600'
+              }`}
             />
+            {nameError && (
+              <p className="mt-2 text-center text-sm text-red-500">{nameError}</p>
+            )}
           </div>
           <br />
           <div className="enterbutton" onClick={handleNameNext}>

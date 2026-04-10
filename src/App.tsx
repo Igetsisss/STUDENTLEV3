@@ -416,7 +416,8 @@ function App() {
     // Check Google Sheets: if no one has played today yet, this player is first
     if (!isBonusRound) {
       try {
-        const today = new Date().toISOString().split('T')[0]
+        const _d = solutionGameDate
+        const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
         const existing = await fetchLeaderboard(today)
         if (existing.filter((e) => e.gameType === 'daily').length === 0) {
           setIsFirstToday(true)
@@ -432,11 +433,13 @@ function App() {
     const gradeRaw = localStorage.getItem('gradeNumber') || ''
     const gradeClean = gradeRaw.replace(/"/g, '')
     const trackingData = tracker.getSubmissionData()
+    const d = solutionGameDate
+    const puzzleDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
     submitGameData({
       name: playerName,
       grade: gradeClean,
-      date: new Date().toISOString().split('T')[0],
+      date: puzzleDateStr,
       word: activeSolution,
       won,
       guessCount,

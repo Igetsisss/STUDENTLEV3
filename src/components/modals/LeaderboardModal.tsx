@@ -95,7 +95,8 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const [filterType, setFilterType] = useState<'daily' | 'bonus'>('daily')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
-  const today = new Date().toISOString().split('T')[0]
+  const _ld = new Date()
+  const today = `${_ld.getFullYear()}-${String(_ld.getMonth() + 1).padStart(2, '0')}-${String(_ld.getDate()).padStart(2, '0')}`
 
   useEffect(() => {
     if (!isOpen) return
