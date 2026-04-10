@@ -32,7 +32,6 @@ import {
   CORRECT_WORD_MESSAGE,
   DISCOURAGE_INAPP_BROWSER_TEXT,
   GAME_COPIED_MESSAGE,
-  HARD_MODE_ALERT_MESSAGE,
   NOT_ENOUGH_LETTERS_MESSAGE,
   SHARE_FAILURE_TEXT,
   WIN_MESSAGES,
@@ -59,7 +58,6 @@ import {
 } from './lib/localStorage'
 import { addStatsForCompletedGame, loadStats } from './lib/stats'
 import {
-  findFirstUnusedReveal,
   getGameDate,
   getIsLatestGame,
   isWinningWord,
@@ -274,12 +272,6 @@ function App() {
 
   const [stats, setStats] = useState(() => loadStats())
 
-  const [isHardMode, setIsHardMode] = useState(
-    localStorage.getItem('gameMode')
-      ? localStorage.getItem('gameMode') === 'hard'
-      : false
-  )
-
   const gradeStatKey = 'gradeNumber'
   const grade = localStorage.getItem(gradeStatKey)
   // grade is stored as JSON string e.g. '"0"' for teachers, '"9"' for Freshman, etc.
@@ -459,15 +451,6 @@ function App() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light')
   }
 
-  const handleHardMode = (isHard: boolean) => {
-    if (guesses.length === 0 || localStorage.getItem('gameMode') === 'hard') {
-      setIsHardMode(isHard)
-      localStorage.setItem('gameMode', isHard ? 'hard' : 'normal')
-    } else {
-      showErrorAlert(HARD_MODE_ALERT_MESSAGE)
-    }
-  }
-
   const handleHighContrastMode = (isHighContrast: boolean) => {
     setIsHighContrastMode(isHighContrast)
     setStoredIsHighContrastMode(isHighContrast)
@@ -609,16 +592,7 @@ function App() {
       })
     }
 
-    // enforce hard mode - all guesses must contain all previously revealed letters
-    if (isHardMode) {
-      const firstMissingReveal = findFirstUnusedReveal(currentGuess, guesses)
-      if (firstMissingReveal) {
-        setCurrentRowClass('jiggle')
-        return showErrorAlert(firstMissingReveal, {
-          onClose: clearCurrentRowClass,
-        })
-      }
-    }
+    // enforce hard mode check removed — hard mode no longer supported
 
     setIsRevealing(true)
     setTimeout(() => {
@@ -944,7 +918,6 @@ function App() {
                 durationMs: LONG_ALERT_TIME_MS,
               })
             }
-            isHardMode={isHardMode}
             isDarkMode={isDarkMode}
             isHighContrastMode={isHighContrastMode}
             numberOfGuessesMade={guesses.length}
@@ -1007,8 +980,6 @@ function App() {
           <SettingsModal
             isOpen={isSettingsModalOpen}
             handleClose={() => setIsSettingsModalOpen(false)}
-            isHardMode={isHardMode}
-            handleHardMode={handleHardMode}
             isDarkMode={isDarkMode}
             handleDarkMode={handleDarkMode}
             isHighContrastMode={isHighContrastMode}

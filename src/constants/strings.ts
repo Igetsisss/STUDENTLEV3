@@ -4,6 +4,7 @@ export const WIN_MESSAGES = ['Great Job!', 'Awesome', 'Well done!']
 export const GAME_COPIED_MESSAGE = 'Game copied to clipboard'
 export const NOT_ENOUGH_LETTERS_MESSAGE = 'Not enough letters'
 export const WORD_NOT_FOUND_MESSAGE = 'Student not found'
+export const TEACHER_NOT_FOUND_MESSAGE = 'Teacher not found'
 export const HARD_MODE_ALERT_MESSAGE =
   'Hard Mode can be enabled only at the start!'
 export const HARD_MODE_DESCRIPTION =
@@ -13,6 +14,8 @@ export const RESETGRADE =
   'WARNING: When changing this your Local Storage will be cleared meaning ALL Statistics will be lost'
 export const CORRECT_WORD_MESSAGE = (solution: string) =>
   `The student was ${solution}`
+export const CORRECT_TEACHER_MESSAGE = (solution: string) =>
+  `The teacher was ${solution}`
 export const WRONG_SPOT_MESSAGE = (guess: string, position: number) =>
   `Must use ${guess} in position ${position}`
 export const NOT_CONTAINED_MESSAGE = (letter: string) =>

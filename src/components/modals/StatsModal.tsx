@@ -33,7 +33,6 @@ type Props = {
   isGameWon: boolean
   handleShareToClipboard: () => void
   handleShareFailure: () => void
-  isHardMode: boolean
   isDarkMode: boolean
   isHighContrastMode: boolean
   numberOfGuessesMade: number
@@ -66,7 +65,6 @@ export const StatsModal = ({
   isGameWon,
   handleShareToClipboard,
   handleShareFailure,
-  isHardMode,
   isDarkMode,
   isHighContrastMode,
   numberOfGuessesMade,
@@ -251,7 +249,6 @@ export const StatsModal = ({
                   solution,
                   guesses,
                   isGameLost,
-                  isHardMode,
                   isDarkMode,
                   isHighContrastMode,
                   handleShareToClipboard,
@@ -309,37 +306,54 @@ export const StatsModal = ({
       {/* Teacher grade picker — available right after daily */}
       {(isGameLost || isGameWon) && isLatestGame && isTeacherPlayer && handleGradeRound && (
         <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
-          <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
-            🎓 Try a Grade!
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {(['9', '10', '11', '12'] as string[]).map((g) => {
-              const labels: Record<string, string> = {
-                '9': 'Freshman',
-                '10': 'Sophomore',
-                '11': 'Junior',
-                '12': 'Senior',
-              }
-              const done = gradeRoundsPlayed.includes(g)
-              return done ? (
-                <div
-                  key={g}
-                  className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                >
-                  {labels[g]} ✓
-                </div>
-              ) : (
-                <button
-                  key={g}
-                  type="button"
-                  className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                  onClick={() => handleGradeRound(g)}
-                >
-                  {labels[g]}
-                </button>
-              )
-            })}
-          </div>
+          {gradeRoundsPlayed.length >= 4 ? (
+            <div
+              className="rounded-lg px-4 py-3 text-center"
+              style={{
+                background: 'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
+                boxShadow: '0 0 12px 1px #f107a366',
+              }}
+            >
+              <p className="text-sm font-extrabold text-white">
+                🏆 You played every grade today! 🏆
+              </p>
+              <p className="mt-1 text-xs text-white/80">Come back tomorrow for more!</p>
+            </div>
+          ) : (
+            <>
+              <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
+                🎓 Try a Grade!
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {(['9', '10', '11', '12'] as string[]).map((g) => {
+                  const labels: Record<string, string> = {
+                    '9': 'Freshman',
+                    '10': 'Sophomore',
+                    '11': 'Junior',
+                    '12': 'Senior',
+                  }
+                  const done = gradeRoundsPlayed.includes(g)
+                  return done ? (
+                    <div
+                      key={g}
+                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    >
+                      {labels[g]} ✓
+                    </div>
+                  ) : (
+                    <button
+                      key={g}
+                      type="button"
+                      className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                      onClick={() => handleGradeRound(g)}
+                    >
+                      {labels[g]}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -379,37 +393,54 @@ export const StatsModal = ({
       {/* Student grade picker — unlocked after daily + bonus + teachers all done */}
       {!isTeacherPlayer && allRoundsComplete && handleGradeRound && (
         <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
-          <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
-            ⭐ Pick Any Grade to Play!
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {(['9', '10', '11', '12'] as string[]).map((g) => {
-              const labels: Record<string, string> = {
-                '9': 'Freshman',
-                '10': 'Sophomore',
-                '11': 'Junior',
-                '12': 'Senior',
-              }
-              const done = gradeRoundsPlayed.includes(g)
-              return done ? (
-                <div
-                  key={g}
-                  className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                >
-                  {labels[g]} ✓
-                </div>
-              ) : (
-                <button
-                  key={g}
-                  type="button"
-                  className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                  onClick={() => handleGradeRound(g)}
-                >
-                  {labels[g]}
-                </button>
-              )
-            })}
-          </div>
+          {gradeRoundsPlayed.length >= 4 ? (
+            <div
+              className="rounded-lg px-4 py-3 text-center"
+              style={{
+                background: 'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
+                boxShadow: '0 0 12px 1px #f107a366',
+              }}
+            >
+              <p className="text-sm font-extrabold text-white">
+                🏆 You played every grade today! 🏆
+              </p>
+              <p className="mt-1 text-xs text-white/80">Full house — come back tomorrow!</p>
+            </div>
+          ) : (
+            <>
+              <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
+                ⭐ Pick Any Grade to Play!
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {(['9', '10', '11', '12'] as string[]).map((g) => {
+                  const labels: Record<string, string> = {
+                    '9': 'Freshman',
+                    '10': 'Sophomore',
+                    '11': 'Junior',
+                    '12': 'Senior',
+                  }
+                  const done = gradeRoundsPlayed.includes(g)
+                  return done ? (
+                    <div
+                      key={g}
+                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    >
+                      {labels[g]} ✓
+                    </div>
+                  ) : (
+                    <button
+                      key={g}
+                      type="button"
+                      className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                      onClick={() => handleGradeRound(g)}
+                    >
+                      {labels[g]}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
     </BaseModal>

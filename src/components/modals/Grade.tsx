@@ -73,6 +73,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null)
   const [nameError, setNameError] = useState('')
   const [forceOpen, setForceOpen] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleGradeNext = () => {
     if (!selectedGrade) return
@@ -130,12 +132,18 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     const pending = localStorage.getItem('pendingAccountCheck')
     if (!pending) return
 
+    // Open modal immediately with a loading spinner so it doesn't feel broken
+    setForceOpen(true)
+    setIsChecking(true)
+
     fetchLeaderboard().then((data: LeaderboardEntry[]) => {
       const matches = data.filter(
         (e) => e.name.toLowerCase() === pending.toLowerCase()
       )
       if (matches.length === 0) {
         localStorage.removeItem('pendingAccountCheck')
+        setIsChecking(false)
+        setForceOpen(false)
         return
       }
       // Build a quick stats summary for the confirmation screen
@@ -204,15 +212,19 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         todayBonusPlayed: !!todayBonusEntry,
         todayTeachersPlayed: !!todayTeachersEntry,
       })
+      setIsChecking(false)
       setStep('confirm')
-      setForceOpen(true)
+      // forceOpen stays true — now shows the confirm screen
     }).catch(() => {
       localStorage.removeItem('pendingAccountCheck')
+      setIsChecking(false)
+      setForceOpen(false)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleClaimAccount = () => {
+    setIsSaving(true)
     // "Yes, that's me" — use the exact name from the sheet
     const account = existingAccount!
     const name = account.displayName
@@ -262,6 +274,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     if (account.todayBonusPlayed) setBonusPlayedToday()
     if (account.todayTeachersPlayed) setTeachersPlayedToday()
 
+    // reload immediately after synchronous writes; isSaving shows briefly
     handleClose()
     window.location.reload()
   }
@@ -278,20 +291,29 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   return (
     <BaseModal
       title={
-        step === 'grade'
-          ? 'What Grade are you in?'
-          : step === 'name'
-          ? (isTeacherFlow ? 'What is your last name?' : 'What is your first name?')
-          : step === 'initial'
-          ? (isTeacherFlow ? 'First name initial?' : 'Last name initial?')
-          : 'Is this you?'
+        isChecking ? 'Just a moment...' :
+        isSaving ? 'Restoring your account...' :
+        step === 'grade' ? 'What Grade are you in?' :
+        step === 'name' ? (isTeacherFlow ? 'What is your last name?' : 'What is your first name?') :
+        step === 'initial' ? (isTeacherFlow ? 'First name initial?' : 'Last name initial?') :
+        'Is this you?'
       }
       isOpen={isOpen || forceOpen}
-      handleClose={step === 'confirm' ? () => {} : handleClose}
+      handleClose={step === 'confirm' || isChecking || isSaving ? () => {} : handleClose}
     >
       <br />
 
-      {step === 'grade' && (
+      {(isChecking || isSaving) && (
+        <div className="flex flex-col items-center justify-center py-8 gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            {isSaving ? 'Restoring your account...' : 'Looking up your account...'}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">This only takes a second</p>
+        </div>
+      )}
+
+      {!isChecking && !isSaving && step === 'grade' && (
         <>
           <form>
             <div className="select">
@@ -321,7 +343,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {step === 'name' && (
+      {!isChecking && !isSaving && step === 'name' && (
         <>
           <div className="mb-4">
             <input
@@ -351,7 +373,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {step === 'initial' && (
+      {!isChecking && !isSaving && step === 'initial' && (
         <>
           <div className="mb-4">
             <input
@@ -377,7 +399,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {step === 'confirm' && existingAccount && (
+      {!isChecking && !isSaving && step === 'confirm' && existingAccount && (
         <>
           <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
             We found an account with that name. Is this you?
