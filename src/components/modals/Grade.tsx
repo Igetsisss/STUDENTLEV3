@@ -134,6 +134,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       const wins = matches.filter((e) => e.won)
       const gradeNum = matches[0].grade
       const gradeLabel: Record<string, string> = {
+        '0': 'Teachers',
         '9': 'Freshman (9th)',
         '10': 'Sophomore (10th)',
         '11': 'Junior (11th)',

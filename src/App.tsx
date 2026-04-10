@@ -807,8 +807,6 @@ function App() {
             handleTeachersRound={handleTeachersRound}
             isTeachersRoundAvailable={
               !isTeachersRound &&
-              !isBonusRound &&
-              !hasTeachersBeenPlayedToday() &&
               isLatestGame &&
               (isGameWon || isGameLost)
             }

@@ -9,6 +9,7 @@ type Props = {
 }
 
 const gradeLabels: Record<string, string> = {
+  '0': 'Teachers',
   '9': 'Freshman',
   '10': 'Sophomore',
   '11': 'Junior',
