@@ -25,9 +25,9 @@ export const getGradeRoundSolution = (grade: string): string => {
   if (!words || words.length === 0) return ''
   const gameDate = getGameDate()
   const index = getIndex(gameDate)
-  // Offset each grade so they don't all share the same word on the same day
-  const offsets: Record<string, number> = { '9': 0, '10': 17, '11': 31, '12': 47, '0': 59 }
-  const offset = offsets[grade] ?? 0
+  // Each grade round shows that grade's actual daily word (offset 0)
+  // Teachers grade round matches getTeachersSolution() offset
+  const offset = grade === '0' ? Math.floor(TEACHER_WORDS.length / 2) : 0
   return localeAwareUpperCase(words[(index + offset) % words.length])
 }
 
