@@ -321,8 +321,10 @@ function App() {
   useEffect(() => {
     const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    const displayName = prefix ? `${prefix} ${firstName}` : lastInitial ? `${firstName} ${lastInitial}` : firstName
     if (!firstName) return // no name yet, skip
-    const displayName = lastInitial ? `${firstName} ${lastInitial}` : firstName
+    const myName = displayName
 
     fetchLeaderboard()
       .then((data) => {
@@ -553,7 +555,8 @@ function App() {
 
     const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''
-    const playerName = lastInitial ? `${firstName} ${lastInitial}` : firstName
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    const playerName = prefix ? `${prefix} ${firstName}` : lastInitial ? `${firstName} ${lastInitial}` : firstName
     if (!firstName) return // don't submit nameless games
     const gradeRaw = localStorage.getItem('gradeNumber') || ''
     const gradeClean = gradeRaw.replace(/"/g, '')

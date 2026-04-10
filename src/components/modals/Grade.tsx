@@ -33,7 +33,7 @@ const containsProfanity = (text: string): boolean => {
 const capitalizeName = (name: string): string =>
   name.trim().replace(/\b\w/g, (c) => c.toUpperCase())
 
-type Step = 'grade' | 'name' | 'initial' | 'checking' | 'confirm'
+type Step = 'grade' | 'name' | 'initial' | 'prefix' | 'checking' | 'confirm'
 
 type ExistingAccount = {
   displayName: string
@@ -66,6 +66,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   const [selectedGrade, setSelectedGrade] = useState<string>('')
   const [playerName, setPlayerName] = useState('')
   const [lastInitial, setLastInitial] = useState('')
+  const [selectedPrefix, setSelectedPrefix] = useState('')
 
   // Derive whether the current player is a teacher at each step
   const currentGrade = selectedGrade || (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')
@@ -92,7 +93,32 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     setPlayerName(capitalized)
     localStorage.setItem('playerName', capitalized)
     setNameError('')
-    setStep('initial')
+    // Teachers pick a prefix instead of an initial
+    setStep(isTeacherFlow ? 'prefix' : 'initial')
+  }
+
+  const handlePrefixDone = () => {
+    if (!selectedPrefix) return
+    const lastName = capitalizeName(playerName)
+    // Display name for teachers: "Mr. Smith"
+    const displayName = `${selectedPrefix} ${lastName}`
+    localStorage.setItem('playerName', lastName)
+    localStorage.setItem('playerPrefix', selectedPrefix)
+    localStorage.removeItem('playerLastInitial') // not used for teachers
+    if (!localStorage.getItem('hasSeenInfo')) {
+      localStorage.setItem('showInfoAfterReload', 'true')
+    }
+    if (!localStorage.getItem('historicalStatsSubmitted')) {
+      const stats = loadStatsFromLocalStorage()
+      const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      if (stats && stats.totalGames > 0 && gradeRaw) {
+        localStorage.setItem('historicalStatsSubmitted', 'true')
+        submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
+      }
+    }
+    localStorage.setItem('pendingAccountCheck', displayName)
+    handleClose()
+    window.location.reload()
   }
 
   const handleInitialDone = () => {
@@ -229,11 +255,22 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     const account = existingAccount!
     const name = account.displayName
     const parts = name.split(' ')
-    const initial = parts.length > 1 ? parts[parts.length - 1] : ''
-    const firstName = initial ? parts.slice(0, -1).join(' ') : name
-
-    localStorage.setItem('playerName', firstName)
-    if (initial) localStorage.setItem('playerLastInitial', initial)
+    // Detect teacher prefix: first part ends with "." or is a known prefix
+    const PREFIXES = ['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Coach', 'Prof.']
+    const isTeacher = PREFIXES.includes(parts[0])
+    if (isTeacher) {
+      const prefix = parts[0]
+      const lastName = parts.slice(1).join(' ')
+      localStorage.setItem('playerName', lastName)
+      localStorage.setItem('playerPrefix', prefix)
+      localStorage.removeItem('playerLastInitial')
+    } else {
+      const initial = parts.length > 1 ? parts[parts.length - 1] : ''
+      const firstName = initial ? parts.slice(0, -1).join(' ') : name
+      localStorage.setItem('playerName', firstName)
+      if (initial) localStorage.setItem('playerLastInitial', initial)
+      localStorage.removeItem('playerPrefix')
+    }
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
@@ -294,8 +331,9 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         isChecking ? 'Just a moment...' :
         isSaving ? 'Restoring your account...' :
         step === 'grade' ? 'What Grade are you in?' :
-        step === 'name' ? (isTeacherFlow ? 'What is your last name?' : 'What is your first name?') :
-        step === 'initial' ? (isTeacherFlow ? 'First name initial?' : 'Last name initial?') :
+        step === 'name' ? 'What is your last name?' :
+        step === 'prefix' ? 'What is your title?' :
+        step === 'initial' ? 'Last name initial?' :
         'Is this you?'
       }
       isOpen={isOpen || forceOpen}
@@ -389,12 +427,37 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             />
           </div>
           <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-            {isTeacherFlow
-              ? 'Your first initial helps tell apart teachers with the same last name on the leaderboard (e.g. “Smith J”). We only store your last name + initial.'
-              : 'Your last initial helps tell apart players with the same first name on the leaderboard (e.g. “Jack S”). We never store your full last name.'}
+            Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.
           </p>
           <div className="enterbutton" onClick={handleInitialDone}>
             <button>Done</button>
+          </div>
+        </>
+      )}
+
+      {!isChecking && !isSaving && step === 'prefix' && (
+        <>
+          <p className="mb-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+            You'll appear on the leaderboard as <strong>{selectedPrefix || 'Mr.'} {capitalizeName(playerName)}</strong>
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 mb-5">
+            {['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Coach', 'Prof.'].map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setSelectedPrefix(p)}
+                className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition-colors ${
+                  selectedPrefix === p
+                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-indigo-400 dark:border-gray-600 dark:bg-slate-800 dark:text-gray-200'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <div className="enterbutton" onClick={handlePrefixDone}>
+            <button disabled={!selectedPrefix}>Done</button>
           </div>
         </>
       )}

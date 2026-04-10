@@ -170,7 +170,8 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const myName = (() => {
     const fn = localStorage.getItem('playerName') || ''
     const li = localStorage.getItem('playerLastInitial') || ''
-    return li ? `${fn} ${li}` : fn
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    return prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
   })()
 
   return (

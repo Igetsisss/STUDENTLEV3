@@ -93,7 +93,8 @@ export const StatsModal = ({
     if (!isOpen || (!isGameWon && !isGameLost)) return
     const fn = localStorage.getItem('playerName') || ''
     const li = localStorage.getItem('playerLastInitial') || ''
-    const myName = li ? `${fn} ${li}` : fn
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    const myName = prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
     if (!myName) return
 
     fetchLeaderboard().then((entries) => {
