@@ -15,7 +15,6 @@ import { GradeModal } from './components/modals/Grade'
 import { InfoModal } from './components/modals/InfoModal'
 import { LeaderboardModal } from './components/modals/LeaderboardModal'
 import { MvpModal } from './components/modals/MvpModal'
-import { MigrateStatsModal } from './components/modals/MigrateStatsModal'
 import { SettingsModal } from './components/modals/SettingsModal'
 import { StatsModal } from './components/modals/StatsModal'
 import { Navbar } from './components/navbar/Navbar'
@@ -92,7 +91,6 @@ function App() {
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false)
-  const [isMigrateStatsModalOpen, setIsMigrateStatsModalOpen] = useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false)
   const [isMvpModalOpen, setIsMvpModalOpen] = useState(false)
@@ -668,11 +666,6 @@ function App() {
                 durationMs: LONG_ALERT_TIME_MS,
               })
             }
-            handleMigrateStatsButton={() => {
-              setIsStatsModalOpen(false)
-
-              setIsMigrateStatsModalOpen(true)
-            }}
             isHardMode={isHardMode}
             isDarkMode={isDarkMode}
             isHighContrastMode={isHighContrastMode}
@@ -701,10 +694,6 @@ function App() {
               setGameDate(d)
             }}
             handleClose={() => setIsDatePickerModalOpen(false)}
-          />
-          <MigrateStatsModal
-            isOpen={isMigrateStatsModalOpen}
-            handleClose={() => setIsMigrateStatsModalOpen(false)}
           />
           <LeaderboardModal
             isOpen={isLeaderboardModalOpen}

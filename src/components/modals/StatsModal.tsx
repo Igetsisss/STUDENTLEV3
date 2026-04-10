@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react'
 import {
   DATE_LOCALE,
   ENABLE_ARCHIVED_GAMES,
-  ENABLE_MIGRATE_STATS,
 } from '../../constants/settings'
 import {
   ARCHIVE_GAMEDATE_TEXT,
@@ -20,7 +19,6 @@ import { fetchLeaderboard } from '../../lib/api'
 import { shareStatus } from '../../lib/share'
 import { solutionGameDate, tomorrow } from '../../lib/words'
 import { Histogram } from '../stats/Histogram'
-import { MigrationIntro } from '../stats/MigrationIntro'
 import { StatBar } from '../stats/StatBar'
 import { BaseModal } from './BaseModal'
 
@@ -35,7 +33,6 @@ type Props = {
   isGameWon: boolean
   handleShareToClipboard: () => void
   handleShareFailure: () => void
-  handleMigrateStatsButton: () => void
   isHardMode: boolean
   isDarkMode: boolean
   isHighContrastMode: boolean
@@ -60,7 +57,6 @@ export const StatsModal = ({
   isGameWon,
   handleShareToClipboard,
   handleShareFailure,
-  handleMigrateStatsButton,
   isHardMode,
   isDarkMode,
   isHighContrastMode,
@@ -108,9 +104,6 @@ export const StatsModal = ({
         handleClose={handleClose}
       >
         <StatBar gameStats={gameStats} />
-        {ENABLE_MIGRATE_STATS && (
-          <MigrationIntro handleMigrateStatsButton={handleMigrateStatsButton} />
-        )}
       </BaseModal>
     )
   }
@@ -269,12 +262,6 @@ export const StatsModal = ({
           >
             Bonus Round!
           </button>
-        </div>
-      )}
-      {ENABLE_MIGRATE_STATS && (
-        <div>
-          <hr className="mt-4 -mb-4 border-gray-500" />
-          <MigrationIntro handleMigrateStatsButton={handleMigrateStatsButton} />
         </div>
       )}
     </BaseModal>
