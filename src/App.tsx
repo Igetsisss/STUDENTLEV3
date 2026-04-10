@@ -341,6 +341,53 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // On page load: restore all completed round guesses and bothComplete state
+  useEffect(() => {
+    // Load bonus guesses if bonus was finished today
+    const bLoaded = loadBonusGameStateFromLocalStorage()
+    if (bLoaded && bLoaded.solution === bonusSolution) {
+      const bWon = bLoaded.guesses.includes(bonusSolution)
+      const bLost = bLoaded.guesses.length >= MAX_BONUS_CHALLENGES && !bWon
+      if (bWon || bLost) setBonusGuesses(bLoaded.guesses)
+    }
+    // Load teachers guesses if teachers was finished today
+    const tLoaded = loadTeachersGameStateFromLocalStorage()
+    if (tLoaded && tLoaded.solution === teachersSolution) {
+      const tWon = tLoaded.guesses.includes(teachersSolution)
+      const tLost = tLoaded.guesses.length >= MAX_CHALLENGES && !tWon
+      if (tWon || tLost) setTeachersGuesses(tLoaded.guesses)
+    }
+    // Load daily guesses if daily was finished today
+    const dLoaded = loadGameStateFromLocalStorage(isLatestGame)
+    if (dLoaded && dLoaded.solution === dailySolution) {
+      const dWon = dLoaded.guesses.includes(dailySolution)
+      const dLost = dLoaded.guesses.length >= MAX_CHALLENGES && !dWon
+      if (dWon || dLost) setDailyGuesses(dLoaded.guesses)
+    }
+    // Load grade round guesses for all grades played today
+    const gradeMap: Record<string, string[]> = {}
+    for (const g of ['9', '10', '11', '12']) {
+      if (hasGradeRoundBeenPlayedToday(g)) {
+        const gLoaded = loadGradeRoundGameStateFromLocalStorage(g)
+        const gSol = getGradeRoundSolution(g)
+        if (gLoaded && gLoaded.solution === gSol) {
+          gradeMap[g] = gLoaded.guesses
+        }
+      }
+    }
+    if (Object.keys(gradeMap).length > 0) {
+      setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({ ...prev, ...gradeMap }))
+    }
+    // Restore bothComplete if any extra round was done today
+    if (
+      hasBonusBeenPlayedToday() ||
+      hasTeachersBeenPlayedToday() ||
+      ['9', '10', '11', '12'].some((g) => hasGradeRoundBeenPlayedToday(g))
+    ) {
+      setBothComplete(true)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // On page load: if game is already complete, show stats after 1 second
   useEffect(() => {
     if (hasLoadedRef.current) return
@@ -667,6 +714,8 @@ function App() {
       // Set up the bonus round
       setActiveSolution(bonusSolution)
       setIsBonusRound(true)
+      setIsTeachersRound(false)
+      setIsGradeRound(false)
       setGuesses([])
       setCurrentGuess('')
       setIsGameWon(false)
@@ -710,6 +759,7 @@ function App() {
       setActiveSolution(teachersSolution)
       setIsTeachersRound(true)
       setIsBonusRound(false)
+      setIsGradeRound(false)
       setGuesses([])
       setCurrentGuess('')
       setIsGameWon(false)
@@ -804,7 +854,7 @@ function App() {
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 sm:px-6 md:max-w-7xl lg:px-8 short:pb-2 short:pt-2">
           {bothComplete ? (
             <div className="flex grow flex-col justify-center pb-6 short:pb-2">
-              <div className="flex justify-center gap-4">
+              <div className="flex flex-wrap justify-center gap-4">
                 <CompletedGrid
                   solution={dailySolution}
                   guesses={dailyGuesses}
@@ -824,6 +874,14 @@ function App() {
                     label="Teachers"
                   />
                 )}
+                {(Object.entries(gradeRoundGuessesMap) as [string, string[]][]).map(([g, gGuesses]) => (
+                  <CompletedGrid
+                    key={g}
+                    solution={getGradeRoundSolution(g)}
+                    guesses={gGuesses}
+                    label={GRADE_LABELS[g]}
+                  />
+                ))}
               </div>
             </div>
           ) : isGridHidden ? (
@@ -884,7 +942,6 @@ function App() {
                   ['9', '10', '11', '12'].every((g) => gradeRoundsPlayed.includes(g))
                 : // Students: bonus available right after daily
                   !isBonusRound &&
-                  !isTeachersRound &&
                   !hasBonusBeenPlayedToday() &&
                   isLatestGame &&
                   (isGameWon || isGameLost)
@@ -897,6 +954,7 @@ function App() {
               // Teachers never see the "Teachers Round" button — they ARE teachers
               !isTeacherPlayer &&
               !isTeachersRound &&
+              !hasTeachersBeenPlayedToday() &&
               isLatestGame &&
               (isGameWon || isGameLost)
             }
