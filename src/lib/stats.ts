@@ -17,9 +17,12 @@ export const addStatsForCompletedGame = (
   stats.totalGames += 1
 
   if (count >= MAX_CHALLENGES) {
-    // A fail situation
-    stats.currentStreak = 0
+    // A fail situation — streak still increments (streak = total games played)
     stats.gamesFailed += 1
+    stats.currentStreak += 1
+    if (stats.bestStreak < stats.currentStreak) {
+      stats.bestStreak = stats.currentStreak
+    }
   } else {
     stats.winDistribution[count] += 1
     stats.currentStreak += 1

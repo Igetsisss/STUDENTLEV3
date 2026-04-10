@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { computeMvp, computeStreaks, fetchLeaderboard, LeaderboardEntry, MvpEntry } from '../../lib/api'
+import { computeAllTimeLeaderboard, computeMvp, computeStreaks, fetchLeaderboard, AllTimeEntry, LeaderboardEntry, MvpEntry } from '../../lib/api'
 import { BaseModal } from './BaseModal'
 
 type Props = {
@@ -101,11 +101,13 @@ const MvpExplainerModal = ({
 
 export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
+  const [allTimeEntries, setAllTimeEntries] = useState<AllTimeEntry[]>([])
   const [mvp, setMvp] = useState<MvpEntry | null>(null)
   const [streaks, setStreaks] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(false)
   const [filterGrade, setFilterGrade] = useState<string>('')
   const [filterType, setFilterType] = useState<'daily' | 'bonus'>('daily')
+  const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
   const _ld = new Date()
@@ -114,39 +116,55 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   useEffect(() => {
     if (!isOpen) return
     setLoading(true)
-    fetchLeaderboard(today, filterGrade)
-      .then((data) => {
-        setEntries(data)
-        setMvp(computeMvp(data))
-        setStreaks(computeStreaks(data))
-      })
-      .finally(() => setLoading(false))
-  }, [isOpen, filterGrade])
+    if (viewMode === 'today') {
+      fetchLeaderboard(today, filterGrade)
+        .then((data) => {
+          setEntries(data)
+          setMvp(computeMvp(data))
+          setStreaks(computeStreaks(data))
+        })
+        .finally(() => setLoading(false))
+    } else {
+      fetchLeaderboard(undefined, filterGrade, true)
+        .then((data) => {
+          setAllTimeEntries(computeAllTimeLeaderboard(data))
+          setMvp(computeMvp(data))
+          setStreaks(computeStreaks(data))
+        })
+        .finally(() => setLoading(false))
+    }
+  }, [isOpen, filterGrade, viewMode])
 
   const filtered = entries.filter((e) => e.gameType === filterType)
+  const myName = (() => {
+    const fn = localStorage.getItem('playerName') || ''
+    const li = localStorage.getItem('playerLastInitial') || ''
+    return li ? `${fn} ${li}` : fn
+  })()
 
   return (
     <BaseModal title="Leaderboard" isOpen={isOpen} handleClose={handleClose}>
-      <div className="mb-3 flex gap-2">
+      {/* View mode tabs */}
+      <div className="mb-3 flex gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
         <button
           className={`rounded px-3 py-1 text-sm font-semibold ${
-            filterType === 'daily'
+            viewMode === 'today'
               ? 'bg-blue-600 text-white'
               : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
           }`}
-          onClick={() => setFilterType('daily')}
+          onClick={() => setViewMode('today')}
         >
-          Daily
+          Today
         </button>
         <button
           className={`rounded px-3 py-1 text-sm font-semibold ${
-            filterType === 'bonus'
+            viewMode === 'alltime'
               ? 'bg-blue-600 text-white'
               : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
           }`}
-          onClick={() => setFilterType('bonus')}
+          onClick={() => setViewMode('alltime')}
         >
-          Bonus
+          All-Time
         </button>
         <select
           className="ml-auto rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-slate-800 dark:text-white"
@@ -161,10 +179,89 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         </select>
       </div>
 
+      {/* Today sub-tabs (only shown in today mode) */}
+      {viewMode === 'today' && (
+        <div className="mb-3 flex gap-2">
+          <button
+            className={`rounded px-3 py-1 text-sm font-semibold ${
+              filterType === 'daily'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+            }`}
+            onClick={() => setFilterType('daily')}
+          >
+            Daily
+          </button>
+          <button
+            className={`rounded px-3 py-1 text-sm font-semibold ${
+              filterType === 'bonus'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+            }`}
+            onClick={() => setFilterType('bonus')}
+          >
+            Bonus
+          </button>
+        </div>
+      )}
+
       {loading ? (
-        <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-          Loading...
-        </p>
+        <p className="py-8 text-center text-gray-500 dark:text-gray-400">Loading...</p>
+      ) : viewMode === 'alltime' ? (
+        allTimeEntries.length === 0 ? (
+          <p className="py-8 text-center text-gray-500 dark:text-gray-400">No data yet</p>
+        ) : (
+          <div className="max-h-64 overflow-y-auto">
+            <table className="w-full text-sm text-gray-800 dark:text-gray-200">
+              <thead>
+                <tr className="border-b border-gray-300 text-left dark:border-gray-600">
+                  <th className="w-6 py-1 pr-1">#</th>
+                  <th className="py-1 pr-1">Name</th>
+                  <th className="w-14 py-1 pr-1">Grade</th>
+                  <th className="w-12 py-1 pr-1 text-center">Games</th>
+                  <th className="w-10 py-1 pr-1 text-center">Wins</th>
+                  <th className="w-12 py-1 text-right">Win%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allTimeEntries.map((entry, i) => {
+                  const isMvpRow = mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
+                  const isMe = entry.name.toLowerCase() === myName.toLowerCase()
+                  return (
+                  <tr
+                    key={i}
+                    className={`border-b border-gray-100 dark:border-gray-700 ${
+                      isMe
+                        ? 'font-bold text-blue-600 dark:text-blue-400'
+                        : isMvpRow
+                        ? 'font-bold'
+                        : 'text-gray-800 dark:text-gray-200'
+                    }`}
+                  >
+                    <td className="py-1 pr-1">{i + 1}</td>
+                    <td className="truncate py-1 pr-1">
+                      {isMvpRow && <span className="mr-0.5">👑</span>}
+                      <span style={isMvpRow && !isMe ? { color: '#d4a017' } : undefined}>
+                        {toTitleCase(entry.name)}
+                      </span>
+                      {(streaks.get(entry.name) ?? 0) >= 2 && (
+                        <span className="ml-1 text-xs text-orange-500">
+                          🔥{streaks.get(entry.name)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-1 pr-1 text-xs">
+                      {gradeLabels[String(entry.grade)] || entry.grade}
+                    </td>
+                    <td className="py-1 pr-1 text-center">{entry.totalGames}</td>
+                    <td className="py-1 pr-1 text-center">{entry.wins}</td>
+                    <td className="py-1 text-right">{Math.round(entry.winRate * 100)}%</td>
+                  </tr>
+                )})
+              </tbody>
+            </table>
+          </div>
+        )
       ) : filtered.length === 0 ? (
         <p className="py-8 text-center text-gray-500 dark:text-gray-400">
           No results yet for today
@@ -182,23 +279,26 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((entry, i) => (
+              {filtered.map((entry, i) => {
+                const isMvpRow = mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
+                const isMe = entry.name.toLowerCase() === myName.toLowerCase()
+                return (
                 <tr
                   key={i}
                   className={`border-b border-gray-100 dark:border-gray-700 ${
-                    entry.name ===
-                      (() => {
-                        const fn = localStorage.getItem('playerName') || ''
-                        const li = localStorage.getItem('playerLastInitial') || ''
-                        return li ? `${fn} ${li}` : fn
-                      })()
+                    isMe
                       ? 'font-bold text-blue-600 dark:text-blue-400'
+                      : isMvpRow
+                      ? 'font-bold'
                       : 'text-gray-800 dark:text-gray-200'
                   }`}
                 >
                   <td className="py-1 pr-1">{i + 1}</td>
                   <td className="truncate py-1 pr-1">
-                    {toTitleCase(entry.name)}
+                    {isMvpRow && <span className="mr-0.5">👑</span>}
+                    <span style={isMvpRow && !isMe ? { color: '#d4a017' } : undefined}>
+                      {toTitleCase(entry.name)}
+                    </span>
                     {(streaks.get(entry.name) ?? 0) >= 2 && (
                       <span className="ml-1 text-xs text-orange-500">
                         🔥{streaks.get(entry.name)}
@@ -215,7 +315,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                     {formatTime(entry.totalDurationSec)}
                   </td>
                 </tr>
-              ))}
+              )})
             </tbody>
           </table>
         </div>

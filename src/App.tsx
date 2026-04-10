@@ -520,10 +520,12 @@ function App() {
         }
         submitGame(false, newGuesses.length)
         setIsGameLost(true)
-        showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
-          persist: true,
-          delayMs: REVEAL_TIME_MS * activeSolution.length + 1,
-        })
+        if (!isBonusRound) {
+          showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
+            persist: true,
+            delayMs: REVEAL_TIME_MS * activeSolution.length + 1,
+          })
+        }
       }
     }
   }

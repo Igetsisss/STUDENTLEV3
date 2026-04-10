@@ -1,6 +1,6 @@
 import './gradestyle.css'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import {
   GradeNumber,
@@ -64,6 +64,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   const [lastInitial, setLastInitial] = useState('')
   const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null)
   const [nameError, setNameError] = useState('')
+  const [forceOpen, setForceOpen] = useState(false)
 
   const handleGradeNext = () => {
     if (!selectedGrade) return
@@ -89,113 +90,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
       : capitalizeName(playerName)
 
-    setStep('checking')
-
-    fetchLeaderboard()
-      .then((data: LeaderboardEntry[]) => {
-        const inProgressGuesses: string[] = []
-        // Look for any existing entries with this exact display name
-        const matches = data.filter(
-          (e) => e.name.toLowerCase() === displayName.toLowerCase()
-        )
-
-        if (matches.length > 0) {
-          // Build a quick stats summary for the confirmation screen
-          const wins = matches.filter((e) => e.won)
-          const gradeNum = matches[0].grade
-          const gradeLabel: Record<string, string> = {
-            '9': 'Freshman (9th)',
-            '10': 'Sophomore (10th)',
-            '11': 'Junior (11th)',
-            '12': 'Senior (12th)',
-          }
-          const avgGuesses =
-            wins.length > 0
-              ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
-              : 0
-
-          const today = new Date().toISOString().split('T')[0]
-          const todayEntry = matches.find(
-            (e) => e.gameType === 'daily' && String(e.date).startsWith(today)
-          )
-
-          // Reconstruct GameStats from sheet history so localStorage isn't empty on new devices
-          const dailyMatches = matches.filter(
-            (e) => e.gameType === 'daily' && !String(e.date).startsWith('1970')
-          )
-          const dailyWins = dailyMatches.filter((e) => e.won)
-          const dailyLosses = dailyMatches.filter((e) => !e.won)
-          const winDist = Array(6).fill(0)
-          dailyWins.forEach((e) => {
-            const idx = Math.min(e.guessCount - 1, 5)
-            if (idx >= 0) winDist[idx]++
-          })
-          const totalDailyGames = dailyWins.length + dailyLosses.length
-          const successRate =
-            totalDailyGames > 0
-              ? Math.round((dailyWins.length / totalDailyGames) * 100)
-              : 0
-          // Compute streaks from sorted win dates
-          const winDatesSet = new Set(
-            dailyWins.map((e) => String(e.date).slice(0, 10))
-          )
-          const winDatesSorted = Array.from(winDatesSet).sort()
-          let currentStreak = 0
-          const checkDate = new Date(today + 'T12:00:00Z')
-          while (winDatesSet.has(checkDate.toISOString().split('T')[0])) {
-            currentStreak++
-            checkDate.setUTCDate(checkDate.getUTCDate() - 1)
-          }
-          let bestStreak = 0
-          let runStreak = 0
-          for (let i = 0; i < winDatesSorted.length; i++) {
-            if (i === 0) {
-              runStreak = 1
-            } else {
-              const prev = new Date(winDatesSorted[i - 1] + 'T12:00:00Z')
-              prev.setUTCDate(prev.getUTCDate() + 1)
-              runStreak =
-                prev.toISOString().split('T')[0] === winDatesSorted[i]
-                  ? runStreak + 1
-                  : 1
-            }
-            bestStreak = Math.max(bestStreak, runStreak)
-          }
-          bestStreak = Math.max(bestStreak, currentStreak)
-
-          const reconstructedStats: GameStats = {
-            winDistribution: winDist,
-            gamesFailed: dailyLosses.length,
-            currentStreak,
-            bestStreak,
-            totalGames: totalDailyGames,
-            successRate,
-          }
-
-          setExistingAccount({
-            displayName: matches[0].name, // use exact casing from sheet
-            totalGames: matches.length,
-            wins: wins.length,
-            grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
-            avgGuesses,
-            todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
-            todayGuessCount: todayEntry ? todayEntry.guessCount : null,
-            inProgressGuesses,
-            reconstructedStats,
-          })
-          setStep('confirm')
-        } else {
-          // No duplicate — save and reload
-          finalizeSave(displayName)
-        }
-      })
-      .catch(() => {
-        // If the fetch fails just proceed — don't block account creation
-        finalizeSave(displayName)
-      })
-  }
-
-  const finalizeSave = (displayName: string) => {
+    // Save everything to localStorage right now so the game can start immediately
     const parts = displayName.split(' ')
     const initial = parts.length > 1 ? parts[parts.length - 1] : ''
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
@@ -206,7 +101,6 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
 
-    // Submit any locally accumulated historical stats (games played before account creation)
     if (!localStorage.getItem('historicalStatsSubmitted')) {
       const stats = loadStatsFromLocalStorage()
       const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
@@ -216,9 +110,89 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       }
     }
 
+    // Queue a background duplicate-account check after reload
+    localStorage.setItem('pendingAccountCheck', displayName)
+
     handleClose()
     window.location.reload()
   }
+
+  // Background account check — runs once on mount if pendingAccountCheck is set
+  useEffect(() => {
+    const pending = localStorage.getItem('pendingAccountCheck')
+    if (!pending) return
+
+    fetchLeaderboard().then((data: LeaderboardEntry[]) => {
+      const matches = data.filter(
+        (e) => e.name.toLowerCase() === pending.toLowerCase()
+      )
+      if (matches.length === 0) {
+        localStorage.removeItem('pendingAccountCheck')
+        return
+      }
+      // Build a quick stats summary for the confirmation screen
+      const wins = matches.filter((e) => e.won)
+      const gradeNum = matches[0].grade
+      const gradeLabel: Record<string, string> = {
+        '9': 'Freshman (9th)',
+        '10': 'Sophomore (10th)',
+        '11': 'Junior (11th)',
+        '12': 'Senior (12th)',
+      }
+      const avgGuesses =
+        wins.length > 0
+          ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
+          : 0
+      const today = new Date().toISOString().split('T')[0]
+      const todayEntry = matches.find(
+        (e) => e.gameType === 'daily' && String(e.date).startsWith(today)
+      )
+      const dailyMatches = matches.filter(
+        (e) => e.gameType === 'daily' && !String(e.date).startsWith('1970')
+      )
+      const dailyWins = dailyMatches.filter((e) => e.won)
+      const dailyLosses = dailyMatches.filter((e) => !e.won)
+      const winDist = Array(6).fill(0)
+      dailyWins.forEach((e) => {
+        const idx = Math.min(e.guessCount - 1, 5)
+        if (idx >= 0) winDist[idx]++
+      })
+      const totalDailyGames = dailyWins.length + dailyLosses.length
+      const successRate =
+        totalDailyGames > 0
+          ? Math.round((dailyWins.length / totalDailyGames) * 100)
+          : 0
+      // Streak = total games played (no consecutive-day requirement)
+      const currentStreak = totalDailyGames
+      const bestStreak = totalDailyGames
+
+      const reconstructedStats: GameStats = {
+        winDistribution: winDist,
+        gamesFailed: dailyLosses.length,
+        currentStreak,
+        bestStreak,
+        totalGames: totalDailyGames,
+        successRate,
+      }
+
+      setExistingAccount({
+        displayName: matches[0].name,
+        totalGames: matches.length,
+        wins: wins.length,
+        grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
+        avgGuesses,
+        todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
+        todayGuessCount: todayEntry ? todayEntry.guessCount : null,
+        inProgressGuesses: [],
+        reconstructedStats,
+      })
+      setStep('confirm')
+      setForceOpen(true)
+    }).catch(() => {
+      localStorage.removeItem('pendingAccountCheck')
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleClaimAccount = () => {
     // "Yes, that's me" — use the exact name from the sheet
@@ -233,6 +207,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
+
+    localStorage.removeItem('pendingAccountCheck')
 
     // Write reconstructed stats to localStorage so the stats modal shows real data
     saveStatsToLocalStorage(account.reconstructedStats)
@@ -270,6 +246,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
   const handleMakeNewAccount = () => {
     // "No, make a new one" — go back to the name step
+    localStorage.removeItem('pendingAccountCheck')
     setPlayerName('')
     setLastInitial('')
     setExistingAccount(null)
@@ -285,12 +262,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
           ? 'What is your first name?'
           : step === 'initial'
           ? 'Last name initial?'
-          : step === 'checking'
-          ? 'Checking...'
           : 'Is this you?'
       }
-      isOpen={isOpen}
-      handleClose={handleClose}
+      isOpen={isOpen || forceOpen}
+      handleClose={step === 'confirm' ? () => {} : handleClose}
     >
       <br />
 
@@ -375,30 +350,6 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             <button>Done</button>
           </div>
         </>
-      )}
-
-      {step === 'checking' && (
-        <div className="flex flex-col items-center py-6 text-gray-500 dark:text-gray-400">
-          <svg
-            className="mb-3 h-8 w-8 animate-spin text-blue-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12" cy="12" r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8z"
-            />
-          </svg>
-          <p className="text-sm">Looking up your account…</p>
-        </div>
       )}
 
       {step === 'confirm' && existingAccount && (

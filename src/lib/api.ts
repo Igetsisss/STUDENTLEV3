@@ -271,9 +271,46 @@ const parseGvizResponse = (text: string): any[][] => {
   return rows
 }
 
+export type AllTimeEntry = {
+  name: string
+  grade: number
+  totalGames: number
+  wins: number
+  winRate: number
+  avgGuesses: number
+}
+
+export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeEntry[] => {
+  const daily = entries.filter(
+    (e) => e.gameType === 'daily' && !String(e.date).startsWith('1970')
+  )
+  const map = new Map<string, LeaderboardEntry[]>()
+  for (const e of daily) {
+    map.set(e.name, [...(map.get(e.name) || []), e])
+  }
+  const result: AllTimeEntry[] = []
+  map.forEach((games, name) => {
+    const wins = games.filter((g) => g.won)
+    const avgGuesses =
+      wins.length > 0
+        ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
+        : 0
+    result.push({
+      name,
+      grade: games[0].grade,
+      totalGames: games.length,
+      wins: wins.length,
+      winRate: wins.length / games.length,
+      avgGuesses,
+    })
+  })
+  return result.sort((a, b) => b.totalGames - a.totalGames)
+}
+
 export const fetchLeaderboard = async (
   date?: string,
-  grade?: string
+  grade?: string,
+  allTime?: boolean
 ): Promise<LeaderboardEntry[]> => {
   try {
     const res = await fetch(GVIZ_URL)
@@ -282,7 +319,7 @@ export const fetchLeaderboard = async (
 
     const _fd = new Date()
     const localToday = `${_fd.getFullYear()}-${String(_fd.getMonth() + 1).padStart(2, '0')}-${String(_fd.getDate()).padStart(2, '0')}`
-    const today = date || localToday
+    const today = allTime ? '' : (date || localToday)
     const results: LeaderboardEntry[] = []
 
     for (const r of rows) {

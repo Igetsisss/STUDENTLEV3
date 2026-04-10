@@ -139,15 +139,7 @@ export const StatsModal = ({
                 🔥 {gameStats.currentStreak}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Current Streak
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-yellow-500">
-                🏆 {gameStats.bestStreak}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                Best Streak
+                Days Played
               </div>
             </div>
             {bestGuessCount !== null && (
