@@ -44,6 +44,8 @@ type Props = {
   bonusSolution?: string
   bonusGuesses?: string[]
   isFirstToday?: boolean
+  isPersonalBest?: boolean
+  onPersonalBestSeen?: () => void
 }
 
 export const StatsModal = ({
@@ -68,6 +70,8 @@ export const StatsModal = ({
   bonusSolution,
   bonusGuesses,
   isFirstToday,
+  isPersonalBest,
+  onPersonalBestSeen,
 }: Props) => {
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null)
   const [leaderboardTotal, setLeaderboardTotal] = useState<number | null>(null)
@@ -113,6 +117,28 @@ export const StatsModal = ({
       isOpen={isOpen}
       handleClose={handleClose}
     >
+      {isPersonalBest && (
+        <div
+          className="mb-3 rounded-xl px-4 py-2 text-center animate-bounce"
+          style={{
+            background: 'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
+            boxShadow: '0 0 16px 2px #f107a388',
+          }}
+        >
+          <span className="text-sm font-extrabold text-white tracking-wide">
+            ⭐ New Personal Best! ⭐
+          </span>
+          {onPersonalBestSeen && (
+            <button
+              onClick={onPersonalBestSeen}
+              className="ml-3 text-xs text-white/70 hover:text-white"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
       {isBonusRound && (
         <p className="glisten-text mb-2 text-center text-sm font-bold text-blue-600 dark:text-blue-400">
           Bonus Round

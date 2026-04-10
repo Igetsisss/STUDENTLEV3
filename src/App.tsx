@@ -93,6 +93,7 @@ function App() {
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false)
+  const [isPersonalBest, setIsPersonalBest] = useState(false)
   const [isMvpModalOpen, setIsMvpModalOpen] = useState(false)
   const [isMvp, setIsMvp] = useState(false)
   const [mvpData, setMvpData] = useState<{ name: string; winRate: number; avgGuesses: number; totalGames: number } | null>(null)
@@ -495,8 +496,15 @@ function App() {
 
       if (winningWord) {
         if (isLatestGame && !isBonusRound) {
-          setStats(addStatsForCompletedGame(stats, guesses.length))
+          const newStats = addStatsForCompletedGame(stats, guesses.length)
+          setStats(newStats)
           setDailyGuesses(newGuesses)
+          // Personal best: first win ever, or beat lowest guess count on record
+          const guessCount = guesses.length + 1
+          const prevBestIdx = stats.winDistribution.findIndex((c: number) => c > 0)
+          const isFirstWin = prevBestIdx === -1
+          const beatsBest = !isFirstWin && guessCount < prevBestIdx + 1
+          if (isFirstWin || beatsBest) setIsPersonalBest(true)
         }
         if (isBonusRound) {
           setBonusPlayedToday()
@@ -687,6 +695,8 @@ function App() {
               setIsLeaderboardModalOpen(true)
             }}
             isFirstToday={isFirstToday}
+            isPersonalBest={isPersonalBest}
+            onPersonalBestSeen={() => setIsPersonalBest(false)}
           />
           <DatePickerModal
             isOpen={isDatePickerModalOpen}

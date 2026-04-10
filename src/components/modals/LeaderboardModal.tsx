@@ -282,6 +282,10 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
               {filtered.map((entry, i) => {
                 const isMvpRow = mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
                 const isMe = entry.name.toLowerCase() === myName.toLowerCase()
+                const podium = i === 0 ? { bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.4)', medal: '🥇', color: '#b8860b' }
+                             : i === 1 ? { bg: 'rgba(192,192,192,0.12)', border: 'rgba(192,192,192,0.4)', medal: '🥈', color: '#888' }
+                             : i === 2 ? { bg: 'rgba(205,127,50,0.12)', border: 'rgba(205,127,50,0.35)', medal: '🥉', color: '#a06030' }
+                             : null
                 return (
                 <tr
                   key={i}
@@ -292,11 +296,23 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                       ? 'font-bold'
                       : 'text-gray-800 dark:text-gray-200'
                   }`}
+                  style={podium && !isMe ? { background: podium.bg } : undefined}
                 >
-                  <td className="py-1 pr-1">{i + 1}</td>
+                  <td className="py-1 pr-1 text-center">
+                    {podium ? (
+                      <span className="text-base leading-none">{podium.medal}</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">{i + 1}</span>
+                    )}
+                  </td>
                   <td className="truncate py-1 pr-1">
                     {isMvpRow && <span className="mr-0.5">👑</span>}
-                    <span style={isMvpRow && !isMe ? { color: '#d4a017' } : undefined}>
+                    <span style={
+                      isMe ? undefined
+                      : podium ? { color: podium.color, fontWeight: 700 }
+                      : isMvpRow ? { color: '#d4a017' }
+                      : undefined
+                    }>
                       {toTitleCase(entry.name)}
                     </span>
                     {(streaks.get(entry.name) ?? 0) >= 2 && (
