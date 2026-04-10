@@ -79,6 +79,7 @@ import {
   hasTeachersBeenPlayedToday,
   setTeachersPlayedToday,
 } from './utils/teachersRound'
+import { getTeachersBonusSolution } from './teacherWords'
 import {
   getGradeRoundSolution,
   hasGradeRoundBeenPlayedToday,
@@ -91,7 +92,11 @@ import { useGameTracker } from './hooks/useGameTracker'
 function App() {
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
-  const bonusSolution = getBonusSolution()
+  // Teachers get their own bonus using all teacher names; students get the regular bonus
+  const bonusSolution = (() => {
+    const g = localStorage.getItem('gradeNumber')
+    return g === '"0"' ? getTeachersBonusSolution() : getBonusSolution()
+  })()
   const teachersSolution = getTeachersSolution()
   const hasLoadedRef = useRef(false)
 
@@ -951,7 +956,7 @@ function App() {
               (isGameWon || isGameLost)
             }
             isBonusRound={isBonusRound}
-            bonusSolution={getBonusSolution()}
+            bonusSolution={bonusSolution}
             bonusGuesses={bonusGuesses}
             handleTeachersRound={handleTeachersRound}
             isTeachersRoundAvailable={

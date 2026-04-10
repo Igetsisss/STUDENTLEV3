@@ -13,7 +13,7 @@ import { ENABLE_ARCHIVED_GAMES } from '../constants/settings'
 import { NOT_CONTAINED_MESSAGE, WRONG_SPOT_MESSAGE } from '../constants/strings'
 import { VALID_GUESSES } from '../constants/validGuesses'
 import { WORDS, SENIOR, JUNIOR, SOPHOMORE, FRESHMAN } from '../constants/wordlist'
-import { TEACHER_WORDS } from '../teacherWords'
+import { TEACHER_WORDS, TEACHER_WORDS_FULL } from '../teacherWords'
 import { getToday } from './dateutils'
 import { getGuessStatuses } from './statuses'
 
@@ -28,6 +28,7 @@ export const isWordInWordList = (word: string) => {
     WORDS.includes(lower) ||
     VALID_GUESSES.includes(lower) ||
     TEACHER_WORDS.includes(lower) ||
+    TEACHER_WORDS_FULL.includes(lower) ||
     SENIOR.includes(lower) ||
     JUNIOR.includes(lower) ||
     SOPHOMORE.includes(lower) ||
