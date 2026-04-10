@@ -56,7 +56,7 @@ const SOPHOMORE = [
   'merrick', 'amaya', 'jackson', 'bobby', 'maia', 'emme', 'caroline', 
   'turner', 'ava', 'mia', 'kaylee', 'logan', 'maddie', 'molly', 'shane', 
   'gabby', 'bryson', 'allison', 'daniel', 'wilkins', 'treasure', 'ashley', 
-  'colt', 'divya'
+  'colt', 'bree', 'divya'
 ]
 
 const FRESHMAN = [

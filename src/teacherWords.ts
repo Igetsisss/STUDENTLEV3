@@ -1,6 +1,6 @@
 // Teacher last names — used for the Teachers daily game mode and Teachers bonus round
-// Rules: must be all-alphabetic (no hyphens/spaces) and at least 5 letters
-// so there are always enough valid Wordle guesses to make the game fun.
+// Rules: all-alphabetic (no hyphens/spaces), 5–8 letters only
+// so the board length is manageable and there are always enough valid guesses.
 export const TEACHER_WORDS: string[] = [
   'adams',
   'allan',
@@ -11,7 +11,6 @@ export const TEACHER_WORDS: string[] = [
   'bange',
   'baroody',
   'bassett',
-  'batchelor',
   'bradford',
   'cagle',
   'cameron',
@@ -21,10 +20,8 @@ export const TEACHER_WORDS: string[] = [
   'cruce',
   'dickey',
   'domescik',
-  'dominique',
   'dyche',
   'forman',
-  'forrester',
   'gainer',
   'graham',
   'graves',
@@ -36,7 +33,6 @@ export const TEACHER_WORDS: string[] = [
   'johnson',
   'klein',
   'kraner',
-  'kreinheder',
   'lamback',
   'locurto',
   'lozier',
@@ -56,7 +52,6 @@ export const TEACHER_WORDS: string[] = [
   'rivera',
   'rowland',
   'rutledge',
-  'sammataro',
   'santana',
   'santee',
   'sautter',
@@ -65,7 +60,6 @@ export const TEACHER_WORDS: string[] = [
   'spayd',
   'staples',
   'stetson',
-  'strickland',
   'suarez',
   'swain',
   'swann',
@@ -75,13 +69,11 @@ export const TEACHER_WORDS: string[] = [
   'thompson',
   'tongren',
   'townsend',
-  'tumbleson',
   'tuohy',
   'turner',
   'waken',
   'walker',
   'walsh',
-  'washington',
   'white',
   'wright',
 ]
