@@ -18,7 +18,7 @@ const SENIOR = [
   'taylor', 'ethan', 'kate', 'ella', 'peyton', 'jack', 'grant', 'gabe', 'lily', 
   'brady', 'devin', 'sam', 'myles', 'carson', 'fallon', 'baxter', 'mary frances', 
   'maddie', 'grace', 'julie', 'lila', 'jordan', 'parker', 'jay', 'andrew', 
-  'caroline', 'nate', 'haylen', 'mary kathryn', 'sophia', 'marcos', 'sairis', 
+  'caroline', 'nate', 'haylen', 'sophia', 'marcos', 'sairis', 
   'alexa', 'zari', 'evie', 'jada', 'olivia', 'katherine', 'keval', 'jordynn', 
   'lewis', 'tommy', 'steele', 'dallas', 'austin', 'lilly', 'zion', 'rio', 
   'will', 'evan', 'cate', 'xavier', 'miller', 'anna', 'fletcher', 'khalid'
