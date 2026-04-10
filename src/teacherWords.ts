@@ -175,7 +175,7 @@ export const TEACHER_WORDS_FULL: string[] = [
   'wright',
 ]
 
-import { getGameDate, getIndex, localeAwareUpperCase } from '../lib/words'
+import { getGameDate, getIndex, localeAwareUpperCase } from './lib/words'
 
 // Teacher bonus solution — uses the full name list with a different offset from the daily,
 // so the bonus word never repeats the same day's daily word.
