@@ -571,7 +571,7 @@ function App() {
       word: activeSolution,
       won,
       guessCount,
-      gameType: isGradeRound ? 'grade' : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : 'daily',
+      gameType: isGradeRound ? `grade${gradeRoundGrade}` : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : 'daily',
       ...trackingData,
     })
   }

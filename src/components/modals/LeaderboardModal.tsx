@@ -9,11 +9,23 @@ type Props = {
 }
 
 const gradeLabels: Record<string, string> = {
-  '0': 'Teachers',
+  '0': 'Teacher',
   '9': 'Freshman',
   '10': 'Sophomore',
   '11': 'Junior',
   '12': 'Senior',
+}
+
+const gradeBadgeClass: Record<string, string> = {
+  '0': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  '9': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  '10': 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  '11': 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  '12': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+}
+
+const gradeShort: Record<string, string> = {
+  '0': 'TCH', '9': 'FR', '10': 'SO', '11': 'JR', '12': 'SR',
 }
 
 const formatTime = (sec: number): string => {
@@ -108,18 +120,22 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const [streaks, setStreaks] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(false)
   const [filterGrade, setFilterGrade] = useState<string>('')
-  const [filterType, setFilterType] = useState<'daily' | 'bonus' | 'teachers'>('daily')
+  const [filterType, setFilterType] = useState<'daily' | 'bonus' | 'teachers' | 'graderound'>('daily')
+  const [gradeRoundFilter, setGradeRoundFilter] = useState<string>('9')
   const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
   const _ld = new Date()
   const today = `${_ld.getFullYear()}-${String(_ld.getMonth() + 1).padStart(2, '0')}-${String(_ld.getDate()).padStart(2, '0')}`
 
+  // Grade rounds are filtered client-side by gameType, not by player's registered grade
+  const effectiveFetchGrade = filterType === 'graderound' ? '' : filterGrade
+
   useEffect(() => {
     if (!isOpen) return
     setLoading(true)
     if (viewMode === 'today') {
-      fetchLeaderboard(today, filterGrade)
+      fetchLeaderboard(today, effectiveFetchGrade)
         .then((data) => {
           setEntries(data)
           setMvp(computeMvp(data))
@@ -127,7 +143,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         })
         .finally(() => setLoading(false))
     } else {
-      fetchLeaderboard(undefined, filterGrade, true)
+      fetchLeaderboard(undefined, effectiveFetchGrade, true)
         .then((data) => {
           setAllTimeEntries(computeAllTimeLeaderboard(data))
           setMvp(computeMvp(data))
@@ -135,10 +151,14 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         })
         .finally(() => setLoading(false))
     }
-  }, [isOpen, filterGrade, viewMode])
+  }, [isOpen, filterGrade, filterType, viewMode])
 
   const filtered = (() => {
-    const byType = entries.filter((e) => e.gameType === filterType)
+    const byType = entries.filter((e) =>
+      filterType === 'graderound'
+        ? e.gameType === `grade${gradeRoundFilter}`
+        : e.gameType === filterType
+    )
     // Deduplicate: one entry per player name — keep their best result
     const map = new Map<string, LeaderboardEntry>()
     for (const e of byType) {
@@ -174,95 +194,120 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
     return prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
   })()
 
+  const myRank = filtered.findIndex((e) => e.name.toLowerCase() === myName.toLowerCase()) + 1
+
   return (
     <BaseModal title="Leaderboard" isOpen={isOpen} handleClose={handleClose}>
-      {/* View mode tabs */}
-      <div className="mb-3 flex gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
-        <button
-          className={`rounded px-3 py-1 text-sm font-semibold ${
-            viewMode === 'today'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
-          }`}
-          onClick={() => setViewMode('today')}
-        >
-          Today
-        </button>
-        <button
-          className={`rounded px-3 py-1 text-sm font-semibold ${
-            viewMode === 'alltime'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
-          }`}
-          onClick={() => setViewMode('alltime')}
-        >
-          All-Time
-        </button>
-        <select
-          className="ml-auto rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-slate-800 dark:text-white"
-          value={filterGrade}
-          onChange={(e) => setFilterGrade(e.target.value)}
-        >
-          <option value="">All Grades</option>
-          <option value="9">Freshman</option>
-          <option value="10">Sophomore</option>
-          <option value="11">Junior</option>
-          <option value="12">Senior</option>
-          <option value="0">Teachers</option>
-        </select>
+      {/* ── View mode row: Today | All-Time + grade filter ── */}
+      <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setViewMode('today')}
+            className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
+              viewMode === 'today'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300'
+            }`}
+          >Today</button>
+          <button
+            onClick={() => setViewMode('alltime')}
+            className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
+              viewMode === 'alltime'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300'
+            }`}
+          >All&#8209;Time</button>
+        </div>
+        {/* Grade filter — hidden when viewing grade rounds */}
+        {filterType !== 'graderound' && (
+          <select
+            className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-slate-800 dark:text-white"
+            value={filterGrade}
+            onChange={(e) => setFilterGrade(e.target.value)}
+          >
+            <option value="">All Grades</option>
+            <option value="9">Freshman</option>
+            <option value="10">Sophomore</option>
+            <option value="11">Junior</option>
+            <option value="12">Senior</option>
+            <option value="0">Teacher</option>
+          </select>
+        )}
       </div>
 
-      {/* Today sub-tabs (only shown in today mode) */}
+      {/* ── Today sub-tabs: Daily | Bonus | Teachers | Grade Rounds ── */}
       {viewMode === 'today' && (
-        <div className="mb-3 flex gap-2">
+        <div className="mb-2 flex flex-wrap gap-1.5">
           <button
-            className={`rounded px-3 py-1 text-sm font-semibold ${
-              filterType === 'daily'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
-            }`}
             onClick={() => setFilterType('daily')}
-          >
-            Daily
-          </button>
-          <button
-            className={`rounded px-3 py-1 text-sm font-semibold ${
-              filterType === 'bonus'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+            className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
+              filterType === 'daily' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300'
             }`}
+          >Daily</button>
+          <button
             onClick={() => setFilterType('bonus')}
-          >
-            Bonus
-          </button>
-          <button
-            className={`rounded px-3 py-1 text-sm font-semibold ${
-              filterType === 'teachers'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+            className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
+              filterType === 'bonus' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300'
             }`}
+          >Bonus</button>
+          <button
             onClick={() => setFilterType('teachers')}
-          >
-            🍎 Teachers
-          </button>
+            className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
+              filterType === 'teachers' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300'
+            }`}
+          >🍎 Teachers</button>
+          <button
+            onClick={() => setFilterType('graderound')}
+            className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
+              filterType === 'graderound' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300'
+            }`}
+          >Grade Rounds</button>
+        </div>
+      )}
+
+      {/* ── Grade round sub-selector ── */}
+      {viewMode === 'today' && filterType === 'graderound' && (
+        <div className="mb-3 flex gap-1.5 flex-wrap">
+          <button onClick={() => setGradeRoundFilter('9')}
+            className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-bold transition-all ${
+              gradeRoundFilter === '9' ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-300 text-gray-600 hover:border-emerald-400 dark:border-gray-600 dark:text-gray-300'
+            }`}>Freshman</button>
+          <button onClick={() => setGradeRoundFilter('10')}
+            className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-bold transition-all ${
+              gradeRoundFilter === '10' ? 'bg-sky-500 text-white border-sky-500' : 'border-gray-300 text-gray-600 hover:border-sky-400 dark:border-gray-600 dark:text-gray-300'
+            }`}>Sophomore</button>
+          <button onClick={() => setGradeRoundFilter('11')}
+            className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-bold transition-all ${
+              gradeRoundFilter === '11' ? 'bg-violet-500 text-white border-violet-500' : 'border-gray-300 text-gray-600 hover:border-violet-400 dark:border-gray-600 dark:text-gray-300'
+            }`}>Junior</button>
+          <button onClick={() => setGradeRoundFilter('12')}
+            className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-bold transition-all ${
+              gradeRoundFilter === '12' ? 'bg-rose-500 text-white border-rose-500' : 'border-gray-300 text-gray-600 hover:border-rose-400 dark:border-gray-600 dark:text-gray-300'
+            }`}>Senior</button>
         </div>
       )}
 
       {loading ? (
-        <p className="py-8 text-center text-gray-500 dark:text-gray-400">Loading...</p>
+        <div className="flex items-center justify-center gap-3 py-10">
+          <div className="h-5 w-5 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">Loading…</span>
+        </div>
       ) : viewMode === 'alltime' ? (
         allTimeEntries.length === 0 ? (
           <p className="py-8 text-center text-gray-500 dark:text-gray-400">No data yet</p>
         ) : (
-          <div className="max-h-64 overflow-y-auto">
+          <p className="mb-1 text-right text-xs text-gray-400 dark:text-gray-500">
+            {allTimeEntries.length} player{allTimeEntries.length !== 1 ? 's' : ''}
+          </p>
+          <div className="max-h-72 overflow-y-auto">
             <table className="w-full text-sm text-gray-800 dark:text-gray-200">
-              <thead>
+              <thead className="sticky top-0 bg-white dark:bg-slate-900">
                 <tr className="border-b border-gray-300 text-left dark:border-gray-600">
-                  <th className="w-6 py-1 pr-1">#</th>
-                  <th className="py-1 pr-1">Name</th>
-                  <th className="w-14 py-1 pr-1">Grade</th>
-                  <th className="w-12 py-1 pr-1 text-center">Games</th>
-                  <th className="w-10 py-1 pr-1 text-center">Wins</th>
+                  <th className="w-6 pb-1.5 pr-1">#</th>
+                  <th className="pb-1.5 pr-1">Name</th>
+                  <th className="w-10 pb-1.5 pr-1 text-center">Grade</th>
+                  <th className="w-12 pb-1.5 pr-1 text-center">Games</th>
+                  <th className="w-10 pb-1.5 pr-1 text-center">Wins</th>
                   <th className="w-12 py-1 text-right">Win%</th>
                 </tr>
               </thead>
@@ -298,10 +343,12 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                           </span>
                         )}
                       </td>
-                      <td className="py-1 pr-1 text-xs">
-                        {gradeLabels[String(entry.grade)] || entry.grade}
+                      <td className="py-1.5 pr-1 text-center">
+                        <span className={`inline-block rounded px-1 py-0.5 text-xs font-bold ${gradeBadgeClass[String(entry.grade)] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {gradeShort[String(entry.grade)] ?? String(entry.grade)}
+                        </span>
                       </td>
-                      <td className="py-1 pr-1 text-center">{entry.totalGames}</td>
+                      <td className="py-1.5 pr-1 text-center">{entry.totalGames}</td>
                       <td className="py-1 pr-1 text-center">{entry.wins}</td>
                       <td className="py-1 text-right">
                         {Math.round(entry.winRate * 100)}%
@@ -315,102 +362,102 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         )
       ) : filtered.length === 0 ? (
         <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-          No results yet for today
+          {filterType === 'graderound'
+            ? `No ${gradeLabels[gradeRoundFilter] || ''} round results yet today`
+            : 'No results yet for today'}
         </p>
       ) : (
-        <div className="max-h-64 overflow-y-auto">
-          <table className="w-full text-sm text-gray-800 dark:text-gray-200">
-            <thead>
-              <tr className="border-b border-gray-300 text-left dark:border-gray-600">
-                <th className="w-6 py-1 pr-1">#</th>
-                <th className="py-1 pr-1">Name</th>
-                <th className="w-16 py-1 pr-1">Grade</th>
-                <th className="w-14 py-1 pr-1 text-center">Guesses</th>
-                <th className="w-14 py-1 text-right">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((entry, i) => {
-                const isMvpRow =
-                  mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
-                const isMe = entry.name.toLowerCase() === myName.toLowerCase()
-                const podium =
-                  i === 0
-                    ? {
-                        bg: 'rgba(255,215,0,0.12)',
-                        medal: '🥇',
-                        color: '#b8860b',
-                      }
-                    : i === 1
-                    ? {
-                        bg: 'rgba(192,192,192,0.12)',
-                        medal: '🥈',
-                        color: '#888',
-                      }
-                    : i === 2
-                    ? {
-                        bg: 'rgba(205,127,50,0.12)',
-                        medal: '🥉',
-                        color: '#a06030',
-                      }
-                    : null
-                return (
-                  <tr
-                    key={i}
-                    className={`border-b border-gray-100 dark:border-gray-700 ${
-                      isMe
-                        ? 'font-bold text-blue-600 dark:text-blue-400'
-                        : isMvpRow
-                        ? 'font-bold'
-                        : 'text-gray-800 dark:text-gray-200'
-                    }`}
-                    style={podium && !isMe ? { background: podium.bg } : undefined}
-                  >
-                    <td className="py-1 pr-1 text-center">
-                      {podium ? (
-                        <span className="text-base leading-none">
-                          {podium.medal}
+        <>
+          <p className="mb-1 text-right text-xs text-gray-400 dark:text-gray-500">
+            {filtered.length} player{filtered.length !== 1 ? 's' : ''} today
+          </p>
+          <div className="max-h-72 overflow-y-auto">
+            <table className="w-full text-sm text-gray-800 dark:text-gray-200">
+              <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                <tr className="border-b border-gray-300 text-left dark:border-gray-600">
+                  <th className="w-6 pb-1.5 pr-1">#</th>
+                  <th className="pb-1.5 pr-1">Name</th>
+                  <th className="w-10 pb-1.5 pr-1 text-center">Grade</th>
+                  <th className="w-14 pb-1.5 pr-1 text-center">Guesses</th>
+                  <th className="w-14 pb-1.5 text-right">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((entry, i) => {
+                  const isMvpRow =
+                    mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
+                  const isMe = entry.name.toLowerCase() === myName.toLowerCase()
+                  const podium =
+                    i === 0
+                      ? { bg: 'rgba(255,215,0,0.12)', medal: '🥇', color: '#b8860b' }
+                      : i === 1
+                      ? { bg: 'rgba(192,192,192,0.12)', medal: '🥈', color: '#888' }
+                      : i === 2
+                      ? { bg: 'rgba(205,127,50,0.12)', medal: '🥉', color: '#a06030' }
+                      : null
+                  return (
+                    <tr
+                      key={i}
+                      className={`border-b border-gray-100 dark:border-gray-700 ${
+                        isMe
+                          ? 'font-bold text-blue-600 dark:text-blue-400'
+                          : isMvpRow
+                          ? 'font-bold'
+                          : 'text-gray-800 dark:text-gray-200'
+                      }`}
+                      style={podium && !isMe ? { background: podium.bg } : undefined}
+                    >
+                      <td className="py-1.5 pr-1 text-center">
+                        {podium ? (
+                          <span className="text-base leading-none">{podium.medal}</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">{i + 1}</span>
+                        )}
+                      </td>
+                      <td className="max-w-[110px] truncate py-1.5 pr-1">
+                        {isMvpRow && <span className="mr-0.5">👑</span>}
+                        <span
+                          style={
+                            isMe
+                              ? undefined
+                              : podium
+                              ? { color: podium.color, fontWeight: 700 }
+                              : isMvpRow
+                              ? { color: '#d4a017' }
+                              : undefined
+                          }
+                        >
+                          {toTitleCase(entry.name)}
                         </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">{i + 1}</span>
-                      )}
-                    </td>
-                    <td className="truncate py-1 pr-1">
-                      {isMvpRow && <span className="mr-0.5">👑</span>}
-                      <span
-                        style={
-                          isMe
-                            ? undefined
-                            : podium
-                            ? { color: podium.color, fontWeight: 700 }
-                            : isMvpRow
-                            ? { color: '#d4a017' }
-                            : undefined
-                        }
-                      >
-                        {toTitleCase(entry.name)}
-                      </span>
-                      {(streaks.get(entry.name.toLowerCase().trim()) ?? 0) >= 2 && (
-                        <span className="ml-1 text-xs text-orange-500">
-                          🔥{streaks.get(entry.name.toLowerCase().trim())}
+                        {(streaks.get(entry.name.toLowerCase().trim()) ?? 0) >= 2 && (
+                          <span className="ml-1 text-xs text-orange-500">
+                            🔥{streaks.get(entry.name.toLowerCase().trim())}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1.5 pr-1 text-center">
+                        <span className={`inline-block rounded px-1 py-0.5 text-xs font-bold ${gradeBadgeClass[String(entry.grade)] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {gradeShort[String(entry.grade)] ?? String(entry.grade)}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-1 pr-1 text-xs">
-                      {gradeLabels[String(entry.grade)] || entry.grade}
-                    </td>
-                    <td className="py-1 pr-1 text-center">
-                      {entry.won ? entry.guessCount : 'X'}
-                    </td>
-                    <td className="py-1 text-right">
-                      {formatTime(entry.totalDurationSec)}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td className="py-1.5 pr-1 text-center font-mono">
+                        {entry.won ? entry.guessCount : <span className="font-bold text-red-500">✕</span>}
+                      </td>
+                      <td className="py-1.5 text-right font-mono text-xs">
+                        {formatTime(entry.totalDurationSec)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {myRank > 0 && (
+            <p className="mt-1.5 text-center text-xs text-gray-400 dark:text-gray-500">
+              Your rank: <span className="font-bold text-blue-500">#{myRank}</span> of {filtered.length}
+            </p>
+          )}
+        </>
       )}
 
       {mvp && (

@@ -62,7 +62,7 @@ export type GameSubmission = {
   word: string
   won: boolean
   guessCount: number
-  gameType: 'daily' | 'bonus' | 'teachers' | 'grade'
+  gameType: 'daily' | 'bonus' | 'teachers' | 'grade' | `grade${string}`
   gameStartTime: string
   gameEndTime: string
   totalDurationSec: number
