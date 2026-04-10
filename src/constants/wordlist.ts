@@ -91,3 +91,6 @@ if (grade == '"0"') {
 }
 
 export const WORDS = GRADEWORDS
+
+// Export all grade arrays for use in grade-picker rounds
+export { SENIOR, JUNIOR, SOPHOMORE, FRESHMAN }

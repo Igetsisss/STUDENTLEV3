@@ -12,7 +12,7 @@ import queryString from 'query-string'
 import { ENABLE_ARCHIVED_GAMES } from '../constants/settings'
 import { NOT_CONTAINED_MESSAGE, WRONG_SPOT_MESSAGE } from '../constants/strings'
 import { VALID_GUESSES } from '../constants/validGuesses'
-import { WORDS } from '../constants/wordlist'
+import { WORDS, SENIOR, JUNIOR, SOPHOMORE, FRESHMAN } from '../constants/wordlist'
 import { TEACHER_WORDS } from '../teacherWords'
 import { getToday } from './dateutils'
 import { getGuessStatuses } from './statuses'
@@ -23,10 +23,15 @@ export const firstGameDate = new Date(2023, 2, 1)
 export const periodInDays = 1
 
 export const isWordInWordList = (word: string) => {
+  const lower = localeAwareLowerCase(word)
   return (
-    WORDS.includes(localeAwareLowerCase(word)) ||
-    VALID_GUESSES.includes(localeAwareLowerCase(word)) ||
-    TEACHER_WORDS.includes(localeAwareLowerCase(word))
+    WORDS.includes(lower) ||
+    VALID_GUESSES.includes(lower) ||
+    TEACHER_WORDS.includes(lower) ||
+    SENIOR.includes(lower) ||
+    JUNIOR.includes(lower) ||
+    SOPHOMORE.includes(lower) ||
+    FRESHMAN.includes(lower)
   )
 }
 

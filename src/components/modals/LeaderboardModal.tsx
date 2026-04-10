@@ -107,7 +107,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const [streaks, setStreaks] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(false)
   const [filterGrade, setFilterGrade] = useState<string>('')
-  const [filterType, setFilterType] = useState<'daily' | 'bonus'>('daily')
+  const [filterType, setFilterType] = useState<'daily' | 'bonus' | 'teachers'>('daily')
   const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
@@ -177,6 +177,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
           <option value="10">Sophomore</option>
           <option value="11">Junior</option>
           <option value="12">Senior</option>
+          <option value="0">Teachers</option>
         </select>
       </div>
 
@@ -202,6 +203,16 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
             onClick={() => setFilterType('bonus')}
           >
             Bonus
+          </button>
+          <button
+            className={`rounded px-3 py-1 text-sm font-semibold ${
+              filterType === 'teachers'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+            }`}
+            onClick={() => setFilterType('teachers')}
+          >
+            🍎 Teachers
           </button>
         </div>
       )}

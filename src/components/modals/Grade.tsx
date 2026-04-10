@@ -11,6 +11,8 @@ import {
   saveStatsToLocalStorage,
   loadStatsFromLocalStorage,
 } from '../../lib/localStorage'
+import { setBonusPlayedToday } from '../../utils/bonusRound'
+import { setTeachersPlayedToday } from '../../utils/teachersRound'
 import { fetchLeaderboard, submitHistoricalStats, LeaderboardEntry } from '../../lib/api'
 import { getSolution, getGameDate } from '../../lib/words'
 import { Cell } from '../grid/Cell'
@@ -43,6 +45,8 @@ type ExistingAccount = {
   todayGuessCount: number | null
   inProgressGuesses: string[]
   reconstructedStats: GameStats
+  todayBonusPlayed: boolean
+  todayTeachersPlayed: boolean
 }
 
 type Props = {
@@ -176,6 +180,13 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         successRate,
       }
 
+      const todayBonusEntry = matches.find(
+        (e) => e.gameType === 'bonus' && String(e.date).startsWith(today)
+      )
+      const todayTeachersEntry = matches.find(
+        (e) => e.gameType === 'teachers' && String(e.date).startsWith(today)
+      )
+
       setExistingAccount({
         displayName: matches[0].name,
         totalGames: matches.length,
@@ -186,6 +197,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         todayGuessCount: todayEntry ? todayEntry.guessCount : null,
         inProgressGuesses: [],
         reconstructedStats,
+        todayBonusPlayed: !!todayBonusEntry,
+        todayTeachersPlayed: !!todayTeachersEntry,
       })
       setStep('confirm')
       setForceOpen(true)
@@ -240,6 +253,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     } catch {
       // If we can't resolve the solution, just skip — game starts fresh
     }
+
+    // Cross-device: restore bonus/teachers played status from server data
+    if (account.todayBonusPlayed) setBonusPlayedToday()
+    if (account.todayTeachersPlayed) setTeachersPlayedToday()
 
     handleClose()
     window.location.reload()

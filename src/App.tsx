@@ -48,6 +48,8 @@ import {
   saveGameStateToLocalStorage,
   loadTeachersGameStateFromLocalStorage,
   saveTeachersGameStateToLocalStorage,
+  saveGradeRoundGameStateToLocalStorage,
+  loadGradeRoundGameStateFromLocalStorage,
   setStoredIsHighContrastMode,
 } from './lib/localStorage'
 import {
@@ -77,6 +79,12 @@ import {
   hasTeachersBeenPlayedToday,
   setTeachersPlayedToday,
 } from './utils/teachersRound'
+import {
+  getGradeRoundSolution,
+  hasGradeRoundBeenPlayedToday,
+  setGradeRoundPlayedToday,
+  GRADE_LABELS,
+} from './utils/gradeRound'
 import { submitGameData, fetchLeaderboard, computeMvp } from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
 
@@ -121,6 +129,15 @@ function App() {
   const [isRevealing, setIsRevealing] = useState(false)
   const [isBonusRound, setIsBonusRound] = useState(false)
   const [isTeachersRound, setIsTeachersRound] = useState(false)
+  const [isGradeRound, setIsGradeRound] = useState(false)
+  const [gradeRoundGrade, setGradeRoundGrade] = useState<string>('')
+  const [gradeRoundsPlayed, setGradeRoundsPlayed] = useState<string[]>(() => {
+    // Restore which grade rounds were completed today
+    const today = new Date().toISOString().slice(0, 10)
+    return ['9', '10', '11', '12', '0'].filter(
+      (g) => localStorage.getItem('gradeRoundPlayedDate_' + g) === today
+    )
+  })
   const currentMaxChallenges = isBonusRound ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
   const [activeSolution, setActiveSolution] = useState(dailySolution)
   const [isClearing, setIsClearing] = useState(false)
@@ -140,6 +157,7 @@ function App() {
   const [dailyGuesses, setDailyGuesses] = useState<string[]>([])
   const [bonusGuesses, setBonusGuesses] = useState<string[]>([])
   const [teachersGuesses, setTeachersGuesses] = useState<string[]>([])
+  const [gradeRoundGuessesMap, setGradeRoundGuessesMap] = useState<Record<string, string[]>>({})
   const [bothComplete, setBothComplete] = useState(false)
 
   const [guesses, setGuesses] = useState<string[]>(() => {
@@ -395,7 +413,12 @@ function App() {
 
   // Persist game state
   useEffect(() => {
-    if (isTeachersRound) {
+    if (isGradeRound && gradeRoundGrade) {
+      saveGradeRoundGameStateToLocalStorage(gradeRoundGrade, {
+        guesses,
+        solution: getGradeRoundSolution(gradeRoundGrade),
+      })
+    } else if (isTeachersRound) {
       saveTeachersGameStateToLocalStorage({
         guesses,
         solution: teachersSolution,
@@ -411,7 +434,7 @@ function App() {
         solution: dailySolution,
       })
     }
-  }, [guesses, isBonusRound, isTeachersRound])
+  }, [guesses, isBonusRound, isTeachersRound, isGradeRound, gradeRoundGrade])
 
   useEffect(() => {
     if (isGameWon && !alreadyCompleteOnLoadRef.current) {
@@ -496,7 +519,7 @@ function App() {
       word: activeSolution,
       won,
       guessCount,
-      gameType: isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : 'daily',
+      gameType: isGradeRound ? 'grade' : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : 'daily',
       ...trackingData,
     })
   }
@@ -549,7 +572,7 @@ function App() {
       setCurrentGuess('')
 
       if (winningWord) {
-        if (isLatestGame && !isBonusRound && !isTeachersRound) {
+        if (isLatestGame && !isBonusRound && !isTeachersRound && !isGradeRound) {
           const newStats = addStatsForCompletedGame(stats, guesses.length)
           setStats(newStats)
           setDailyGuesses(newGuesses)
@@ -563,7 +586,6 @@ function App() {
         if (isBonusRound) {
           setBonusPlayedToday()
           setBonusGuesses(newGuesses)
-          // Both complete if daily was also done
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
         if (isTeachersRound) {
@@ -571,12 +593,18 @@ function App() {
           setTeachersGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
+        if (isGradeRound && gradeRoundGrade) {
+          setGradeRoundPlayedToday(gradeRoundGrade)
+          setGradeRoundsPlayed((prev: string[]) => [...prev, gradeRoundGrade])
+          setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({ ...prev, [gradeRoundGrade]: newGuesses }))
+          if (dailyGuesses.length > 0) setBothComplete(true)
+        }
         submitGame(true, newGuesses.length)
         return setIsGameWon(true)
       }
 
       if (guesses.length === currentMaxChallenges - 1) {
-        if (isLatestGame && !isBonusRound && !isTeachersRound) {
+        if (isLatestGame && !isBonusRound && !isTeachersRound && !isGradeRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length + 1))
           setDailyGuesses(newGuesses)
         }
@@ -590,9 +618,15 @@ function App() {
           setTeachersGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
+        if (isGradeRound && gradeRoundGrade) {
+          setGradeRoundPlayedToday(gradeRoundGrade)
+          setGradeRoundsPlayed((prev: string[]) => [...prev, gradeRoundGrade])
+          setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({ ...prev, [gradeRoundGrade]: newGuesses }))
+          if (dailyGuesses.length > 0) setBothComplete(true)
+        }
         submitGame(false, newGuesses.length)
         setIsGameLost(true)
-        if (!isBonusRound && !isTeachersRound) {
+        if (!isBonusRound && !isTeachersRound && !isGradeRound) {
           showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
             persist: true,
             delayMs: REVEAL_TIME_MS * activeSolution.length + 1,
@@ -692,6 +726,50 @@ function App() {
         })
 
         const totalEnterTime = MAX_CHALLENGES * teachersSolution.length * 60 + 500
+        setTimeout(() => {
+          setBonusEnter(null)
+        }, totalEnterTime)
+      }, 1000)
+    }, totalClearTime)
+  }
+
+  const handleGradeRound = (grade: string) => {
+    const gradeSolution = getGradeRoundSolution(grade)
+    if (!gradeSolution) return
+    setIsStatsModalOpen(false)
+    setDailyGuesses([...guesses])
+
+    setIsClearing(true)
+    const totalRows = MAX_CHALLENGES
+    const totalClearTime = totalRows * 110 + 700 + 150
+
+    setTimeout(() => {
+      setIsClearing(false)
+      setIsGridHidden(true)
+
+      setActiveSolution(gradeSolution)
+      setIsGradeRound(true)
+      setGradeRoundGrade(grade)
+      setIsBonusRound(false)
+      setIsTeachersRound(false)
+      setGuesses([])
+      setCurrentGuess('')
+      setIsGameWon(false)
+      setIsGameLost(false)
+      setBothComplete(false)
+      tracker.reset()
+      tracker.startGame()
+      hasSubmittedRef.current = false
+
+      setTimeout(() => {
+        setIsGridHidden(false)
+        setBonusEnter('grow')
+
+        showSuccessAlert(`${GRADE_LABELS[grade] ?? 'Grade'} Round!`, {
+          delayMs: 100,
+        })
+
+        const totalEnterTime = MAX_CHALLENGES * gradeSolution.length * 60 + 500
         setTimeout(() => {
           setBonusEnter(null)
         }, totalEnterTime)
@@ -811,6 +889,14 @@ function App() {
               (isGameWon || isGameLost)
             }
             isTeachersRound={isTeachersRound}
+            handleGradeRound={handleGradeRound}
+            gradeRoundsPlayed={gradeRoundsPlayed}
+            allRoundsComplete={
+              isLatestGame &&
+              (isGameWon || isGameLost || dailyGuesses.length > 0) &&
+              hasBonusBeenPlayedToday() &&
+              hasTeachersBeenPlayedToday()
+            }
             onOpenLeaderboard={() => {
               setIsStatsModalOpen(false)
               setIsLeaderboardModalOpen(true)
