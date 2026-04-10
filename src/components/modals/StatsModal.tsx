@@ -46,6 +46,7 @@ type Props = {
   gradeRoundsPlayed?: string[]
   allRoundsComplete?: boolean
   isTeacherPlayer?: boolean
+  playerGrade?: string
   onOpenLeaderboard?: () => void
   bonusSolution?: string
   bonusGuesses?: string[]
@@ -78,6 +79,7 @@ export const StatsModal = ({
   gradeRoundsPlayed = [],
   allRoundsComplete = false,
   isTeacherPlayer = false,
+  playerGrade = '',
   onOpenLeaderboard,
   bonusSolution,
   bonusGuesses,
@@ -88,6 +90,7 @@ export const StatsModal = ({
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null)
   const [leaderboardTotal, setLeaderboardTotal] = useState<number | null>(null)
   const [solveRate, setSolveRate] = useState<number | null>(null)
+  const [lockMessage, setLockMessage] = useState('')
 
   useEffect(() => {
     if (!isOpen || (!isGameWon && !isGameLost)) return
@@ -391,10 +394,10 @@ export const StatsModal = ({
           )}
         </div>
       )}
-      {/* Student grade picker — unlocked after daily + bonus + teachers all done */}
-      {!isTeacherPlayer && allRoundsComplete && handleGradeRound && (
+      {/* Student grade picker — visible when daily is done; grades lock until all rounds complete */}
+      {(isGameLost || isGameWon) && isLatestGame && !isTeacherPlayer && handleGradeRound && (
         <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
-          {gradeRoundsPlayed.length >= 4 ? (
+          {gradeRoundsPlayed.filter((g) => g !== playerGrade).length >= 3 && gradeRoundsPlayed.includes(playerGrade || '') ? (
             <div
               className="rounded-lg px-4 py-3 text-center"
               style={{
@@ -420,7 +423,9 @@ export const StatsModal = ({
                     '11': 'Junior',
                     '12': 'Senior',
                   }
-                  const done = gradeRoundsPlayed.includes(g)
+                  const isOwnGrade = g === playerGrade
+                  const done = gradeRoundsPlayed.includes(g) || isOwnGrade
+                  const locked = !done && !allRoundsComplete
                   return done ? (
                     <div
                       key={g}
@@ -428,18 +433,32 @@ export const StatsModal = ({
                     >
                       {labels[g]} ✓
                     </div>
+                  ) : locked ? (
+                    <button
+                      key={g}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
+                      onClick={() => setLockMessage('Complete Bonus + Teachers rounds first to unlock other grades!')}
+                    >
+                      🔒 {labels[g]}
+                    </button>
                   ) : (
                     <button
                       key={g}
                       type="button"
                       className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                      onClick={() => handleGradeRound(g)}
+                      onClick={() => { setLockMessage(''); handleGradeRound(g) }}
                     >
                       {labels[g]}
                     </button>
                   )
                 })}
               </div>
+              {lockMessage && (
+                <p className="mt-2 text-center text-xs font-medium text-amber-600 dark:text-amber-400">
+                  🔒 {lockMessage}
+                </p>
+              )}
             </>
           )}
         </div>

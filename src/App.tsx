@@ -137,9 +137,18 @@ function App() {
   const [gradeRoundsPlayed, setGradeRoundsPlayed] = useState<string[]>(() => {
     // Restore which grade rounds were completed today
     const today = new Date().toISOString().slice(0, 10)
-    return ['9', '10', '11', '12'].filter(
+    const played = ['9', '10', '11', '12'].filter(
       (g) => localStorage.getItem('gradeRoundPlayedDate_' + g) === today
     )
+    // Pre-mark player's own grade as done — they shouldn't replay it
+    const ownGrade = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+    if (['9', '10', '11', '12'].includes(ownGrade) && !played.includes(ownGrade)) {
+      const dLoaded = loadGameStateFromLocalStorage(true)
+      if (dLoaded && (dLoaded.guesses.includes(dailySolution) || dLoaded.guesses.length >= MAX_CHALLENGES)) {
+        played.push(ownGrade)
+      }
+    }
+    return played
   })
   const currentMaxChallenges = isBonusRound ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
   // Teachers' daily IS the teacher-names word (same as students' Teachers Round)
@@ -625,6 +634,11 @@ function App() {
           const isFirstWin = prevBestIdx === -1
           const beatsBest = !isFirstWin && guessCount < prevBestIdx + 1
           if (isFirstWin || beatsBest) setIsPersonalBest(true)
+          // Pre-mark own grade as done so it can't be replayed
+          const ownGrade = (grade || '').replace(/"/g, '')
+          if (['9', '10', '11', '12'].includes(ownGrade) && !gradeRoundsPlayed.includes(ownGrade)) {
+            setGradeRoundsPlayed((prev: string[]) => [...prev, ownGrade])
+          }
         }
         if (isBonusRound) {
           setBonusPlayedToday()
@@ -650,6 +664,11 @@ function App() {
         if (isLatestGame && !isBonusRound && !isTeachersRound && !isGradeRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length + 1))
           setDailyGuesses(newGuesses)
+          // Pre-mark own grade as done so it can't be replayed
+          const ownGrade = (grade || '').replace(/"/g, '')
+          if (['9', '10', '11', '12'].includes(ownGrade) && !gradeRoundsPlayed.includes(ownGrade)) {
+            setGradeRoundsPlayed((prev: string[]) => [...prev, ownGrade])
+          }
         }
         if (isBonusRound) {
           setBonusPlayedToday()
@@ -847,8 +866,8 @@ function App() {
 
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 sm:px-6 md:max-w-7xl lg:px-8 short:pb-2 short:pt-2">
           {bothComplete ? (
-            <div className="flex grow flex-col justify-center pb-6 short:pb-2">
-              <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex grow flex-col overflow-y-auto pb-2 short:pb-1">
+              <div className="flex flex-wrap justify-center gap-3 py-2">
                 <CompletedGrid
                   solution={effectiveDailySolution}
                   guesses={dailyGuesses}
@@ -894,14 +913,16 @@ function App() {
               />
             </div>
           )}
-          <Keyboard
-            onChar={onChar}
-            onDelete={onDelete}
-            onEnter={onEnter}
-            solution={activeSolution}
-            guesses={guesses}
-            isRevealing={isRevealing}
-          />
+          {!bothComplete && (
+            <Keyboard
+              onChar={onChar}
+              onDelete={onDelete}
+              onEnter={onEnter}
+              solution={activeSolution}
+              guesses={guesses}
+              isRevealing={isRevealing}
+            />
+          )}
           <InfoModal
             isOpen={isInfoModalOpen}
             handleClose={() => setIsInfoModalOpen(false)}
@@ -947,6 +968,7 @@ function App() {
             handleGradeRound={handleGradeRound}
             gradeRoundsPlayed={gradeRoundsPlayed}
             isTeacherPlayer={isTeacherPlayer}
+            playerGrade={(grade || '').replace(/"/g, '')}
             allRoundsComplete={
               isTeacherPlayer
                 ? // Teachers: "all rounds" means bonus has been played
@@ -988,7 +1010,12 @@ function App() {
             isHighContrastMode={isHighContrastMode}
             handleHighContrastMode={handleHighContrastMode}
           />
-          <GradeModal isOpen={isGradeModalOpen} handleClose={() => jack()} />
+          <GradeModal
+            isOpen={isGradeModalOpen}
+            handleClose={() => jack()}
+            isGameActive={!isGameWon && !isGameLost && guesses.length > 0}
+            isInfoOpen={isInfoModalOpen}
+          />
           {mvpData && (
             <MvpModal
               isOpen={isMvpModalOpen}

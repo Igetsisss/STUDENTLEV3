@@ -52,9 +52,11 @@ type ExistingAccount = {
 type Props = {
   isOpen: boolean
   handleClose: () => void
+  isGameActive?: boolean
+  isInfoOpen?: boolean
 }
 
-export const GradeModal = ({ isOpen, handleClose }: Props) => {
+export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOpen = false }: Props) => {
   const hasExistingGrade = !!localStorage.getItem(gradeStatKey)
   const hasExistingName = !!localStorage.getItem('playerName')
 
@@ -74,8 +76,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null)
   const [nameError, setNameError] = useState('')
   const [forceOpen, setForceOpen] = useState(false)
-  const [isChecking, setIsChecking] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [pendingAccountData, setPendingAccountData] = useState<ExistingAccount | null>(null)
 
   const handleGradeNext = () => {
     if (!selectedGrade) return
@@ -152,14 +154,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     window.location.reload()
   }
 
-  // Background account check — runs once on mount if pendingAccountCheck is set
+  // Background account check — runs silently, does NOT open modal during loading
   useEffect(() => {
     const pending = localStorage.getItem('pendingAccountCheck')
     if (!pending) return
-
-    // Open modal immediately with a loading spinner so it doesn't feel broken
-    setForceOpen(true)
-    setIsChecking(true)
 
     fetchLeaderboard().then((data: LeaderboardEntry[]) => {
       const matches = data.filter(
@@ -167,8 +165,6 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       )
       if (matches.length === 0) {
         localStorage.removeItem('pendingAccountCheck')
-        setIsChecking(false)
-        setForceOpen(false)
         return
       }
       // Build a quick stats summary for the confirmation screen
@@ -204,7 +200,6 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         totalDailyGames > 0
           ? Math.round((dailyWins.length / totalDailyGames) * 100)
           : 0
-      // Streak = total games played (no consecutive-day requirement)
       const currentStreak = totalDailyGames
       const bestStreak = totalDailyGames
 
@@ -224,7 +219,8 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         (e) => e.gameType === 'teachers' && String(e.date).startsWith(today)
       )
 
-      setExistingAccount({
+      // Store account silently — modal will open once game is idle
+      setPendingAccountData({
         displayName: matches[0].name,
         totalGames: matches.length,
         wins: wins.length,
@@ -237,16 +233,21 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         todayBonusPlayed: !!todayBonusEntry,
         todayTeachersPlayed: !!todayTeachersEntry,
       })
-      setIsChecking(false)
-      setStep('confirm')
-      // forceOpen stays true — now shows the confirm screen
     }).catch(() => {
       localStorage.removeItem('pendingAccountCheck')
-      setIsChecking(false)
-      setForceOpen(false)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Show account found popup once game is idle (done or not started) and info is closed
+  useEffect(() => {
+    if (!pendingAccountData) return
+    if (isGameActive || isInfoOpen) return
+    setExistingAccount(pendingAccountData)
+    setStep('confirm')
+    setForceOpen(true)
+    setPendingAccountData(null)
+  }, [pendingAccountData, isGameActive, isInfoOpen])
 
   const handleClaimAccount = () => {
     setIsSaving(true)
@@ -327,7 +328,6 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   return (
     <BaseModal
       title={
-        isChecking ? 'Just a moment...' :
         isSaving ? 'Restoring your account...' :
         step === 'grade' ? 'What Grade are you in?' :
         step === 'name' ? (isTeacherFlow ? 'What is your last name?' : 'What is your first name?') :
@@ -336,21 +336,21 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         'Is this you?'
       }
       isOpen={isOpen || forceOpen}
-      handleClose={step === 'confirm' || isChecking || isSaving ? () => {} : handleClose}
+      handleClose={step === 'confirm' || isSaving ? () => {} : handleClose}
     >
       <br />
 
-      {(isChecking || isSaving) && (
+      {isSaving && (
         <div className="flex flex-col items-center justify-center py-8 gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {isSaving ? 'Restoring your account...' : 'Looking up your account...'}
+            Restoring your account...
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">This only takes a second</p>
         </div>
       )}
 
-      {!isChecking && !isSaving && step === 'grade' && (
+      {!isSaving && step === 'grade' && (
         <>
           <form>
             <div className="select">
@@ -380,7 +380,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {!isChecking && !isSaving && step === 'name' && (
+      {!isSaving && step === 'name' && (
         <>
           <div className="mb-4">
             <input
@@ -410,7 +410,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {!isChecking && !isSaving && step === 'initial' && !isTeacherFlow && (
+      {!isSaving && step === 'initial' && !isTeacherFlow && (
         <>
           <div className="mb-4">
             <input
@@ -434,7 +434,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {!isChecking && !isSaving && step === 'prefix' && (
+      {!isSaving && step === 'prefix' && (
         <>
           <form>
             <div className="select">
@@ -461,7 +461,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {!isChecking && !isSaving && step === 'confirm' && existingAccount && (
+      {!isSaving && step === 'confirm' && existingAccount && (
         <>
           <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
             We found an account with that name. Is this you?
