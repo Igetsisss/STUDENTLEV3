@@ -225,39 +225,47 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
               </thead>
               <tbody>
                 {allTimeEntries.map((entry, i) => {
-                  const isMvpRow = mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
+                  const isMvpRow =
+                    mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
                   const isMe = entry.name.toLowerCase() === myName.toLowerCase()
                   return (
-                  <tr
-                    key={i}
-                    className={`border-b border-gray-100 dark:border-gray-700 ${
-                      isMe
-                        ? 'font-bold text-blue-600 dark:text-blue-400'
-                        : isMvpRow
-                        ? 'font-bold'
-                        : 'text-gray-800 dark:text-gray-200'
-                    }`}
-                  >
-                    <td className="py-1 pr-1">{i + 1}</td>
-                    <td className="truncate py-1 pr-1">
-                      {isMvpRow && <span className="mr-0.5">👑</span>}
-                      <span style={isMvpRow && !isMe ? { color: '#d4a017' } : undefined}>
-                        {toTitleCase(entry.name)}
-                      </span>
-                      {(streaks.get(entry.name) ?? 0) >= 2 && (
-                        <span className="ml-1 text-xs text-orange-500">
-                          🔥{streaks.get(entry.name)}
+                    <tr
+                      key={i}
+                      className={`border-b border-gray-100 dark:border-gray-700 ${
+                        isMe
+                          ? 'font-bold text-blue-600 dark:text-blue-400'
+                          : isMvpRow
+                          ? 'font-bold'
+                          : 'text-gray-800 dark:text-gray-200'
+                      }`}
+                    >
+                      <td className="py-1 pr-1">{i + 1}</td>
+                      <td className="truncate py-1 pr-1">
+                        {isMvpRow && <span className="mr-0.5">👑</span>}
+                        <span
+                          style={
+                            isMvpRow && !isMe ? { color: '#d4a017' } : undefined
+                          }
+                        >
+                          {toTitleCase(entry.name)}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-1 pr-1 text-xs">
-                      {gradeLabels[String(entry.grade)] || entry.grade}
-                    </td>
-                    <td className="py-1 pr-1 text-center">{entry.totalGames}</td>
-                    <td className="py-1 pr-1 text-center">{entry.wins}</td>
-                    <td className="py-1 text-right">{Math.round(entry.winRate * 100)}%</td>
-                  </tr>
-                )})
+                        {(streaks.get(entry.name) ?? 0) >= 2 && (
+                          <span className="ml-1 text-xs text-orange-500">
+                            🔥{streaks.get(entry.name)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1 pr-1 text-xs">
+                        {gradeLabels[String(entry.grade)] || entry.grade}
+                      </td>
+                      <td className="py-1 pr-1 text-center">{entry.totalGames}</td>
+                      <td className="py-1 pr-1 text-center">{entry.wins}</td>
+                      <td className="py-1 text-right">
+                        {Math.round(entry.winRate * 100)}%
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
