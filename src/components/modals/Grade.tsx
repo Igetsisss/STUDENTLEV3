@@ -66,6 +66,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
   const [selectedGrade, setSelectedGrade] = useState<string>('')
   const [playerName, setPlayerName] = useState('')
   const [lastInitial, setLastInitial] = useState('')
+
+  // Derive whether the current player is a teacher at each step
+  const currentGrade = selectedGrade || (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')
+  const isTeacherFlow = currentGrade === '0'
   const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null)
   const [nameError, setNameError] = useState('')
   const [forceOpen, setForceOpen] = useState(false)
@@ -277,9 +281,9 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         step === 'grade'
           ? 'What Grade are you in?'
           : step === 'name'
-          ? 'What is your first name?'
+          ? (isTeacherFlow ? 'What is your last name?' : 'What is your first name?')
           : step === 'initial'
-          ? 'Last name initial?'
+          ? (isTeacherFlow ? 'First name initial?' : 'Last name initial?')
           : 'Is this you?'
       }
       isOpen={isOpen || forceOpen}
@@ -322,7 +326,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
           <div className="mb-4">
             <input
               type="text"
-              placeholder="First name"
+              placeholder={isTeacherFlow ? 'Last name' : 'First name'}
               value={playerName}
               onChange={(e) => {
                 setPlayerName(e.target.value)
@@ -363,7 +367,9 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             />
           </div>
           <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-            Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.
+            {isTeacherFlow
+              ? 'Your first initial helps tell apart teachers with the same last name on the leaderboard (e.g. “Smith J”). We only store your last name + initial.'
+              : 'Your last initial helps tell apart players with the same first name on the leaderboard (e.g. “Jack S”). We never store your full last name.'}
           </p>
           <div className="enterbutton" onClick={handleInitialDone}>
             <button>Done</button>
