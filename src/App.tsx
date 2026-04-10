@@ -134,7 +134,7 @@ function App() {
   const [gradeRoundsPlayed, setGradeRoundsPlayed] = useState<string[]>(() => {
     // Restore which grade rounds were completed today
     const today = new Date().toISOString().slice(0, 10)
-    return ['9', '10', '11', '12', '0'].filter(
+    return ['9', '10', '11', '12'].filter(
       (g) => localStorage.getItem('gradeRoundPlayedDate_' + g) === today
     )
   })
@@ -267,6 +267,8 @@ function App() {
 
   const gradeStatKey = 'gradeNumber'
   const grade = localStorage.getItem(gradeStatKey)
+  // grade is stored as JSON string e.g. '"0"' for teachers, '"9"' for Freshman, etc.
+  const isTeacherPlayer = grade === '"0"'
 
   useEffect(() => {
     if (grade == null) {
@@ -873,17 +875,27 @@ function App() {
             numberOfGuessesMade={guesses.length}
             handleBonusRound={handleBonusRound}
             isBonusRoundAvailable={
-              !isBonusRound &&
-              !isTeachersRound &&
-              !hasBonusBeenPlayedToday() &&
-              isLatestGame &&
-              (isGameWon || isGameLost)
+              isTeacherPlayer
+                ? // Teachers: bonus unlocks only after all 4 grade rounds are done
+                  !isBonusRound &&
+                  !hasBonusBeenPlayedToday() &&
+                  isLatestGame &&
+                  (isGameWon || isGameLost) &&
+                  ['9', '10', '11', '12'].every((g) => gradeRoundsPlayed.includes(g))
+                : // Students: bonus available right after daily
+                  !isBonusRound &&
+                  !isTeachersRound &&
+                  !hasBonusBeenPlayedToday() &&
+                  isLatestGame &&
+                  (isGameWon || isGameLost)
             }
             isBonusRound={isBonusRound}
             bonusSolution={getBonusSolution()}
             bonusGuesses={bonusGuesses}
             handleTeachersRound={handleTeachersRound}
             isTeachersRoundAvailable={
+              // Teachers never see the "Teachers Round" button — they ARE teachers
+              !isTeacherPlayer &&
               !isTeachersRound &&
               isLatestGame &&
               (isGameWon || isGameLost)
@@ -891,11 +903,18 @@ function App() {
             isTeachersRound={isTeachersRound}
             handleGradeRound={handleGradeRound}
             gradeRoundsPlayed={gradeRoundsPlayed}
+            isTeacherPlayer={isTeacherPlayer}
             allRoundsComplete={
-              isLatestGame &&
-              (isGameWon || isGameLost || dailyGuesses.length > 0) &&
-              hasBonusBeenPlayedToday() &&
-              hasTeachersBeenPlayedToday()
+              isTeacherPlayer
+                ? // Teachers: "all rounds" means all 4 student grades played
+                  isLatestGame &&
+                  (isGameWon || isGameLost || dailyGuesses.length > 0) &&
+                  ['9', '10', '11', '12'].every((g) => gradeRoundsPlayed.includes(g))
+                : // Students: bonus + teachers both done
+                  isLatestGame &&
+                  (isGameWon || isGameLost || dailyGuesses.length > 0) &&
+                  hasBonusBeenPlayedToday() &&
+                  hasTeachersBeenPlayedToday()
             }
             onOpenLeaderboard={() => {
               setIsStatsModalOpen(false)

@@ -46,6 +46,7 @@ type Props = {
   handleGradeRound?: (grade: string) => void
   gradeRoundsPlayed?: string[]
   allRoundsComplete?: boolean
+  isTeacherPlayer?: boolean
   onOpenLeaderboard?: () => void
   bonusSolution?: string
   bonusGuesses?: string[]
@@ -78,6 +79,7 @@ export const StatsModal = ({
   handleGradeRound,
   gradeRoundsPlayed = [],
   allRoundsComplete = false,
+  isTeacherPlayer = false,
   onOpenLeaderboard,
   bonusSolution,
   bonusGuesses,
@@ -284,7 +286,63 @@ export const StatsModal = ({
           )}
         </div>
       )}
-      {(isGameLost || isGameWon) && isLatestGame && (
+      {/* ── TEACHER FLOW ─────────────────────────────────────────────── */}
+      {(isGameLost || isGameWon) && isLatestGame && isTeacherPlayer && handleGradeRound && (
+        <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
+          <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
+            🎓 Play a Grade!
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {(['9', '10', '11', '12'] as string[]).map((g) => {
+              const labels: Record<string, string> = {
+                '9': 'Freshman',
+                '10': 'Sophomore',
+                '11': 'Junior',
+                '12': 'Senior',
+              }
+              const done = gradeRoundsPlayed.includes(g)
+              return done ? (
+                <div
+                  key={g}
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                >
+                  {labels[g]} ✓
+                </div>
+              ) : (
+                <button
+                  key={g}
+                  type="button"
+                  className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                  onClick={() => handleGradeRound(g)}
+                >
+                  {labels[g]}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      {/* Teacher: Bonus unlocks after all 4 grade rounds */}
+      {(isGameLost || isGameWon) && isLatestGame && isTeacherPlayer && (
+        <div className="mt-3 flex justify-center">
+          {isBonusRoundAvailable && handleBonusRound ? (
+            <button
+              type="button"
+              className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-5 py-2.5 text-center text-sm font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              onClick={handleBonusRound}
+            >
+              🎉 Bonus Round Unlocked!
+            </button>
+          ) : allRoundsComplete ? (
+            <div className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-600 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+              ✓ Bonus Done
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* ── STUDENT FLOW ─────────────────────────────────────────────── */}
+      {(isGameLost || isGameWon) && isLatestGame && !isTeacherPlayer && (
         <div className="mt-3 flex flex-wrap justify-center gap-2">
           {/* Bonus round button — always visible, done = muted badge */}
           {isBonusRoundAvailable && handleBonusRound ? (
@@ -316,20 +374,19 @@ export const StatsModal = ({
           )}
         </div>
       )}
-      {/* Grade picker — unlocked after daily + bonus + teachers all done */}
-      {allRoundsComplete && handleGradeRound && (
+      {/* Student grade picker — unlocked after daily + bonus + teachers all done */}
+      {!isTeacherPlayer && allRoundsComplete && handleGradeRound && (
         <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
           <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
             ⭐ Pick Any Grade to Play!
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            {(['9', '10', '11', '12', '0'] as string[]).map((g) => {
+            {(['9', '10', '11', '12'] as string[]).map((g) => {
               const labels: Record<string, string> = {
                 '9': 'Freshman',
                 '10': 'Sophomore',
                 '11': 'Junior',
                 '12': 'Senior',
-                '0': 'Teachers',
               }
               const done = gradeRoundsPlayed.includes(g)
               return done ? (
