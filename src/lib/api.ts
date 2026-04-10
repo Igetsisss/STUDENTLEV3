@@ -62,7 +62,7 @@ export type GameSubmission = {
   word: string
   won: boolean
   guessCount: number
-  gameType: 'daily' | 'bonus'
+  gameType: 'daily' | 'bonus' | 'teachers'
   gameStartTime: string
   gameEndTime: string
   totalDurationSec: number

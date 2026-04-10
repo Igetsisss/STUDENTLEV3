@@ -13,6 +13,7 @@ import { ENABLE_ARCHIVED_GAMES } from '../constants/settings'
 import { NOT_CONTAINED_MESSAGE, WRONG_SPOT_MESSAGE } from '../constants/strings'
 import { VALID_GUESSES } from '../constants/validGuesses'
 import { WORDS } from '../constants/wordlist'
+import { TEACHER_WORDS } from '../teacherWords'
 import { getToday } from './dateutils'
 import { getGuessStatuses } from './statuses'
 
@@ -24,7 +25,8 @@ export const periodInDays = 1
 export const isWordInWordList = (word: string) => {
   return (
     WORDS.includes(localeAwareLowerCase(word)) ||
-    VALID_GUESSES.includes(localeAwareLowerCase(word))
+    VALID_GUESSES.includes(localeAwareLowerCase(word)) ||
+    TEACHER_WORDS.includes(localeAwareLowerCase(word))
   )
 }
 

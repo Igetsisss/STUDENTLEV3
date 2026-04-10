@@ -37,6 +37,23 @@ export const clearBonusGameState = () => {
   localStorage.removeItem(bonusGameStateKey)
 }
 
+const teachersGameStateKey = 'teachersGameState'
+
+export const saveTeachersGameStateToLocalStorage = (
+  gameState: StoredGameState
+) => {
+  localStorage.setItem(teachersGameStateKey, JSON.stringify(gameState))
+}
+
+export const loadTeachersGameStateFromLocalStorage = () => {
+  const state = localStorage.getItem(teachersGameStateKey)
+  return state ? (JSON.parse(state) as StoredGameState) : null
+}
+
+export const clearTeachersGameState = () => {
+  localStorage.removeItem(teachersGameStateKey)
+}
+
 const gameStatKey = 'gameStats'
 
 const gradeStatKey = 'gradeNumber'

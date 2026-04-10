@@ -46,6 +46,8 @@ import {
   loadBonusGameStateFromLocalStorage,
   saveBonusGameStateToLocalStorage,
   saveGameStateToLocalStorage,
+  loadTeachersGameStateFromLocalStorage,
+  saveTeachersGameStateToLocalStorage,
   setStoredIsHighContrastMode,
 } from './lib/localStorage'
 import {
@@ -70,6 +72,11 @@ import {
   hasBonusBeenPlayedToday,
   setBonusPlayedToday,
 } from './utils/bonusRound'
+import {
+  getTeachersSolution,
+  hasTeachersBeenPlayedToday,
+  setTeachersPlayedToday,
+} from './utils/teachersRound'
 import { submitGameData, fetchLeaderboard, computeMvp } from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
 
@@ -77,6 +84,7 @@ function App() {
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
   const bonusSolution = getBonusSolution()
+  const teachersSolution = getTeachersSolution()
   const hasLoadedRef = useRef(false)
 
   const prefersDarkMode = window.matchMedia(
@@ -112,7 +120,8 @@ function App() {
 
   const [isRevealing, setIsRevealing] = useState(false)
   const [isBonusRound, setIsBonusRound] = useState(false)
-  const currentMaxChallenges = isBonusRound ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
+  const [isTeachersRound, setIsTeachersRound] = useState(false)
+  const currentMaxChallenges = (isBonusRound || isTeachersRound) ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
   const [activeSolution, setActiveSolution] = useState(dailySolution)
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
@@ -130,9 +139,49 @@ function App() {
   // Store completed daily game for side-by-side display
   const [dailyGuesses, setDailyGuesses] = useState<string[]>([])
   const [bonusGuesses, setBonusGuesses] = useState<string[]>([])
+  const [teachersGuesses, setTeachersGuesses] = useState<string[]>([])
   const [bothComplete, setBothComplete] = useState(false)
 
   const [guesses, setGuesses] = useState<string[]>(() => {
+    // Check if there's a teachers round in progress (check first so it restores properly)
+    const teachersSolution = getTeachersSolution()
+    const teachersLoaded = loadTeachersGameStateFromLocalStorage()
+    if (teachersLoaded && teachersLoaded.solution === teachersSolution) {
+      const dailyLoaded = loadGameStateFromLocalStorage(isLatestGame)
+      if (dailyLoaded) {
+        setDailyGuesses(dailyLoaded.guesses)
+      }
+
+      setIsTeachersRound(true)
+      setActiveSolution(teachersSolution)
+
+      const teachersWon = teachersLoaded.guesses.includes(teachersSolution)
+      const teachersLost =
+        teachersLoaded.guesses.length === MAX_CHALLENGES && !teachersWon
+
+      if (teachersWon) {
+        setIsGameWon(true)
+        setTeachersGuesses(teachersLoaded.guesses)
+        if (dailyLoaded) {
+          const dailyDone =
+            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.length === MAX_CHALLENGES
+          if (dailyDone) setBothComplete(true)
+        }
+      }
+      if (teachersLost) {
+        setIsGameLost(true)
+        setTeachersGuesses(teachersLoaded.guesses)
+        if (dailyLoaded) {
+          const dailyDone =
+            dailyLoaded.guesses.includes(dailySolution) ||
+            dailyLoaded.guesses.length === MAX_CHALLENGES
+          if (dailyDone) setBothComplete(true)
+        }
+      }
+      return teachersLoaded.guesses
+    }
+
     // Check if there's a bonus round in progress
     const bonusLoaded = loadBonusGameStateFromLocalStorage()
     if (bonusLoaded && bonusLoaded.solution === bonusSolution) {
@@ -346,7 +395,12 @@ function App() {
 
   // Persist game state
   useEffect(() => {
-    if (isBonusRound) {
+    if (isTeachersRound) {
+      saveTeachersGameStateToLocalStorage({
+        guesses,
+        solution: teachersSolution,
+      })
+    } else if (isBonusRound) {
       saveBonusGameStateToLocalStorage({
         guesses,
         solution: bonusSolution,
@@ -357,7 +411,7 @@ function App() {
         solution: dailySolution,
       })
     }
-  }, [guesses, isBonusRound])
+  }, [guesses, isBonusRound, isTeachersRound])
 
   useEffect(() => {
     if (isGameWon && !alreadyCompleteOnLoadRef.current) {
@@ -442,7 +496,7 @@ function App() {
       word: activeSolution,
       won,
       guessCount,
-      gameType: isBonusRound ? 'bonus' : 'daily',
+      gameType: isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : 'daily',
       ...trackingData,
     })
   }
@@ -495,7 +549,7 @@ function App() {
       setCurrentGuess('')
 
       if (winningWord) {
-        if (isLatestGame && !isBonusRound) {
+        if (isLatestGame && !isBonusRound && !isTeachersRound) {
           const newStats = addStatsForCompletedGame(stats, guesses.length)
           setStats(newStats)
           setDailyGuesses(newGuesses)
@@ -512,12 +566,17 @@ function App() {
           // Both complete if daily was also done
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
+        if (isTeachersRound) {
+          setTeachersPlayedToday()
+          setTeachersGuesses(newGuesses)
+          if (dailyGuesses.length > 0) setBothComplete(true)
+        }
         submitGame(true, newGuesses.length)
         return setIsGameWon(true)
       }
 
       if (guesses.length === currentMaxChallenges - 1) {
-        if (isLatestGame && !isBonusRound) {
+        if (isLatestGame && !isBonusRound && !isTeachersRound) {
           setStats(addStatsForCompletedGame(stats, guesses.length + 1))
           setDailyGuesses(newGuesses)
         }
@@ -526,9 +585,14 @@ function App() {
           setBonusGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
+        if (isTeachersRound) {
+          setTeachersPlayedToday()
+          setTeachersGuesses(newGuesses)
+          if (dailyGuesses.length > 0) setBothComplete(true)
+        }
         submitGame(false, newGuesses.length)
         setIsGameLost(true)
-        if (!isBonusRound) {
+        if (!isBonusRound && !isTeachersRound) {
           showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
             persist: true,
             delayMs: REVEAL_TIME_MS * activeSolution.length + 1,
@@ -588,6 +652,46 @@ function App() {
 
         // Clear the enter animation after it finishes
         const totalEnterTime = MAX_CHALLENGES * bonusSolution.length * 60 + 500
+        setTimeout(() => {
+          setBonusEnter(null)
+        }, totalEnterTime)
+      }, 1000)
+    }, totalClearTime)
+  }
+
+  const handleTeachersRound = () => {
+    setIsStatsModalOpen(false)
+    setDailyGuesses([...guesses])
+
+    setIsClearing(true)
+    const totalRows = MAX_CHALLENGES
+    const totalClearTime = totalRows * 110 + 700 + 150
+
+    setTimeout(() => {
+      setIsClearing(false)
+      setIsGridHidden(true)
+
+      setActiveSolution(teachersSolution)
+      setIsTeachersRound(true)
+      setIsBonusRound(false)
+      setGuesses([])
+      setCurrentGuess('')
+      setIsGameWon(false)
+      setIsGameLost(false)
+      setBothComplete(false)
+      tracker.reset()
+      tracker.startGame()
+      hasSubmittedRef.current = false
+
+      setTimeout(() => {
+        setIsGridHidden(false)
+        setBonusEnter('grow')
+
+        showSuccessAlert('Teachers Round!', {
+          delayMs: 100,
+        })
+
+        const totalEnterTime = MAX_CHALLENGES * teachersSolution.length * 60 + 500
         setTimeout(() => {
           setBonusEnter(null)
         }, totalEnterTime)
@@ -683,6 +787,7 @@ function App() {
             handleBonusRound={handleBonusRound}
             isBonusRoundAvailable={
               !isBonusRound &&
+              !isTeachersRound &&
               !hasBonusBeenPlayedToday() &&
               isLatestGame &&
               (isGameWon || isGameLost)
@@ -690,6 +795,14 @@ function App() {
             isBonusRound={isBonusRound}
             bonusSolution={getBonusSolution()}
             bonusGuesses={bonusGuesses}
+            handleTeachersRound={handleTeachersRound}
+            isTeachersRoundAvailable={
+              !isTeachersRound &&
+              !isBonusRound &&
+              !hasTeachersBeenPlayedToday() &&
+              isLatestGame &&
+              (isGameWon || isGameLost)
+            }
             onOpenLeaderboard={() => {
               setIsStatsModalOpen(false)
               setIsLeaderboardModalOpen(true)

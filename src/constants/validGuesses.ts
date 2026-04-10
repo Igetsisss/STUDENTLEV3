@@ -3,6 +3,7 @@ import {
   loadGradeFromLocalStorage,
   saveGradeToLocalStorage,
 } from '../lib/localStorage'
+import { TEACHER_WORDS } from '../teacherWords'
 
 const gradeStatKey = 'gradeNumber'
 const grade = localStorage.getItem(gradeStatKey)
@@ -73,7 +74,9 @@ const FRESHMAN = [
 ]
 
 // Updated logic mapping to the new high school grades/grad years
-if (grade == null) {
+if (grade == '"0"') {
+  GRADEWORDS = TEACHER_WORDS
+} else if (grade == null) {
   GRADEWORDS = nogradeyet
 } else if (grade == '"69"') {
   console.log('nah thats crazy ')

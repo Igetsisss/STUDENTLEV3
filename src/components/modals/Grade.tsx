@@ -288,6 +288,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
                 <option value="10">Sophomore (10th Grade)</option>
                 <option value="11">Junior (11th Grade)</option>
                 <option value="12">Senior (12th Grade)</option>
+                <option value="0">Teachers</option>
               </select>
             </div>
           </form>

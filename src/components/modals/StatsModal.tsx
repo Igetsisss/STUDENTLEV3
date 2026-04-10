@@ -40,6 +40,8 @@ type Props = {
   handleBonusRound?: () => void
   isBonusRoundAvailable?: boolean
   isBonusRound?: boolean
+  handleTeachersRound?: () => void
+  isTeachersRoundAvailable?: boolean
   onOpenLeaderboard?: () => void
   bonusSolution?: string
   bonusGuesses?: string[]
@@ -66,6 +68,8 @@ export const StatsModal = ({
   handleBonusRound,
   isBonusRoundAvailable,
   isBonusRound,
+  handleTeachersRound,
+  isTeachersRoundAvailable,
   onOpenLeaderboard,
   bonusSolution,
   bonusGuesses,
@@ -279,6 +283,17 @@ export const StatsModal = ({
             onClick={handleBonusRound}
           >
             Bonus Round!
+          </button>
+        </div>
+      )}
+      {(isGameLost || isGameWon) && isTeachersRoundAvailable && handleTeachersRound && (
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-emerald-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+            onClick={handleTeachersRound}
+          >
+            🍎 Teachers Round!
           </button>
         </div>
       )}
