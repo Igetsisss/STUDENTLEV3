@@ -22,6 +22,9 @@ const formatTime = (sec: number): string => {
   return m > 0 ? `${m}m ${s}s` : `${s}s`
 }
 
+const toTitleCase = (name: string): string =>
+  name.replace(/\b\w/g, (c) => c.toUpperCase())
+
 const MvpExplainerModal = ({
   isOpen,
   onClose,
@@ -158,14 +161,14 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         </p>
       ) : (
         <div className="max-h-64 overflow-y-auto">
-          <table className="w-full table-fixed text-sm">
+          <table className="w-full text-sm text-gray-800 dark:text-gray-200">
             <thead>
               <tr className="border-b border-gray-300 text-left dark:border-gray-600">
-                <th className="w-7 py-1 pr-1">#</th>
+                <th className="w-6 py-1 pr-1">#</th>
                 <th className="py-1 pr-1">Name</th>
                 <th className="w-16 py-1 pr-1">Grade</th>
                 <th className="w-14 py-1 pr-1 text-center">Guesses</th>
-                <th className="w-12 py-1 text-right">Time</th>
+                <th className="w-14 py-1 text-right">Time</th>
               </tr>
             </thead>
             <tbody>
@@ -185,7 +188,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                 >
                   <td className="py-1 pr-1">{i + 1}</td>
                   <td className="truncate py-1 pr-1">
-                    {entry.name}
+                    {toTitleCase(entry.name)}
                     {(streaks.get(entry.name) ?? 0) >= 2 && (
                       <span className="ml-1 text-xs text-orange-500">
                         🔥{streaks.get(entry.name)}
@@ -224,7 +227,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold text-yellow-700 dark:text-yellow-400">{mvp.name}</p>
+              <p className="font-bold text-yellow-700 dark:text-yellow-400">{toTitleCase(mvp.name)}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {gradeLabels[String(mvp.grade)] || `Grade ${mvp.grade}`}
               </p>

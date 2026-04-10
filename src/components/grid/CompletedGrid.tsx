@@ -18,7 +18,7 @@ export const CompletedGrid = ({ solution, guesses, label }: Props) => {
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {label}
       </p>
-      <div className="scale-[0.55] origin-top">
+      <div style={{ zoom: 0.55 }}>
         {guesses.map((guess, i) => (
           <CompletedRow key={i} solution={solution} guess={guess} />
         ))}
