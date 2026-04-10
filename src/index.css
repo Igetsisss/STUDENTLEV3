@@ -131,7 +131,7 @@
 }
 
 .cell-clear {
-  animation: cellFallOff 0.45s cubic-bezier(0.55, 0, 1, 0.45) both;
+  animation: cellFallOff 0.7s cubic-bezier(0.4, 0, 0.9, 0.6) both;
 }
 
 @keyframes cellFallOff {
@@ -139,12 +139,12 @@
     transform: translateY(0) rotate(0deg) scale(1);
     opacity: 1;
   }
-  15% {
-    transform: translateY(-8px) rotate(-3deg) scale(1.04);
+  12% {
+    transform: translateY(-10px) rotate(-4deg) scale(1.05);
     opacity: 1;
   }
   100% {
-    transform: translateY(180px) rotate(12deg) scale(0.8);
+    transform: translateY(800px) rotate(18deg) scale(0.7);
     opacity: 0;
   }
 }

@@ -4,7 +4,7 @@ import { CurrentRow } from './CurrentRow'
 import { EmptyRow } from './EmptyRow'
 
 const CELL_STAGGER_MS = 60
-const FALL_ROW_STAGGER_MS = 80 // stagger between rows for the fall animation
+const FALL_ROW_STAGGER_MS = 110 // stagger between rows for the fall animation
 
 type Props = {
   solution: string

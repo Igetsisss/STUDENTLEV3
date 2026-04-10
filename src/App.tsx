@@ -546,9 +546,9 @@ function App() {
     // Start the fall-off-screen clearing animation
     setIsClearing(true)
 
-    // Each row falls 80ms after the previous; last row needs 450ms to finish falling
+    // Each row falls 110ms after the previous; last row needs 700ms to finish falling
     const totalRows = MAX_CHALLENGES
-    const totalClearTime = totalRows * 80 + 450 + 150 // rows * stagger + fall duration + buffer
+    const totalClearTime = totalRows * 110 + 700 + 150 // rows * stagger + fall duration + buffer
 
     setTimeout(() => {
       setIsClearing(false)

@@ -35,55 +35,65 @@ const MvpExplainerModal = ({
   if (!isOpen) return null
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
       onClick={onClose}
     >
       {/* backdrop */}
-      <div className="absolute inset-0 bg-black/50" />
+      <div className="absolute inset-0 bg-black/70" />
       <div
-        className="relative z-10 max-w-sm rounded-2xl border-2 border-yellow-400 bg-white px-6 py-5 shadow-2xl dark:bg-slate-900"
+        className="relative max-w-sm w-full rounded-2xl px-6 py-5 shadow-2xl"
+        style={{
+          zIndex: 10000,
+          background: 'linear-gradient(145deg, #1a1200 0%, #2e1f00 40%, #1a1200 100%)',
+          border: '2px solid transparent',
+          backgroundClip: 'padding-box',
+          boxShadow: '0 0 0 2px #b8860b, 0 0 24px 4px #f5c518aa, 0 8px 32px rgba(0,0,0,0.7)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* gold shimmer bar */}
+        <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)' }} />
         <button
-          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          className="absolute right-3 top-3 font-bold"
+          style={{ color: '#b8860b' }}
           onClick={onClose}
           aria-label="Close"
         >
           ✕
         </button>
-        <p className="mb-1 text-center text-lg font-extrabold text-yellow-600 dark:text-yellow-400">
+        <p className="mb-1 text-center text-xl font-extrabold" style={{ color: '#f5c518', textShadow: '0 0 12px #f5c51888' }}>
           🏆 What is the MVP?
         </p>
-        <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-yellow-500">
+        <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest" style={{ color: '#c9a227' }}>
           Most Valuable Player
         </p>
-        <p className="mb-4 text-sm text-gray-700 dark:text-gray-300">
-          The <strong>MVP</strong> is the best overall Studentle player at the
+        <p className="mb-4 text-sm" style={{ color: '#e8d5a0' }}>
+          The <strong style={{ color: '#f5c518' }}>MVP</strong> is the best overall Studentle player at the
           school, based on <em>all-time</em> stats — not just today. To qualify
-          you need at least <strong>3 games</strong> played.
+          you need at least <strong style={{ color: '#f5c518' }}>3 games</strong> played.
         </p>
-        <div className="mb-4 rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 dark:bg-yellow-900/20">
-          <p className="mb-2 text-xs font-bold uppercase text-yellow-700 dark:text-yellow-400">
+        <div className="mb-4 rounded-xl px-4 py-3" style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid #7b5800' }}>
+          <p className="mb-2 text-xs font-bold uppercase" style={{ color: '#f5c518', letterSpacing: '0.1em' }}>
             How the score is calculated
           </p>
-          <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+          <ul className="space-y-1 text-sm" style={{ color: '#e8d5a0' }}>
             <li>
-              <span className="font-semibold text-yellow-600">60 pts</span> — Win
-              rate (% of games solved)
+              <span className="font-bold" style={{ color: '#f5c518' }}>60 pts</span> — Win rate (% of games solved)
             </li>
             <li>
-              <span className="font-semibold text-yellow-600">30 pts</span> —
-              Guess efficiency (fewer guesses = higher score)
+              <span className="font-bold" style={{ color: '#f5c518' }}>30 pts</span> — Guess efficiency (fewer guesses = higher score)
             </li>
             <li>
-              <span className="font-semibold text-yellow-600">10 pts</span> —
-              Consistency (up to 20 games played)
+              <span className="font-bold" style={{ color: '#f5c518' }}>10 pts</span> — Consistency (up to 20 games played)
             </li>
           </ul>
         </div>
-        <p className="text-center text-xs italic text-gray-400 dark:text-gray-500">
+        <p className="text-center text-xs italic" style={{ color: '#a07820' }}>
           Recalculated live from all-time data. Anyone can take the crown — keep playing!
         </p>
+        {/* gold shimmer bar bottom */}
+        <div className="absolute inset-x-0 bottom-0 h-1 rounded-b-2xl" style={{ background: 'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)' }} />
       </div>
     </div>
   )
@@ -212,13 +222,22 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
       )}
 
       {mvp && (
-        <div className="mt-4 rounded-xl border-2 border-yellow-400 bg-yellow-50 px-4 py-3 dark:bg-yellow-900/20">
-          {/* Header row: "All-Time" + clickable MVP */}
-          <p className="mb-2 text-center text-xs font-bold uppercase tracking-widest text-yellow-600 dark:text-yellow-500">
+        <div
+          className="mt-4 rounded-xl px-4 py-3 relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(145deg, #1a1200 0%, #2e1f00 50%, #1a1200 100%)',
+            boxShadow: '0 0 0 2px #b8860b, 0 0 16px 2px #f5c51866',
+          }}
+        >
+          {/* shimmer top */}
+          <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: 'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)' }} />
+          {/* Header */}
+          <p className="mb-2 text-center text-xs font-bold uppercase tracking-widest" style={{ color: '#c9a227' }}>
             🏆 All-Time{' '}
             <button
               onClick={() => setIsMvpExplainerOpen(true)}
-              className="underline decoration-dotted underline-offset-2 hover:text-yellow-800 dark:hover:text-yellow-300"
+              className="underline decoration-dotted underline-offset-2"
+              style={{ color: '#f5c518' }}
               title="What is MVP? Click to learn more"
             >
               MVP
@@ -227,40 +246,45 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold text-yellow-700 dark:text-yellow-400">{toTitleCase(mvp.name)}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="font-extrabold text-lg" style={{ color: '#f5c518', textShadow: '0 0 8px #f5c51888' }}>
+                {toTitleCase(mvp.name)}
+              </p>
+              <p className="text-xs" style={{ color: '#a07820' }}>
                 {gradeLabels[String(mvp.grade)] || `Grade ${mvp.grade}`}
               </p>
             </div>
             <div className="flex gap-4 text-center text-xs">
               <div>
-                <p className="font-bold text-gray-800 dark:text-gray-200">
+                <p className="font-bold" style={{ color: '#f5c518' }}>
                   {Math.round(mvp.winRate * 100)}%
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">Win Rate</p>
+                <p style={{ color: '#c9a227' }}>Win Rate</p>
               </div>
               <div>
-                <p className="font-bold text-gray-800 dark:text-gray-200">
+                <p className="font-bold" style={{ color: '#f5c518' }}>
                   {mvp.avgGuesses > 0 ? mvp.avgGuesses.toFixed(1) : '-'}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">Avg Guesses</p>
+                <p style={{ color: '#c9a227' }}>Avg Guesses</p>
               </div>
               <div>
-                <p className="font-bold text-gray-800 dark:text-gray-200">{mvp.totalGames}</p>
-                <p className="text-gray-500 dark:text-gray-400">Games</p>
+                <p className="font-bold" style={{ color: '#f5c518' }}>{mvp.totalGames}</p>
+                <p style={{ color: '#c9a227' }}>Games</p>
               </div>
             </div>
           </div>
 
-          <p className="mt-2 text-center text-xs italic text-gray-400 dark:text-gray-500">
+          <p className="mt-2 text-center text-xs italic" style={{ color: '#7b5800' }}>
             Calculated from all-time stats across every game they've played.{' '}
             <button
               onClick={() => setIsMvpExplainerOpen(true)}
-              className="underline decoration-dotted underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
+              className="underline decoration-dotted underline-offset-2"
+              style={{ color: '#a07820' }}
             >
               How is this calculated?
             </button>
           </p>
+          {/* shimmer bottom */}
+          <div className="absolute inset-x-0 bottom-0 h-0.5" style={{ background: 'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)' }} />
         </div>
       )}
 
