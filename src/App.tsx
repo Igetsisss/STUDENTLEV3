@@ -810,6 +810,7 @@ function App() {
               isLatestGame &&
               (isGameWon || isGameLost)
             }
+            isTeachersRound={isTeachersRound}
             onOpenLeaderboard={() => {
               setIsStatsModalOpen(false)
               setIsLeaderboardModalOpen(true)

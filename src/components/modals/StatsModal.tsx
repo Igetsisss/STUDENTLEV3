@@ -42,6 +42,7 @@ type Props = {
   isBonusRound?: boolean
   handleTeachersRound?: () => void
   isTeachersRoundAvailable?: boolean
+  isTeachersRound?: boolean
   onOpenLeaderboard?: () => void
   bonusSolution?: string
   bonusGuesses?: string[]
@@ -70,6 +71,7 @@ export const StatsModal = ({
   isBonusRound,
   handleTeachersRound,
   isTeachersRoundAvailable,
+  isTeachersRound,
   onOpenLeaderboard,
   bonusSolution,
   bonusGuesses,
@@ -286,15 +288,21 @@ export const StatsModal = ({
           </button>
         </div>
       )}
-      {(isGameLost || isGameWon) && isTeachersRoundAvailable && handleTeachersRound && (
+      {(isGameLost || isGameWon) && isLatestGame && (
         <div className="mt-3 flex justify-center">
-          <button
-            type="button"
-            className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-emerald-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-            onClick={handleTeachersRound}
-          >
-            🍎 Teachers Round!
-          </button>
+          {isTeachersRound ? (
+            <div className="inline-flex items-center gap-2 rounded-md border border-emerald-400 bg-emerald-50 px-6 py-3 text-base font-bold text-emerald-700 dark:border-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300">
+              🍎 Teachers Round Complete ✓
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="glisten-btn inline-flex items-center justify-center rounded-md border border-transparent bg-emerald-600 px-6 py-3 text-center text-base font-bold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              onClick={handleTeachersRound}
+            >
+              🍎 Teachers Round!
+            </button>
+          )}
         </div>
       )}
     </BaseModal>
