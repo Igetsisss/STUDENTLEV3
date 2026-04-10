@@ -73,6 +73,7 @@ const MvpExplainerModal = ({
           The <strong style={{ color: '#f5c518' }}>MVP</strong> is the best overall Studentle player at the
           school, based on <em>all-time</em> stats — not just today. To qualify
           you need at least <strong style={{ color: '#f5c518' }}>3 games</strong> played.
+          Every round counts — bonus, teachers, and grade rounds too!
         </p>
         <div className="mb-4 rounded-xl px-4 py-3" style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid #7b5800' }}>
           <p className="mb-2 text-xs font-bold uppercase" style={{ color: '#f5c518', letterSpacing: '0.1em' }}>
@@ -80,13 +81,13 @@ const MvpExplainerModal = ({
           </p>
           <ul className="space-y-1 text-sm" style={{ color: '#e8d5a0' }}>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>60 pts</span> — Win rate (% of games solved)
+              <span className="font-bold" style={{ color: '#f5c518' }}>35 pts</span> — Volume (total rounds played — daily, bonus, teachers, grade picks all count!)
             </li>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>30 pts</span> — Guess efficiency (fewer guesses = higher score)
+              <span className="font-bold" style={{ color: '#f5c518' }}>40 pts</span> — Win rate (% of all rounds solved)
             </li>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>10 pts</span> — Consistency (up to 20 games played)
+              <span className="font-bold" style={{ color: '#f5c518' }}>25 pts</span> — Guess efficiency (fewer guesses = higher score)
             </li>
           </ul>
         </div>

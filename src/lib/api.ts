@@ -93,27 +93,47 @@ export type MvpEntry = {
 }
 
 export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
-  const daily = entries.filter((e) => e.gameType === 'daily')
+  // Include ALL game types (daily, bonus, teachers, grade rounds)
+  const valid = entries.filter((e) => !String(e.date).startsWith('1970'))
+
+  // Group by player name (case-insensitive)
   const map = new Map<string, LeaderboardEntry[]>()
-  for (const e of daily) {
-    map.set(e.name, [...(map.get(e.name) || []), e])
+  for (const e of valid) {
+    const key = e.name.toLowerCase().trim()
+    map.set(key, [...(map.get(key) || []), e])
   }
 
+  // Max total games any player has played (used to normalize volume score)
+  let maxGames = 1
+  map.forEach((games) => {
+    if (games.length > maxGames) maxGames = games.length
+  })
+
   const stats: MvpEntry[] = []
-  map.forEach((games, name) => {
+  map.forEach((games) => {
+    // Require at least 3 total games to qualify (not just daily)
+    if (games.length < 3) return
     const wins = games.filter((g) => g.won)
     const winRate = wins.length / games.length
     const avgGuesses =
       wins.length > 0
         ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
         : 7
-    // Score: win rate (60pts) + avg guesses quality (30pts) + consistency (10pts)
+
+    // Scoring:
+    // 40 pts — Win rate across all game types
+    // 25 pts — Guess efficiency (fewer guesses per win = higher score)
+    // 35 pts — Volume: total games played relative to the most-active player
+    //           Playing bonus, teachers, and grade rounds all count.
+    //           Someone who plays every available option will score highest here.
+    const volumeScore = (games.length / maxGames) * 35
     const score =
-      winRate * 60 +
-      (Math.max(0, 6 - avgGuesses) / 6) * 30 +
-      (Math.min(games.length, 20) / 20) * 10
+      winRate * 40 +
+      (Math.max(0, 6 - avgGuesses) / 6) * 25 +
+      volumeScore
+
     stats.push({
-      name,
+      name: games[0].name,
       grade: games[0].grade,
       totalGames: games.length,
       wins: wins.length,
