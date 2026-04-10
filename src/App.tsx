@@ -121,7 +121,7 @@ function App() {
   const [isRevealing, setIsRevealing] = useState(false)
   const [isBonusRound, setIsBonusRound] = useState(false)
   const [isTeachersRound, setIsTeachersRound] = useState(false)
-  const currentMaxChallenges = (isBonusRound || isTeachersRound) ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
+  const currentMaxChallenges = isBonusRound ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
   const [activeSolution, setActiveSolution] = useState(dailySolution)
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
