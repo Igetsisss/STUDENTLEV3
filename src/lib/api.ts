@@ -250,7 +250,18 @@ const parseGvizResponse = (text: string): any[][] => {
       rows.push(
         row.c.map((cell: any) => {
           if (!cell) return null
-          // Prefer formatted value for dates, fall back to raw value
+          // gviz encodes date cells as Date(YYYY,M,D) with 0-indexed month.
+          // Always convert these to ISO YYYY-MM-DD so date comparisons are reliable
+          // regardless of the sheet's display locale/format.
+          if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
+            const m = cell.v.match(/Date\((\d+),(\d+),(\d+)\)/)
+            if (m) {
+              const y = m[1]
+              const mo = String(Number(m[2]) + 1).padStart(2, '0')
+              const d = String(Number(m[3])).padStart(2, '0')
+              return `${y}-${mo}-${d}`
+            }
+          }
           if (cell.f != null) return cell.f
           return cell.v
         })
@@ -269,7 +280,9 @@ export const fetchLeaderboard = async (
     const text = await res.text()
     const rows = parseGvizResponse(text)
 
-    const today = date || new Date().toISOString().split('T')[0]
+    const _fd = new Date()
+    const localToday = `${_fd.getFullYear()}-${String(_fd.getMonth() + 1).padStart(2, '0')}-${String(_fd.getDate()).padStart(2, '0')}`
+    const today = date || localToday
     const results: LeaderboardEntry[] = []
 
     for (const r of rows) {
