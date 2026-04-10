@@ -1,6 +1,8 @@
 // Teacher last names — used for the Teachers daily game mode and Teachers bonus round
 // Rules: all-alphabetic (no hyphens/spaces), 5–8 letters only
 // so the board length is manageable and there are always enough valid guesses.
+import { getGameDate, getIndex, localeAwareUpperCase } from './lib/words'
+
 export const TEACHER_WORDS: string[] = [
   'adams',
   'allan',
@@ -175,7 +177,6 @@ export const TEACHER_WORDS_FULL: string[] = [
   'wright',
 ]
 
-import { getGameDate, getIndex, localeAwareUpperCase } from './lib/words'
 
 // Teacher bonus solution — uses the full name list with a different offset from the daily,
 // so the bonus word never repeats the same day's daily word.

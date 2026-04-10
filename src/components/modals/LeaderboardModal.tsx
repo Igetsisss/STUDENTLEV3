@@ -296,10 +296,11 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         allTimeEntries.length === 0 ? (
           <p className="py-8 text-center text-gray-500 dark:text-gray-400">No data yet</p>
         ) : (
-          <p className="mb-1 text-right text-xs text-gray-400 dark:text-gray-500">
-            {allTimeEntries.length} player{allTimeEntries.length !== 1 ? 's' : ''}
-          </p>
-          <div className="max-h-72 overflow-y-auto">
+          <>
+            <p className="mb-1 text-right text-xs text-gray-400 dark:text-gray-500">
+              {allTimeEntries.length} player{allTimeEntries.length !== 1 ? 's' : ''}
+            </p>
+            <div className="max-h-72 overflow-y-auto">
             <table className="w-full text-sm text-gray-800 dark:text-gray-200">
               <thead className="sticky top-0 bg-white dark:bg-slate-900">
                 <tr className="border-b border-gray-300 text-left dark:border-gray-600">
@@ -359,6 +360,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
               </tbody>
             </table>
           </div>
+          </>
         )
       ) : filtered.length === 0 ? (
         <p className="py-8 text-center text-gray-500 dark:text-gray-400">
