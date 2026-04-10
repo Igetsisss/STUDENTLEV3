@@ -93,10 +93,10 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
     setPlayerName(capitalized)
     localStorage.setItem('playerName', capitalized)
     setNameError('')
-    // Re-read grade from localStorage directly to avoid any stale closure value
-    const gradeCheck = (selectedGrade || (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')).trim()
-    const teacherRoute = gradeCheck === '0'
-    setStep(teacherRoute ? 'prefix' : 'initial')
+    // Check grade directly — handle both '"0"' (JSON.stringify) and '0' (plain) storage
+    const rawGrade = localStorage.getItem(gradeStatKey) || ''
+    const isTeacher = rawGrade === '"0"' || rawGrade === '0' || selectedGrade === '0'
+    setStep(isTeacher ? 'prefix' : 'initial')
   }
 
   const handlePrefixDone = () => {
@@ -410,7 +410,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {!isChecking && !isSaving && step === 'initial' && (
+      {!isChecking && !isSaving && step === 'initial' && !isTeacherFlow && (
         <>
           <div className="mb-4">
             <input
