@@ -136,7 +136,36 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
     }
   }, [isOpen, filterGrade, viewMode])
 
-  const filtered = entries.filter((e) => e.gameType === filterType)
+  const filtered = (() => {
+    const byType = entries.filter((e) => e.gameType === filterType)
+    // Deduplicate: one entry per player name — keep their best result
+    const map = new Map<string, LeaderboardEntry>()
+    for (const e of byType) {
+      const key = e.name.toLowerCase()
+      const existing = map.get(key)
+      if (!existing) {
+        map.set(key, e)
+      } else {
+        // Prefer a win over a loss
+        const existingWon = existing.won
+        const newWon = e.won
+        if (newWon && !existingWon) {
+          map.set(key, e)
+        } else if (newWon && existingWon) {
+          // Both won — prefer fewer guesses, then faster time
+          if (
+            e.guessCount < existing.guessCount ||
+            (e.guessCount === existing.guessCount &&
+              e.totalDurationSec < existing.totalDurationSec)
+          ) {
+            map.set(key, e)
+          }
+        }
+        // else keep existing (existing won and new lost, or both lost)
+      }
+    }
+    return Array.from(map.values())
+  })()
   const myName = (() => {
     const fn = localStorage.getItem('playerName') || ''
     const li = localStorage.getItem('playerLastInitial') || ''
@@ -261,9 +290,9 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                         >
                           {toTitleCase(entry.name)}
                         </span>
-                        {(streaks.get(entry.name) ?? 0) >= 2 && (
+                        {(streaks.get(entry.name.toLowerCase().trim()) ?? 0) >= 2 && (
                           <span className="ml-1 text-xs text-orange-500">
-                            🔥{streaks.get(entry.name)}
+                            🔥{streaks.get(entry.name.toLowerCase().trim())}
                           </span>
                         )}
                       </td>
@@ -359,9 +388,9 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                       >
                         {toTitleCase(entry.name)}
                       </span>
-                      {(streaks.get(entry.name) ?? 0) >= 2 && (
+                      {(streaks.get(entry.name.toLowerCase().trim()) ?? 0) >= 2 && (
                         <span className="ml-1 text-xs text-orange-500">
-                          🔥{streaks.get(entry.name)}
+                          🔥{streaks.get(entry.name.toLowerCase().trim())}
                         </span>
                       )}
                     </td>

@@ -135,23 +135,24 @@ export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number>
 
   const byPlayer = new Map<string, Set<string>>()
   for (const e of dailyWins) {
+    const key = e.name.toLowerCase().trim()
     const dateStr = String(e.date).slice(0, 10)
-    if (!byPlayer.has(e.name)) byPlayer.set(e.name, new Set())
-    byPlayer.get(e.name)!.add(dateStr)
+    if (!byPlayer.has(key)) byPlayer.set(key, new Set())
+    byPlayer.get(key)!.add(dateStr)
   }
 
   const streaks = new Map<string, number>()
   const todayStr = new Date().toISOString().split('T')[0]
   const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0]
 
-  byPlayer.forEach((winDates, name) => {
+  byPlayer.forEach((winDates, key) => {
     let startStr: string
     if (winDates.has(todayStr)) {
       startStr = todayStr
     } else if (winDates.has(yesterdayStr)) {
       startStr = yesterdayStr
     } else {
-      streaks.set(name, 0)
+      streaks.set(key, 0)
       return
     }
 
@@ -166,7 +167,7 @@ export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number>
         break
       }
     }
-    streaks.set(name, streak)
+    streaks.set(key, streak)
   })
 
   return streaks
@@ -286,17 +287,18 @@ export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeE
   )
   const map = new Map<string, LeaderboardEntry[]>()
   for (const e of daily) {
-    map.set(e.name, [...(map.get(e.name) || []), e])
+    const key = e.name.toLowerCase().trim()
+    map.set(key, [...(map.get(key) || []), e])
   }
   const result: AllTimeEntry[] = []
-  map.forEach((games, name) => {
+  map.forEach((games, key) => {
     const wins = games.filter((g) => g.won)
     const avgGuesses =
       wins.length > 0
         ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
         : 0
     result.push({
-      name,
+      name: games[0].name,
       grade: games[0].grade,
       totalGames: games.length,
       wins: wins.length,
