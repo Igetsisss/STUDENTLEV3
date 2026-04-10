@@ -730,11 +730,20 @@ function App() {
                   guesses={dailyGuesses}
                   label="Daily"
                 />
-                <CompletedGrid
-                  solution={bonusSolution}
-                  guesses={bonusGuesses}
-                  label="Bonus"
-                />
+                {bonusGuesses.length > 0 && (
+                  <CompletedGrid
+                    solution={bonusSolution}
+                    guesses={bonusGuesses}
+                    label="Bonus"
+                  />
+                )}
+                {teachersGuesses.length > 0 && (
+                  <CompletedGrid
+                    solution={teachersSolution}
+                    guesses={teachersGuesses}
+                    label="Teachers"
+                  />
+                )}
               </div>
             </div>
           ) : isGridHidden ? (
