@@ -1,4 +1,5 @@
 {
   "buildCommand": "CI=false npm run build",
+  "installCommand": "HUSKY=0 npm install",
   "outputDirectory": "build"
 }
