@@ -99,40 +99,33 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
 
   const handlePrefixDone = () => {
     if (!selectedPrefix) return
-    const lastName = capitalizeName(playerName)
-    // Display name for teachers: "Mr. Smith"
-    const displayName = `${selectedPrefix} ${lastName}`
-    localStorage.setItem('playerName', lastName)
+    // Save prefix now so the initial step can use it for the preview
     localStorage.setItem('playerPrefix', selectedPrefix)
-    localStorage.removeItem('playerLastInitial') // not used for teachers
-    if (!localStorage.getItem('hasSeenInfo')) {
-      localStorage.setItem('showInfoAfterReload', 'true')
-    }
-    if (!localStorage.getItem('historicalStatsSubmitted')) {
-      const stats = loadStatsFromLocalStorage()
-      const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
-      if (stats && stats.totalGames > 0 && gradeRaw) {
-        localStorage.setItem('historicalStatsSubmitted', 'true')
-        submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
-      }
-    }
-    localStorage.setItem('pendingAccountCheck', displayName)
-    handleClose()
-    window.location.reload()
+    setStep('initial')
   }
 
   const handleInitialDone = () => {
-    const displayName = lastInitial.trim()
-      ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
-      : capitalizeName(playerName)
-
-    // Save everything to localStorage right now so the game can start immediately
-    const parts = displayName.split(' ')
-    const initial = parts.length > 1 ? parts[parts.length - 1] : ''
-    const name = initial ? parts.slice(0, -1).join(' ') : displayName
-
-    localStorage.setItem('playerName', name)
-    if (initial) localStorage.setItem('playerLastInitial', initial)
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    let displayName: string
+    if (isTeacherFlow && prefix) {
+      // Teacher: "Mr. Smith J"
+      const lastName = capitalizeName(playerName)
+      displayName = lastInitial.trim()
+        ? `${prefix} ${lastName} ${lastInitial.trim().toUpperCase()}`
+        : `${prefix} ${lastName}`
+      localStorage.setItem('playerName', lastName)
+      if (lastInitial.trim()) localStorage.setItem('playerLastInitial', lastInitial.trim().toUpperCase())
+    } else {
+      // Student: "Jack S"
+      displayName = lastInitial.trim()
+        ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
+        : capitalizeName(playerName)
+      const parts = displayName.split(' ')
+      const initial = parts.length > 1 ? parts[parts.length - 1] : ''
+      const name = initial ? parts.slice(0, -1).join(' ') : displayName
+      localStorage.setItem('playerName', name)
+      if (initial) localStorage.setItem('playerLastInitial', initial)
+    }
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
@@ -333,7 +326,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
         step === 'grade' ? 'What Grade are you in?' :
         step === 'name' ? 'What is your last name?' :
         step === 'prefix' ? 'What is your title?' :
-        step === 'initial' ? 'Last name initial?' :
+        step === 'initial' ? (isTeacherFlow ? 'First name initial?' : 'Last name initial?') :
         'Is this you?'
       }
       isOpen={isOpen || forceOpen}
@@ -427,7 +420,9 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
             />
           </div>
           <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-            Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.
+            {isTeacherFlow
+              ? `Your first initial (e.g. "J") tells apart teachers with the same last name. You'll show as "${selectedPrefix || localStorage.getItem('playerPrefix') || 'Mr.'} ${capitalizeName(playerName)} ${lastInitial.toUpperCase() || 'J'}" on the leaderboard.`
+              : 'Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.'}
           </p>
           <div className="enterbutton" onClick={handleInitialDone}>
             <button>Done</button>
@@ -438,7 +433,7 @@ export const GradeModal = ({ isOpen, handleClose }: Props) => {
       {!isChecking && !isSaving && step === 'prefix' && (
         <>
           <p className="mb-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-            You'll appear on the leaderboard as <strong>{selectedPrefix || 'Mr.'} {capitalizeName(playerName)}</strong>
+            You'll appear on the leaderboard as <strong>{selectedPrefix || 'Mr.'} {capitalizeName(playerName)} J</strong>
           </p>
           <div className="flex flex-wrap justify-center gap-2 mb-5">
             {['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Coach', 'Prof.'].map((p) => (

@@ -62,7 +62,7 @@ const SOPHOMORE = [
 const FRESHMAN = [
   'king', 'ben', 'graham', 'aaron', 'morgan', 'finn', 'amzie', 'cole', 
   'natalie', 'blakely', 'jacob', 'henry', 'kate', 'robert', 'chris', 
-  'byrdie', 'fiver', 'sam', 'zachery', 'ken ken', 'ryan', 'sawyer', 
+  'byrdie', 'fiver', 'sam', 'zachery', 'kenken', 'ryan', 'sawyer', 
   'hudson', 'cannon', 'addie', 'harrison', 'mimi', 'liam', 'gus', 'banks', 
   'hardy', 'matthew', 'alessandra', 'yovela', 'asher', 'joey', 'nandi', 
   'ellie', 'ridge', 'temma', 'ollie', 'katie', 'colin', 'ellison', 'parks', 
@@ -70,7 +70,7 @@ const FRESHMAN = [
   'kaleb', 'penny', 'bates', 'miller', 'jack', 'eve', 'gracie', 'callan', 
   'sanders', 'catherine', 'aidan', 'mark', 'abe', 'chelsea', 'parker', 
   'camille', 'christian', 'isabelle', 'kennedy', 'alice', 'ava', 'haiden', 
-  'mack', 'bobby', 'xavier', 'liza', 'hattie', 'bella', 'mary drew'
+  'mack', 'bobby', 'xavier', 'liza', 'hattie', 'bella' 
 ]
 
 // Updated logic mapping to the new high school grades/grad years
