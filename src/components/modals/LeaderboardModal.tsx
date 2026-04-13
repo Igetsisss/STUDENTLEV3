@@ -161,6 +161,12 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         // Legacy rows used gameType='grade' with the player's own grade — include those too.
         return type === `grade${gradeRoundFilter}` || (type === 'grade' && String(e.grade) === gradeRoundFilter)
       }
+      if (filterType === 'daily') {
+        // Daily entries are now submitted as grade11/grade10/etc.
+        // Show entries where the gameType matches the player's own registered grade.
+        // Also accept legacy 'daily' rows for backward compatibility.
+        return type === `grade${e.grade}` || type === 'daily'
+      }
       return type === filterType
     })
     // Deduplicate: one entry per player name — keep their best result
@@ -170,15 +176,6 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
       const existing = map.get(key)
       if (!existing) {
         map.set(key, e)
-      } else if (filterType === 'daily') {
-        // For daily: a player's FIRST game of the day is always their actual
-        // daily word. Any later 'daily' entries are other-grade plays logged
-        // after. Keep whichever has the earlier gameStartTime.
-        if (e.gameStartTime && existing.gameStartTime) {
-          if (e.gameStartTime < existing.gameStartTime) map.set(key, e)
-        } else if (e.gameStartTime && !existing.gameStartTime) {
-          map.set(key, e)
-        }
       } else {
         // Bonus / teachers / grade rounds: keep best result
         const existingWon = existing.won

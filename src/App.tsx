@@ -555,7 +555,9 @@ function App() {
         const _d = solutionGameDate
         const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
         const existing = await fetchLeaderboard(today)
-        if (existing.filter((e) => e.gameType === 'daily').length === 0) {
+        const gradeRawCheck = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+        const gradeCleanCheck = ({ '8': '11', '27': '11', '7': '10', '28': '10' } as Record<string,string>)[gradeRawCheck] || gradeRawCheck
+        if (existing.filter((e) => e.gameType === `grade${gradeCleanCheck}`).length === 0) {
           setIsFirstToday(true)
           localStorage.setItem('firstToPlayDate', today)
         }
@@ -598,7 +600,7 @@ function App() {
       word: activeSolution,
       won,
       guessCount,
-      gameType: isGradeRound ? `grade${gradeRoundGrade}` : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : 'daily',
+      gameType: isGradeRound ? `grade${gradeRoundGrade}` : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : `grade${gradeClean}`,
       ...trackingData,
     })
   }
