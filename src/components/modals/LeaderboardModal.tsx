@@ -172,14 +172,22 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
       const existing = map.get(key)
       if (!existing) {
         map.set(key, e)
+      } else if (filterType === 'daily') {
+        // For daily: a player's FIRST game of the day is always their actual
+        // daily word. Any later 'daily' entries are other-grade plays logged
+        // after. Keep whichever has the earlier gameStartTime.
+        if (e.gameStartTime && existing.gameStartTime) {
+          if (e.gameStartTime < existing.gameStartTime) map.set(key, e)
+        } else if (e.gameStartTime && !existing.gameStartTime) {
+          map.set(key, e)
+        }
       } else {
-        // Prefer a win over a loss
+        // Bonus / teachers / grade rounds: keep best result
         const existingWon = existing.won
         const newWon = e.won
         if (newWon && !existingWon) {
           map.set(key, e)
         } else if (newWon && existingWon) {
-          // Both won — prefer fewer guesses, then faster time
           if (
             e.guessCount < existing.guessCount ||
             (e.guessCount === existing.guessCount &&
@@ -188,7 +196,6 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
             map.set(key, e)
           }
         }
-        // else keep existing (existing won and new lost, or both lost)
       }
     }
     return Array.from(map.values())

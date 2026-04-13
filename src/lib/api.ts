@@ -119,6 +119,7 @@ export type LeaderboardEntry = {
   guessCount: number
   gameType: string
   totalDurationSec: number
+  gameStartTime: string
 }
 
 export type MvpEntry = {
@@ -434,6 +435,7 @@ export const fetchLeaderboard = async (
         guessCount: Number(r[5]) || 0,
         gameType: rowType,
         totalDurationSec: Number(r[9]) || 0,
+        gameStartTime: r[7] ? String(r[7]) : '',
       })
     }
 
