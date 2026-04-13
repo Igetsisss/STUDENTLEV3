@@ -887,6 +887,7 @@ function App() {
                     solution={bonusSolution}
                     guesses={bonusGuesses}
                     label="Bonus"
+                    maxChallenges={MAX_BONUS_CHALLENGES}
                   />
                 )}
                 {teachersGuesses.length > 0 && (

@@ -6,11 +6,12 @@ type Props = {
   solution: string
   guesses: string[]
   label: string
+  maxChallenges?: number
 }
 
-export const CompletedGrid = ({ solution, guesses, label }: Props) => {
+export const CompletedGrid = ({ solution, guesses, label, maxChallenges = MAX_CHALLENGES }: Props) => {
   const empties = Array.from(
-    Array(Math.max(0, MAX_CHALLENGES - guesses.length))
+    Array(Math.max(0, maxChallenges - guesses.length))
   )
 
   return (
