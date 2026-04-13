@@ -154,11 +154,14 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   }, [isOpen, filterGrade, filterType, viewMode])
 
   const filtered = (() => {
-    const byType = entries.filter((e) =>
-      filterType === 'graderound'
-        ? e.gameType === `grade${gradeRoundFilter}`
-        : e.gameType === filterType
-    )
+    const byType = entries.filter((e) => {
+      const type = String(e.gameType || '').toLowerCase().trim()
+      if (filterType === 'graderound') {
+        // Support both new rows (grade9/10/11/12) and legacy rows (grade)
+        return type === `grade${gradeRoundFilter}` || (type === 'grade' && String(e.grade) === gradeRoundFilter)
+      }
+      return type === filterType
+    })
     // Deduplicate: one entry per player name — keep their best result
     const map = new Map<string, LeaderboardEntry>()
     for (const e of byType) {

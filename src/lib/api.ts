@@ -270,6 +270,9 @@ const normalizeLegacyGrade = (rawGrade: string): string => {
   return legacyMap[clean] || clean
 }
 
+const normalizeNameKey = (name: string): string =>
+  String(name || '').toLowerCase().replace(/\s+/g, ' ').trim()
+
 const parseGvizResponse = (text: string): any[][] => {
   // Response is: /*O_o*/\ngoogle.visualization.Query.setResponse({...})
   const jsonStr = text
@@ -356,9 +359,13 @@ export const fetchLeaderboard = async (
     const results: LeaderboardEntry[] = []
 
     // Legacy display-name / grade corrections
-    // Key: "name|grade" (lowercase name, numeric grade as stored)
-    const legacyFixes: Record<string, { name: string; grade: number }> = {
-      'harvey m|11': { name: 'Mrs. Harvey', grade: 0 },
+    // Key: normalized lowercase name, irrespective of stored grade.
+    const legacyNameAliases: Record<string, { name: string; grade: number }> = {
+      'harvey m': { name: 'Mrs. Harvey', grade: 0 },
+      'evan bassett': { name: 'Dr. Bassett', grade: 0 },
+      'bassett evan': { name: 'Dr. Bassett', grade: 0 },
+      'katie cruce': { name: 'Mrs. Cruce', grade: 0 },
+      'amanda adams': { name: 'Mrs. Adams', grade: 0 },
     }
 
     const selectedGrade = grade ? normalizeLegacyGrade(grade) : ''
@@ -366,23 +373,24 @@ export const fetchLeaderboard = async (
     for (const r of rows) {
       // Columns: 0=name, 1=grade, 2=date, 3=word, 4=won, 5=guessCount,
       //          6=gameType, 7=startTime, 8=endTime, 9=totalDurationSec
+      const rawName = r[0] ? String(r[0]) : ''
       const rowDate = r[2] ? String(r[2]) : ''
       const rowGrade = r[1] != null ? normalizeLegacyGrade(String(r[1])) : ''
+      const alias = legacyNameAliases[normalizeNameKey(rawName)]
+      const finalName = alias ? alias.name : rawName
+      const finalGrade = alias ? String(alias.grade) : rowGrade
 
       if (today && !rowDate.startsWith(today)) continue
-      if (selectedGrade && rowGrade !== selectedGrade) continue
-      if (!r[0] || !String(r[0]).trim()) continue // skip nameless entries
-
-      const fixKey = `${String(r[0]).toLowerCase().trim()}|${Number(rowGrade) || 0}`
-      const fix = legacyFixes[fixKey]
+      if (selectedGrade && finalGrade !== selectedGrade) continue
+      if (!finalName || !String(finalName).trim()) continue // skip nameless entries
 
       results.push({
-        name: fix ? fix.name : (r[0] || ''),
-        grade: fix ? fix.grade : (Number(rowGrade) || 0),
+        name: finalName,
+        grade: Number(finalGrade) || 0,
         date: rowDate,
         won: r[4] === true || r[4] === 'TRUE',
         guessCount: Number(r[5]) || 0,
-        gameType: r[6] || 'daily',
+        gameType: String(r[6] || 'daily').toLowerCase().trim(),
         totalDurationSec: Number(r[9]) || 0,
       })
     }

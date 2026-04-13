@@ -572,11 +572,16 @@ function App() {
     const gradeNorm: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
     let gradeClean = gradeNorm[gradeCleanRaw] || gradeCleanRaw
     // Legacy name/grade corrections (players who registered before certain features existed)
+    const normalizePlayerKey = (name: string) =>
+      String(name || '').toLowerCase().replace(/\s+/g, ' ').trim()
     const legacyNameFixes: Record<string, { name: string; grade: string }> = {
-      'harvey m|11': { name: 'Mrs. Harvey', grade: '0' },
+      'harvey m': { name: 'Mrs. Harvey', grade: '0' },
+      'evan bassett': { name: 'Dr. Bassett', grade: '0' },
+      'bassett evan': { name: 'Dr. Bassett', grade: '0' },
+      'katie cruce': { name: 'Mrs. Cruce', grade: '0' },
+      'amanda adams': { name: 'Mrs. Adams', grade: '0' },
     }
-    const legacyKey = `${playerName.toLowerCase().trim()}|${gradeClean}`
-    const legacyFix = legacyNameFixes[legacyKey]
+    const legacyFix = legacyNameFixes[normalizePlayerKey(playerName)]
     if (legacyFix) { playerName = legacyFix.name; gradeClean = legacyFix.grade }
     const trackingData = tracker.getSubmissionData()
     const d = solutionGameDate
