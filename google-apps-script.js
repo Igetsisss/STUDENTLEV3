@@ -56,30 +56,48 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // ── Signup event (reference only — excluded from all leaderboard queries) ─
+    // ── Signup event → Sheet2 account registry ────────────────────────────────
     if (data.action === 'signup') {
-      var sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
-      var row = [
-        data.playerName || '',
-        data.grade || '',
-        data.registeredAtClient || new Date().toISOString(),
-        '',       // word — blank for signup
-        false,    // won
-        0,        // guessCount
-        'signup', // gameType — filtered out by leaderboard logic
-        '',       // gameStartTime
-        '',       // gameEndTime
-        0,        // totalDurationSec
-        0,        // timeToFirstGuessSec
-        data.source || 'grade_modal',
-        data.screenWidth || 0
-      ];
-      // blank out the 6 guess slots
-      for (var g = 0; g < 6; g++) {
-        row.push(''); row.push(0); row.push(0); row.push(0);
+      var ss = SpreadsheetApp.openById(SHEET_ID);
+      var regSheet = ss.getSheetByName('Sheet2') || ss.getSheetByName('Accounts');
+      if (!regSheet) {
+        regSheet = ss.insertSheet('Accounts');
+        regSheet.appendRow(['ID', 'Name', 'Grade', 'Registered At', 'User Agent', 'Screen Width', 'Screen Height']);
+        regSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+        regSheet.setFrozenRows(1);
       }
-      row.push(new Date().toISOString()); // timestamp column (last)
-      sheet.appendRow(row);
+      // Update existing row if same ID already exists, otherwise append
+      var existingId = data.playerId || '';
+      var updated = false;
+      if (existingId) {
+        var allRows = regSheet.getDataRange().getValues();
+        for (var ri = 1; ri < allRows.length; ri++) {
+          if (String(allRows[ri][0]) === existingId) {
+            regSheet.getRange(ri + 1, 1, 1, 7).setValues([[
+              existingId,
+              data.playerName || '',
+              data.grade || '',
+              data.registeredAtClient || new Date().toISOString(),
+              data.userAgent || '',
+              data.screenWidth || 0,
+              data.screenHeight || 0
+            ]]);
+            updated = true;
+            break;
+          }
+        }
+      }
+      if (!updated) {
+        regSheet.appendRow([
+          existingId,
+          data.playerName || '',
+          data.grade || '',
+          data.registeredAtClient || new Date().toISOString(),
+          data.userAgent || '',
+          data.screenWidth || 0,
+          data.screenHeight || 0
+        ]);
+      }
       return ContentService
         .createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -111,7 +129,8 @@ function doPost(e) {
       row.push(g.deletes || 0);
     }
 
-    row.push(new Date().toISOString());
+    row.push(new Date().toISOString()); // timestamp
+    row.push(data.playerId || '');       // player account ID
 
     sheet.appendRow(row);
 
