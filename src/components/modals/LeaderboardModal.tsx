@@ -196,7 +196,15 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         }
       }
     }
-    return Array.from(map.values())
+    const out = Array.from(map.values())
+    // Re-sort after dedup: value-swaps for daily can shift worse entries to earlier
+    // positions. Always rank by: wins first, then fewest guesses, then fastest.
+    out.sort((a, b) => {
+      if (a.won !== b.won) return a.won ? -1 : 1
+      if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
+      return a.totalDurationSec - b.totalDurationSec
+    })
+    return out
   })()
   const myName = (() => {
     const fn = localStorage.getItem('playerName') || ''
