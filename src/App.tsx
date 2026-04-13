@@ -580,7 +580,10 @@ function App() {
       'bassett evan': { name: 'Dr. Bassett', grade: '0' },
       'katie cruce': { name: 'Mrs. Cruce', grade: '0' },
       'amanda adams': { name: 'Mrs. Adams', grade: '0' },
-      'katie c': { name: 'Mrs. Cruce', grade: '0' },
+      'Katie C': { name: 'Mrs. Cruce', grade: '0' },
+      'katie C': { name: 'Mrs. Cruce', grade: '0' },
+      'harvey M': { name: 'Mrs. Harvey', grade: '0' },
+      'Harvey M': { name: 'Mrs. Harvey', grade: '0' },
     }
     const legacyFix = legacyNameFixes[normalizePlayerKey(playerName)]
     if (legacyFix) { playerName = legacyFix.name; gradeClean = legacyFix.grade }
