@@ -222,12 +222,15 @@ function doGet(e) {
 // Open Apps Script > select backfillAccounts > click Run
 function backfillAccounts() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
-  var gameSheet = ss.getActiveSheet();
+  var gameSheet = ss.getSheetByName('Sheet1');
 
-  // Get or create the Accounts sheet
+  // Get or create the Accounts sheet (use existing Sheet2 if present)
   var accSheet = ss.getSheetByName('Accounts') || ss.getSheetByName('Sheet2');
   if (!accSheet) {
     accSheet = ss.insertSheet('Accounts');
+  }
+  // Add header row if sheet is empty
+  if (accSheet.getLastRow() === 0) {
     accSheet.appendRow(['ID', 'Name', 'Grade', 'Registered At', 'User Agent', 'Screen Width', 'Screen Height']);
     accSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
     accSheet.setFrozenRows(1);
