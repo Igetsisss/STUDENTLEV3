@@ -259,6 +259,17 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
 const SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`
 
+const normalizeLegacyGrade = (rawGrade: string): string => {
+  const clean = String(rawGrade || '').replace(/"/g, '').trim()
+  const legacyMap: Record<string, string> = {
+    '8': '11',
+    '27': '11',
+    '7': '10',
+    '28': '10',
+  }
+  return legacyMap[clean] || clean
+}
+
 const parseGvizResponse = (text: string): any[][] => {
   // Response is: /*O_o*/\ngoogle.visualization.Query.setResponse({...})
   const jsonStr = text
@@ -350,22 +361,24 @@ export const fetchLeaderboard = async (
       'harvey m|11': { name: 'Mrs. Harvey', grade: 0 },
     }
 
+    const selectedGrade = grade ? normalizeLegacyGrade(grade) : ''
+
     for (const r of rows) {
       // Columns: 0=name, 1=grade, 2=date, 3=word, 4=won, 5=guessCount,
       //          6=gameType, 7=startTime, 8=endTime, 9=totalDurationSec
       const rowDate = r[2] ? String(r[2]) : ''
-      const rowGrade = r[1] != null ? String(r[1]) : ''
+      const rowGrade = r[1] != null ? normalizeLegacyGrade(String(r[1])) : ''
 
       if (today && !rowDate.startsWith(today)) continue
-      if (grade && rowGrade !== grade) continue
+      if (selectedGrade && rowGrade !== selectedGrade) continue
       if (!r[0] || !String(r[0]).trim()) continue // skip nameless entries
 
-      const fixKey = `${String(r[0]).toLowerCase().trim()}|${Number(r[1]) || 0}`
+      const fixKey = `${String(r[0]).toLowerCase().trim()}|${Number(rowGrade) || 0}`
       const fix = legacyFixes[fixKey]
 
       results.push({
         name: fix ? fix.name : (r[0] || ''),
-        grade: fix ? fix.grade : (Number(r[1]) || 0),
+        grade: fix ? fix.grade : (Number(rowGrade) || 0),
         date: rowDate,
         won: r[4] === true || r[4] === 'TRUE',
         guessCount: Number(r[5]) || 0,
