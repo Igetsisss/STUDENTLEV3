@@ -55,6 +55,45 @@ export const sendKeystrokeBatch = async (
   }
 }
 
+export type SignupEvent = {
+  action: 'signup'
+  playerName: string
+  grade: string
+  registeredAtClient: string
+  source: string
+  userAgent: string
+  screenWidth: number
+  screenHeight: number
+}
+
+export const submitSignupEvent = async (
+  playerName: string,
+  grade: string,
+  source = 'grade_modal'
+): Promise<void> => {
+  if (!playerName || !grade) return
+  try {
+    const payload: SignupEvent = {
+      action: 'signup',
+      playerName,
+      grade,
+      registeredAtClient: new Date().toISOString(),
+      source,
+      userAgent: navigator.userAgent || '',
+      screenWidth: window.innerWidth || 0,
+      screenHeight: window.innerHeight || 0,
+    }
+    fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    // fire-and-forget, never block registration
+  }
+}
+
 export type GameSubmission = {
   name: string
   grade: string
@@ -375,11 +414,14 @@ export const fetchLeaderboard = async (
       //          6=gameType, 7=startTime, 8=endTime, 9=totalDurationSec
       const rawName = r[0] ? String(r[0]) : ''
       const rowDate = r[2] ? String(r[2]) : ''
+      const rowType = String(r[6] || 'daily').toLowerCase().trim()
       const rowGrade = r[1] != null ? normalizeLegacyGrade(String(r[1])) : ''
       const alias = legacyNameAliases[normalizeNameKey(rawName)]
       const finalName = alias ? alias.name : rawName
       const finalGrade = alias ? String(alias.grade) : rowGrade
 
+      // Signup rows are reference-only and must never affect leaderboard views.
+      if (rowType === 'signup') continue
       if (today && !rowDate.startsWith(today)) continue
       if (selectedGrade && finalGrade !== selectedGrade) continue
       if (!finalName || !String(finalName).trim()) continue // skip nameless entries
@@ -390,7 +432,7 @@ export const fetchLeaderboard = async (
         date: rowDate,
         won: r[4] === true || r[4] === 'TRUE',
         guessCount: Number(r[5]) || 0,
-        gameType: String(r[6] || 'daily').toLowerCase().trim(),
+        gameType: rowType,
         totalDurationSec: Number(r[9]) || 0,
       })
     }

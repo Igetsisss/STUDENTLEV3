@@ -13,7 +13,7 @@ import {
 } from '../../lib/localStorage'
 import { setBonusPlayedToday } from '../../utils/bonusRound'
 import { setTeachersPlayedToday } from '../../utils/teachersRound'
-import { fetchLeaderboard, submitHistoricalStats, LeaderboardEntry } from '../../lib/api'
+import { fetchLeaderboard, submitHistoricalStats, submitSignupEvent, LeaderboardEntry } from '../../lib/api'
 import { getSolution, getGameDate } from '../../lib/words'
 import { Cell } from '../grid/Cell'
 import { BaseModal } from './BaseModal2'
@@ -105,17 +105,18 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     if (!selectedPrefix) return
     const lastName = capitalizeName(playerName)
     const displayName = `${selectedPrefix} ${lastName}`
+    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+    const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
+    const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
     localStorage.setItem('playerName', lastName)
     localStorage.setItem('playerPrefix', selectedPrefix)
     localStorage.removeItem('playerLastInitial')
+    submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
     if (!localStorage.getItem('historicalStatsSubmitted')) {
       const stats = loadStatsFromLocalStorage()
-      const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
-      const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
-      const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
       if (stats && stats.totalGames > 0 && gradeRaw) {
         localStorage.setItem('historicalStatsSubmitted', 'true')
         submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
@@ -131,20 +132,21 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     const displayName = lastInitial.trim()
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
       : capitalizeName(playerName)
+    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+    const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
+    const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
     const parts = displayName.split(' ')
     const initial = parts.length > 1 ? parts[parts.length - 1] : ''
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
     localStorage.setItem('playerName', name)
     if (initial) localStorage.setItem('playerLastInitial', initial)
+    submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
 
     if (!localStorage.getItem('historicalStatsSubmitted')) {
       const stats = loadStatsFromLocalStorage()
-      const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
-      const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
-      const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
       if (stats && stats.totalGames > 0 && gradeRaw) {
         localStorage.setItem('historicalStatsSubmitted', 'true')
         submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)

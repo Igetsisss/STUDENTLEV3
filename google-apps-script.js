@@ -3,101 +3,96 @@
 // 1. Open your Google Sheet: https://docs.google.com/spreadsheets/d/1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg
 // 2. Go to Extensions > Apps Script
 // 3. Delete any existing code and paste this entire file
-// 4. Click Deploy > New Deployment
+// 4. Save, then Deploy > New Deployment (or "Manage deployments" to update existing)
 //    - Type: Web App
 //    - Execute as: Me
 //    - Who has access: Anyone
-// 5. Copy the new deployment URL and update API_URL in src/lib/api.ts
+// 5. Copy the deployment URL and update API_URL in src/lib/api.ts
 // ===========================================================
 
-const SHEET_NAME = 'GameData'
-const KEYSTROKE_SHEET_NAME = 'KeystrokeLogs'
-
-function getOrCreateSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  let sheet = ss.getSheetByName(SHEET_NAME)
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME)
-    sheet.appendRow([
-      'timestamp', 'name', 'grade', 'date', 'word', 'won',
-      'guessCount', 'gameType', 'gameStartTime', 'gameEndTime',
-      'totalDurationSec', 'timeToFirstGuessSec', 'device',
-      'screenWidth', 'guesses'
-    ])
-  }
-  return sheet
-}
-
-function getOrCreateKeystrokeSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  let sheet = ss.getSheetByName(KEYSTROKE_SHEET_NAME)
-  if (!sheet) {
-    sheet = ss.insertSheet(KEYSTROKE_SHEET_NAME)
-    sheet.appendRow([
-      'receivedAt',    // when the server got the batch
-      'sessionId',     // unique per game session
-      'playerName',
-      'grade',
-      'date',
-      'gameType',
-      'eventTimestamp', // exact moment the key was pressed (client time)
-      'seq',           // order within the batch (1-based)
-      'keyType',       // char | char_blocked | delete | delete_empty | delete_blocked | enter_submit | enter_blocked
-      'keyValue',      // the actual letter, BACKSPACE, or ENTER
-      'reason',        // why it was blocked (if applicable)
-      'guessNum',      // which guess row (0-based)
-      'inputBefore',   // what was typed before the key
-      'inputAfter'     // what was typed after the key
-    ])
-  }
-  return sheet
-}
+var SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg';
 
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents)
+    var data = JSON.parse(e.postData.contents);
 
-    // ── Live keystroke batch ──────────────────────────────
+    // ── Live keystroke batch ──────────────────────────────────────────────────
     if (data.action === 'keystrokes') {
-      const sheet = getOrCreateKeystrokeSheet()
-      const receivedAt = new Date().toISOString()
-      const { sessionId, playerName, grade, date, gameType, events } = data
-      const rows = (events || []).map((ev, idx) => [
-        receivedAt,
-        sessionId || '',
-        playerName || '',
-        grade || '',
-        date || '',
-        gameType || '',
-        ev.timestamp || '',
-        idx + 1,
-        ev.keyType || '',
-        ev.keyValue || '',
-        ev.reason || '',
-        ev.guessNum != null ? ev.guessNum : '',
-        ev.inputBefore || '',
-        ev.inputAfter || ''
-      ])
-      if (rows.length > 0) {
-        sheet.getRange(
-          sheet.getLastRow() + 1, 1,
-          rows.length, rows[0].length
-        ).setValues(rows)
+      var ss = SpreadsheetApp.openById(SHEET_ID);
+      var kSheet = ss.getSheetByName('KeystrokeLogs');
+      if (!kSheet) {
+        kSheet = ss.insertSheet('KeystrokeLogs');
+        kSheet.appendRow([
+          'receivedAt', 'sessionId', 'playerName', 'grade', 'date', 'gameType',
+          'eventTimestamp', 'seq', 'keyType', 'keyValue', 'reason',
+          'guessNum', 'inputBefore', 'inputAfter'
+        ]);
+      }
+      var receivedAt = new Date().toISOString();
+      var events = data.events || [];
+      var kRows = events.map(function(ev, idx) {
+        return [
+          receivedAt,
+          data.sessionId || '',
+          data.playerName || '',
+          data.grade || '',
+          data.date || '',
+          data.gameType || '',
+          ev.timestamp || '',
+          idx + 1,
+          ev.keyType || '',
+          ev.keyValue || '',
+          ev.reason || '',
+          ev.guessNum != null ? ev.guessNum : '',
+          ev.inputBefore || '',
+          ev.inputAfter || ''
+        ];
+      });
+      if (kRows.length > 0) {
+        kSheet.getRange(kSheet.getLastRow() + 1, 1, kRows.length, kRows[0].length).setValues(kRows);
       }
       return ContentService
         .createTextOutput(JSON.stringify({ status: 'ok' }))
-        .setMimeType(ContentService.MimeType.JSON)
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // ── End-of-game summary ───────────────────────────────
-    const sheet = getOrCreateSheet()
-    sheet.appendRow([
-      new Date().toISOString(),
+    // ── Signup event (reference only — excluded from all leaderboard queries) ─
+    if (data.action === 'signup') {
+      var sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+      var row = [
+        data.playerName || '',
+        data.grade || '',
+        data.registeredAtClient || new Date().toISOString(),
+        '',       // word — blank for signup
+        false,    // won
+        0,        // guessCount
+        'signup', // gameType — filtered out by leaderboard logic
+        '',       // gameStartTime
+        '',       // gameEndTime
+        0,        // totalDurationSec
+        0,        // timeToFirstGuessSec
+        data.source || 'grade_modal',
+        data.screenWidth || 0
+      ];
+      // blank out the 6 guess slots
+      for (var g = 0; g < 6; g++) {
+        row.push(''); row.push(0); row.push(0); row.push(0);
+      }
+      row.push(new Date().toISOString()); // timestamp column (last)
+      sheet.appendRow(row);
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ── End-of-game summary ───────────────────────────────────────────────────
+    var sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+    var row = [
       data.name || '',
       data.grade || '',
       data.date || '',
       data.word || '',
-      data.won === true,
+      data.won || false,
       data.guessCount || 0,
       data.gameType || 'daily',
       data.gameStartTime || '',
@@ -105,72 +100,101 @@ function doPost(e) {
       data.totalDurationSec || 0,
       data.timeToFirstGuessSec || 0,
       data.device || '',
-      data.screenWidth || 0,
-      JSON.stringify(data.guesses || [])
-    ])
+      data.screenWidth || 0
+    ];
+
+    for (var i = 1; i <= 6; i++) {
+      var g = data.guesses && data.guesses[i - 1] ? data.guesses[i - 1] : {};
+      row.push(g.word || '');
+      row.push(g.timeSec || 0);
+      row.push(g.keystrokes || 0);
+      row.push(g.deletes || 0);
+    }
+
+    row.push(new Date().toISOString());
+
+    sheet.appendRow(row);
 
     return ContentService
       .createTextOutput(JSON.stringify({ status: 'ok' }))
-      .setMimeType(ContentService.MimeType.JSON)
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON)
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
 function doGet(e) {
   try {
-    const action = (e.parameter && e.parameter.action) || ''
+    var sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+    var allData = sheet.getDataRange().getValues();
+    var rows = allData.slice(1);
+
+    var action = (e.parameter && e.parameter.action) || 'leaderboard';
+    var filterGrade = e.parameter.grade || '';
+    var callback = e.parameter.callback || '';
 
     if (action === 'leaderboard') {
-      const dateFilter = e.parameter.date || ''
-      const gradeFilter = e.parameter.grade || ''
+      var results = [];
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var gameType = String(r[6] || 'daily').toLowerCase().trim();
 
-      const sheet = getOrCreateSheet()
-      const rows = sheet.getDataRange().getValues()
-      const headers = rows[0]
+        // Exclude signup rows — reference only, never shown on leaderboard
+        if (gameType === 'signup') continue;
 
-      const results = []
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i]
-        const entry = {}
-        headers.forEach((h, idx) => { entry[h] = row[idx] })
-
-        // Apply filters
-        if (dateFilter && entry.date !== dateFilter) continue
-        if (gradeFilter && String(entry.grade) !== gradeFilter) continue
+        if (filterGrade && String(r[1]) !== filterGrade) continue;
 
         results.push({
-          name: entry.name,
-          grade: entry.grade,
-          date: entry.date,
-          won: entry.won === true || entry.won === 'TRUE',
-          guessCount: Number(entry.guessCount) || 0,
-          gameType: entry.gameType || 'daily',
-          totalDurationSec: Number(entry.totalDurationSec) || 0
-        })
+          name: r[0],
+          grade: r[1],
+          date: r[2],
+          won: r[4] === true || r[4] === 'TRUE',
+          guessCount: Number(r[5]) || 0,
+          gameType: gameType,
+          totalDurationSec: Number(r[9]) || 0
+        });
       }
 
-      // Sort: winners first, then fewest guesses, then fastest
-      results.sort((a, b) => {
-        if (a.won !== b.won) return a.won ? -1 : 1
-        if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
-        return a.totalDurationSec - b.totalDurationSec
-      })
+      results.sort(function(a, b) {
+        if (a.won !== b.won) return a.won ? -1 : 1;
+        if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount;
+        return a.totalDurationSec - b.totalDurationSec;
+      });
+
+      var jsonStr = JSON.stringify({ status: 'ok', data: results });
+
+      if (callback) {
+        return ContentService
+          .createTextOutput(callback + '(' + jsonStr + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
 
       return ContentService
-        .createTextOutput(JSON.stringify({ status: 'ok', data: results }))
-        .setMimeType(ContentService.MimeType.JSON)
+        .createTextOutput(jsonStr)
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
+    var emptyStr = JSON.stringify({ status: 'ok', data: [] });
+    if (callback) {
+      return ContentService
+        .createTextOutput(callback + '(' + emptyStr + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
     return ContentService
-      .createTextOutput(JSON.stringify({ status: 'ok', data: [] }))
-      .setMimeType(ContentService.MimeType.JSON)
-
+      .createTextOutput(emptyStr)
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
+    var errStr = JSON.stringify({ status: 'error', message: err.toString() });
+    var cb = (e.parameter && e.parameter.callback) || '';
+    if (cb) {
+      return ContentService
+        .createTextOutput(cb + '(' + errStr + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
     return ContentService
-      .createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON)
+      .createTextOutput(errStr)
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
