@@ -277,5 +277,5 @@ function backfillAccounts() {
     added++;
   }
 
-  SpreadsheetApp.getUi().alert('Backfill complete. ' + added + ' accounts added.');
+  Logger.loge. ' + added + ' accounts added.');
 }
