@@ -217,3 +217,62 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+// ── Run this ONCE from the Apps Script editor to give all existing players an ID ──
+// Open Apps Script > select backfillAccounts > click Run
+function backfillAccounts() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var gameSheet = ss.getActiveSheet();
+
+  // Get or create the Accounts sheet
+  var accSheet = ss.getSheetByName('Accounts') || ss.getSheetByName('Sheet2');
+  if (!accSheet) {
+    accSheet = ss.insertSheet('Accounts');
+    accSheet.appendRow(['ID', 'Name', 'Grade', 'Registered At', 'User Agent', 'Screen Width', 'Screen Height']);
+    accSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+    accSheet.setFrozenRows(1);
+  }
+
+  // Build a set of names already in the Accounts sheet (lowercase for matching)
+  var existingRows = accSheet.getDataRange().getValues();
+  var existingNames = {};
+  for (var i = 1; i < existingRows.length; i++) {
+    var n = String(existingRows[i][1] || '').toLowerCase().trim();
+    if (n) existingNames[n] = true;
+  }
+
+  // Scan Sheet1 for unique player names (skip signup/keystroke rows)
+  var gameData = gameSheet.getDataRange().getValues();
+  var seen = {};       // name -> { name, grade, firstDate }
+  for (var r = 1; r < gameData.length; r++) {
+    var row = gameData[r];
+    var rawName = String(row[0] || '').trim();
+    var rawGrade = String(row[1] || '').trim();
+    var gameType = String(row[6] || '').toLowerCase().trim();
+    if (!rawName || gameType === 'signup') continue;
+    var nameKey = rawName.toLowerCase();
+    if (!seen[nameKey]) {
+      seen[nameKey] = { name: rawName, grade: rawGrade, firstDate: String(row[2] || '') };
+    }
+  }
+
+  // For each unique name not yet in Accounts, generate an ID and add a row
+  var added = 0;
+  for (var key in seen) {
+    if (existingNames[key]) continue;
+    var player = seen[key];
+    var newId = Utilities.getUuid();
+    accSheet.appendRow([
+      newId,
+      player.name,
+      player.grade,
+      player.firstDate || new Date().toISOString(),
+      'backfill',   // user agent — marks this as a backfilled record
+      0,
+      0
+    ]);
+    added++;
+  }
+
+  SpreadsheetApp.getUi().alert('Backfill complete. ' + added + ' accounts added.');
+}
