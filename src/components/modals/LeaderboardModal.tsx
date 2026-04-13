@@ -157,8 +157,11 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
     const byType = entries.filter((e) => {
       const type = String(e.gameType || '').toLowerCase().trim()
       if (filterType === 'graderound') {
-        // Support both new rows (grade9/10/11/12) and legacy rows (grade)
-        return type === `grade${gradeRoundFilter}` || (type === 'grade' && String(e.grade) === gradeRoundFilter)
+        // Only show players whose registered grade matches the grade round being viewed.
+        // Cross-grade plays (e.g. a Junior playing grade10) are excluded entirely.
+        const correctGrade = String(e.grade) === gradeRoundFilter
+        const correctType = type === `grade${gradeRoundFilter}` || (type === 'grade' && correctGrade)
+        return correctType && correctGrade
       }
       return type === filterType
     })
