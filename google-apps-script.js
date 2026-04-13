@@ -56,48 +56,8 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // ── Signup event → Sheet2 account registry ────────────────────────────────
+    // ── Signup event (no-op — just acknowledge) ──────────────────────────────
     if (data.action === 'signup') {
-      var ss = SpreadsheetApp.openById(SHEET_ID);
-      var regSheet = ss.getSheetByName('Sheet2') || ss.getSheetByName('Accounts');
-      if (!regSheet) {
-        regSheet = ss.insertSheet('Accounts');
-        regSheet.appendRow(['ID', 'Name', 'Grade', 'Registered At', 'User Agent', 'Screen Width', 'Screen Height']);
-        regSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
-        regSheet.setFrozenRows(1);
-      }
-      // Update existing row if same ID already exists, otherwise append
-      var existingId = data.playerId || '';
-      var updated = false;
-      if (existingId) {
-        var allRows = regSheet.getDataRange().getValues();
-        for (var ri = 1; ri < allRows.length; ri++) {
-          if (String(allRows[ri][0]) === existingId) {
-            regSheet.getRange(ri + 1, 1, 1, 7).setValues([[
-              existingId,
-              data.playerName || '',
-              data.grade || '',
-              data.registeredAtClient || new Date().toISOString(),
-              data.userAgent || '',
-              data.screenWidth || 0,
-              data.screenHeight || 0
-            ]]);
-            updated = true;
-            break;
-          }
-        }
-      }
-      if (!updated) {
-        regSheet.appendRow([
-          existingId,
-          data.playerName || '',
-          data.grade || '',
-          data.registeredAtClient || new Date().toISOString(),
-          data.userAgent || '',
-          data.screenWidth || 0,
-          data.screenHeight || 0
-        ]);
-      }
       return ContentService
         .createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -130,7 +90,6 @@ function doPost(e) {
     }
 
     row.push(new Date().toISOString()); // timestamp
-    row.push(data.playerId || '');       // player account ID
 
     sheet.appendRow(row);
 

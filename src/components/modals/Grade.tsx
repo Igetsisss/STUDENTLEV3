@@ -111,13 +111,6 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     localStorage.setItem('playerName', lastName)
     localStorage.setItem('playerPrefix', selectedPrefix)
     localStorage.removeItem('playerLastInitial')
-    // Generate a stable account ID for this registration
-    if (!localStorage.getItem('playerId')) {
-      const id = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : Math.random().toString(36).slice(2) + Date.now().toString(36)
-      localStorage.setItem('playerId', id)
-    }
     submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
@@ -147,13 +140,6 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
     localStorage.setItem('playerName', name)
     if (initial) localStorage.setItem('playerLastInitial', initial)
-    // Generate a stable account ID for this registration
-    if (!localStorage.getItem('playerId')) {
-      const id = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : Math.random().toString(36).slice(2) + Date.now().toString(36)
-      localStorage.setItem('playerId', id)
-    }
     submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')

@@ -57,7 +57,6 @@ export const sendKeystrokeBatch = async (
 
 export type SignupEvent = {
   action: 'signup'
-  playerId: string
   playerName: string
   grade: string
   registeredAtClient: string
@@ -76,7 +75,6 @@ export const submitSignupEvent = async (
   try {
     const payload: SignupEvent = {
       action: 'signup',
-      playerId: localStorage.getItem('playerId') || '',
       playerName,
       grade,
       registeredAtClient: new Date().toISOString(),
@@ -291,7 +289,7 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, playerId: localStorage.getItem('playerId') || '' }),
+      body: JSON.stringify(data),
     })
   } catch (err) {
     console.error('Failed to submit game data:', err)
