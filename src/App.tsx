@@ -98,6 +98,24 @@ function App() {
   const teachersSolution = getTeachersSolution()
   const hasLoadedRef = useRef(false)
 
+  // Legacy teachers registered as students before teacher support existed.
+  // Normalize their gradeNumber to "0" in localStorage so every downstream
+  // calculation (daily solution, word list, bonus, gameType) is correct.
+  ;(() => {
+    const fn = localStorage.getItem('playerName') || ''
+    const li = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    const storedName = prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
+    const key = storedName.toLowerCase().replace(/\s+/g, ' ').trim()
+    const legacyTeacherKeys = ['harvey m', 'katie cruce', 'katie c', 'evan bassett', 'bassett evan', 'amanda adams']
+    if (legacyTeacherKeys.includes(key)) {
+      const currentGrade = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      if (currentGrade !== '0') {
+        localStorage.setItem('gradeNumber', '"0"')
+      }
+    }
+  })()
+
   const prefersDarkMode = window.matchMedia(
     '(prefers-color-scheme: dark)'
   ).matches
