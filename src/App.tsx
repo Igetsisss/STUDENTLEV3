@@ -565,10 +565,19 @@ function App() {
     const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''
     const prefix = localStorage.getItem('playerPrefix') || ''
-    const playerName = prefix ? `${prefix} ${firstName}` : lastInitial ? `${firstName} ${lastInitial}` : firstName
+    let playerName = prefix ? `${prefix} ${firstName}` : lastInitial ? `${firstName} ${lastInitial}` : firstName
     if (!firstName) return // don't submit nameless games
     const gradeRaw = localStorage.getItem('gradeNumber') || ''
-    const gradeClean = gradeRaw.replace(/"/g, '')
+    const gradeCleanRaw = gradeRaw.replace(/"/g, '')
+    const gradeNorm: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
+    let gradeClean = gradeNorm[gradeCleanRaw] || gradeCleanRaw
+    // Legacy name/grade corrections (players who registered before certain features existed)
+    const legacyNameFixes: Record<string, { name: string; grade: string }> = {
+      'harvey m|11': { name: 'Mrs. Harvey', grade: '0' },
+    }
+    const legacyKey = `${playerName.toLowerCase().trim()}|${gradeClean}`
+    const legacyFix = legacyNameFixes[legacyKey]
+    if (legacyFix) { playerName = legacyFix.name; gradeClean = legacyFix.grade }
     const trackingData = tracker.getSubmissionData()
     const d = solutionGameDate
     const puzzleDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

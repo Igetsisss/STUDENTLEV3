@@ -113,7 +113,9 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     }
     if (!localStorage.getItem('historicalStatsSubmitted')) {
       const stats = loadStatsFromLocalStorage()
-      const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
+      const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
       if (stats && stats.totalGames > 0 && gradeRaw) {
         localStorage.setItem('historicalStatsSubmitted', 'true')
         submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
@@ -140,7 +142,9 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
 
     if (!localStorage.getItem('historicalStatsSubmitted')) {
       const stats = loadStatsFromLocalStorage()
-      const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+      const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
+      const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
       if (stats && stats.totalGames > 0 && gradeRaw) {
         localStorage.setItem('historicalStatsSubmitted', 'true')
         submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)

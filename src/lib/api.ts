@@ -344,6 +344,12 @@ export const fetchLeaderboard = async (
     const today = allTime ? '' : (date || localToday)
     const results: LeaderboardEntry[] = []
 
+    // Legacy display-name / grade corrections
+    // Key: "name|grade" (lowercase name, numeric grade as stored)
+    const legacyFixes: Record<string, { name: string; grade: number }> = {
+      'harvey m|11': { name: 'Mrs. Harvey', grade: 0 },
+    }
+
     for (const r of rows) {
       // Columns: 0=name, 1=grade, 2=date, 3=word, 4=won, 5=guessCount,
       //          6=gameType, 7=startTime, 8=endTime, 9=totalDurationSec
@@ -354,9 +360,12 @@ export const fetchLeaderboard = async (
       if (grade && rowGrade !== grade) continue
       if (!r[0] || !String(r[0]).trim()) continue // skip nameless entries
 
+      const fixKey = `${String(r[0]).toLowerCase().trim()}|${Number(r[1]) || 0}`
+      const fix = legacyFixes[fixKey]
+
       results.push({
-        name: r[0] || '',
-        grade: Number(r[1]) || 0,
+        name: fix ? fix.name : (r[0] || ''),
+        grade: fix ? fix.grade : (Number(r[1]) || 0),
         date: rowDate,
         won: r[4] === true || r[4] === 'TRUE',
         guessCount: Number(r[5]) || 0,
