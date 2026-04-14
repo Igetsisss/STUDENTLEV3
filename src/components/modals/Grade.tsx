@@ -379,6 +379,9 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     }
 
     // reload immediately after synchronous writes; isSaving shows briefly
+    // Skip one cloud hydration pass after account restore so stale Sheet2 state
+    // cannot overwrite the just-restored local daily/round state.
+    localStorage.setItem('skipCloudHydrationOnce', 'true')
     handleClose()
     window.location.reload()
   }

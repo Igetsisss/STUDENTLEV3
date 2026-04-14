@@ -390,6 +390,13 @@ function App() {
     if (cloudHydrationAttemptedRef.current) return
     cloudHydrationAttemptedRef.current = true
 
+    // After account claim restore, skip one hydration cycle to avoid stale
+    // cloud state clobbering freshly restored local progress.
+    if (localStorage.getItem('skipCloudHydrationOnce') === 'true') {
+      localStorage.removeItem('skipCloudHydrationOnce')
+      return
+    }
+
     // During account-claim flow, leaderboard/API should drive restoration.
     // Skip cloud hydration so stale snapshots cannot override claim results.
     if (localStorage.getItem('pendingAccountCheck')) return
