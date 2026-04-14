@@ -11,11 +11,11 @@ import { GAME_TITLE } from '../../constants/strings'
 
 type Props = {
   setIsInfoModalOpen: (value: boolean) => void
-  setIsGradeModalOpen: (value: boolean) => void
   setIsStatsModalOpen: (value: boolean) => void
   setIsDatePickerModalOpen: (value: boolean) => void
   setIsSettingsModalOpen: (value: boolean) => void
   setIsLeaderboardModalOpen: (value: boolean) => void
+  onTitleTap?: () => void
   isMvp?: boolean
 }
 
@@ -25,6 +25,7 @@ export const Navbar = ({
   setIsDatePickerModalOpen,
   setIsSettingsModalOpen,
   setIsLeaderboardModalOpen,
+  onTitleTap,
   isMvp = false,
 }: Props) => {
   return (
@@ -43,7 +44,11 @@ export const Navbar = ({
           )}
         </div>
         <div className="flex items-center gap-1">
-          <p className={`text-xl font-bold${isMvp ? ' mvp-title' : ' dark:text-white'}`}>
+          <p
+            className={`cursor-pointer select-none text-xl font-bold${isMvp ? ' mvp-title' : ' dark:text-white'}`}
+            onClick={onTitleTap}
+            title="Studentle"
+          >
             {GAME_TITLE}
           </p>
           {isMvp && <span className="mvp-crown">👑</span>}

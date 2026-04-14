@@ -21,28 +21,6 @@ export const SettingsModal = ({
   isHighContrastMode,
   handleHighContrastMode,
 }: Props) => {
-  const handleChangeGrade = () => {
-    if (
-      window.confirm(
-        'Are you sure you want to reset grade? All Statistics will be lost forever!'
-      )
-    ) {
-      // Save it!
-      if (
-        window.confirm(
-          'Are you SURE that your SURE you want to reset grade? ALL STATISTICS WILL BE GONE, OUT THE WINDOW FOREVER!!!!'
-        )
-      ) {
-        window.localStorage.clear()
-        window.location.reload()
-      } else {
-        // Do nothing!
-      }
-    } else {
-      // Do nothing!
-    }
-  }
-
   return (
     <BaseModal title="Settings" isOpen={isOpen} handleClose={handleClose}>
       <div className="mt-2 flex flex-col divide-y">
@@ -56,14 +34,6 @@ export const SettingsModal = ({
           flag={isHighContrastMode}
           handleFlag={handleHighContrastMode}
           description={HIGH_CONTRAST_MODE_DESCRIPTION}
-        />
-        <SettingsToggle
-          settingName="Change Grade"
-          flag={false}
-          handleFlag={handleChangeGrade}
-          description={
-            'WARNING: When changing this your Local Storage will be cleared meaning ALL Statistics will be lost!'
-          }
         />
         <p className="mt-6 text-sm italic text-gray-500 dark:text-gray-300">
           ver 3.0

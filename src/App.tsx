@@ -182,6 +182,8 @@ function App() {
   const tracker = useGameTracker()
   const hasSubmittedRef = useRef(false)
   const alreadyCompleteOnLoadRef = useRef(false)
+  const titleTapCountRef = useRef(0)
+  const titleTapTimerRef = useRef<number | null>(null)
 
   const [isFirstToday, setIsFirstToday] = useState(() => {
     const stored = localStorage.getItem('firstToPlayDate')
@@ -194,6 +196,36 @@ function App() {
   const [teachersGuesses, setTeachersGuesses] = useState<string[]>([])
   const [gradeRoundGuessesMap, setGradeRoundGuessesMap] = useState<Record<string, string[]>>({})
   const [bothComplete, setBothComplete] = useState(false)
+
+  const handleTitleTap = () => {
+    titleTapCountRef.current += 1
+
+    if (titleTapTimerRef.current !== null) {
+      window.clearTimeout(titleTapTimerRef.current)
+    }
+
+    if (titleTapCountRef.current >= 10) {
+      titleTapCountRef.current = 0
+      titleTapTimerRef.current = null
+      window.localStorage.clear()
+      window.location.reload()
+      return
+    }
+
+    // Require 10 taps within a short window to avoid accidental resets.
+    titleTapTimerRef.current = window.setTimeout(() => {
+      titleTapCountRef.current = 0
+      titleTapTimerRef.current = null
+    }, 8000)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (titleTapTimerRef.current !== null) {
+        window.clearTimeout(titleTapTimerRef.current)
+      }
+    }
+  }, [])
 
   const [guesses, setGuesses] = useState<string[]>(() => {
     // Check if there's a teachers round in progress (check first so it restores properly)
@@ -885,11 +917,11 @@ function App() {
       <div className="flex h-full flex-col">
         <Navbar
           setIsInfoModalOpen={setIsInfoModalOpen}
-          setIsGradeModalOpen={setIsGradeModalOpen}
           setIsStatsModalOpen={setIsStatsModalOpen}
           setIsDatePickerModalOpen={setIsDatePickerModalOpen}
           setIsSettingsModalOpen={setIsSettingsModalOpen}
           setIsLeaderboardModalOpen={setIsLeaderboardModalOpen}
+          onTitleTap={handleTitleTap}
           isMvp={isMvp}
         />
 
