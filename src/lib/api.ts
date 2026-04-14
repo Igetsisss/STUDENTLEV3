@@ -349,15 +349,27 @@ const parseGvizResponse = (text: string): any[][] => {
 export type AllTimeEntry = {
   name: string
   grade: number
-  totalGames: number
+  totalDays: number
   wins: number
   winRate: number
   avgGuesses: number
 }
 
+const isOwnGradeDailyEntry = (e: LeaderboardEntry): boolean => {
+  const type = String(e.gameType || '').toLowerCase().trim()
+  if (type === 'daily') return true // legacy daily rows
+  return type === `grade${String(e.grade)}`
+}
+
+const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
+  if (a.won !== b.won) return a.won && !b.won
+  if (a.guessCount !== b.guessCount) return a.guessCount < b.guessCount
+  return a.totalDurationSec < b.totalDurationSec
+}
+
 export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeEntry[] => {
   const daily = entries.filter(
-    (e) => e.gameType === 'daily' && !String(e.date).startsWith('1970')
+    (e) => isOwnGradeDailyEntry(e) && !String(e.date).startsWith('1970')
   )
   const map = new Map<string, LeaderboardEntry[]>()
   for (const e of daily) {
@@ -365,8 +377,20 @@ export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeE
     map.set(key, [...(map.get(key) || []), e])
   }
   const result: AllTimeEntry[] = []
-  map.forEach((games, key) => {
-    const wins = games.filter((g) => g.won)
+  map.forEach((games) => {
+    // Count one daily outcome per date: keep each player's best result that day.
+    const byDate = new Map<string, LeaderboardEntry>()
+    for (const g of games) {
+      const dateKey = String(g.date || '').slice(0, 10)
+      if (!dateKey) continue
+      const existing = byDate.get(dateKey)
+      if (!existing || isBetterResult(g, existing)) {
+        byDate.set(dateKey, g)
+      }
+    }
+
+    const dayResults = Array.from(byDate.values())
+    const wins = dayResults.filter((g) => g.won)
     const avgGuesses =
       wins.length > 0
         ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
@@ -374,13 +398,17 @@ export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeE
     result.push({
       name: games[0].name,
       grade: games[0].grade,
-      totalGames: games.length,
+      totalDays: dayResults.length,
       wins: wins.length,
-      winRate: wins.length / games.length,
+      winRate: dayResults.length > 0 ? wins.length / dayResults.length : 0,
       avgGuesses,
     })
   })
-  return result.sort((a, b) => b.totalGames - a.totalGames)
+  return result.sort((a, b) => {
+    if (b.totalDays !== a.totalDays) return b.totalDays - a.totalDays
+    if (b.wins !== a.wins) return b.wins - a.wins
+    return b.winRate - a.winRate
+  })
 }
 
 export const fetchLeaderboard = async (

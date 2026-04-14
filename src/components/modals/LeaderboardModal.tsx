@@ -323,7 +323,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                   <th className="w-6 pb-1.5 pr-1">#</th>
                   <th className="pb-1.5 pr-1">Name</th>
                   <th className="w-10 pb-1.5 pr-1 text-center">Grade</th>
-                  <th className="w-12 pb-1.5 pr-1 text-center">Games</th>
+                  <th className="w-12 pb-1.5 pr-1 text-center">Days</th>
                   <th className="w-10 pb-1.5 pr-1 text-center">Wins</th>
                   <th className="w-12 py-1 text-right">Win%</th>
                 </tr>
@@ -365,7 +365,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                           {gradeShort[String(entry.grade)] ?? String(entry.grade)}
                         </span>
                       </td>
-                      <td className="py-1.5 pr-1 text-center">{entry.totalGames}</td>
+                      <td className="py-1.5 pr-1 text-center">{entry.totalDays}</td>
                       <td className="py-1 pr-1 text-center">{entry.wins}</td>
                       <td className="py-1 text-right">
                         {Math.round(entry.winRate * 100)}%
