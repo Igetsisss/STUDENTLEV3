@@ -205,7 +205,8 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         wins.length > 0
           ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
           : 0
-      const today = new Date().toISOString().split('T')[0]
+      const gameDay = getGameDate()
+      const today = `${gameDay.getFullYear()}-${String(gameDay.getMonth() + 1).padStart(2, '0')}-${String(gameDay.getDate()).padStart(2, '0')}`
       const todayEntry = matches.find(
         (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
       )
