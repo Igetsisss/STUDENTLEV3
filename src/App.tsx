@@ -462,12 +462,19 @@ function App() {
     if (Object.keys(gradeMap).length > 0) {
       setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({ ...prev, ...gradeMap }))
     }
-    // Restore bothComplete if any extra round was done today
-    if (
+    // Restore bothComplete only when daily is complete and at least one extra round is done.
+    const dLoadedNow = loadGameStateFromLocalStorage(isLatestGame)
+    const dailyDoneNow =
+      !!dLoadedNow &&
+      dLoadedNow.solution === effectiveDailySolution &&
+      (dLoadedNow.guesses.includes(effectiveDailySolution) ||
+        dLoadedNow.guesses.length >= MAX_CHALLENGES)
+    const extrasDoneNow =
       hasBonusBeenPlayedToday() ||
       hasTeachersBeenPlayedToday() ||
       ['9', '10', '11', '12'].some((g) => hasGradeRoundBeenPlayedToday(g))
-    ) {
+
+    if (dailyDoneNow && extrasDoneNow) {
       setBothComplete(true)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
