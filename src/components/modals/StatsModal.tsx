@@ -48,7 +48,11 @@ const getMyDisplayName = () => {
 
 const isOwnDailyType = (gameType: string, grade: number) => {
   const type = String(gameType || '').toLowerCase().trim()
-  return type === 'daily' || type === `grade${String(grade)}`
+  return (
+    type === 'daily' ||
+    type === `grade${String(grade)}` ||
+    (String(grade) === '0' && type === 'teachers')
+  )
 }
 
 const isBetterEntry = (a: { won: boolean; guessCount: number; totalDurationSec: number }, b: { won: boolean; guessCount: number; totalDurationSec: number }) => {

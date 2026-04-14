@@ -84,7 +84,13 @@ import {
   setGradeRoundPlayedToday,
   GRADE_LABELS,
 } from './utils/gradeRound'
-import { submitGameData, fetchLeaderboard, computeMvp } from './lib/api'
+import {
+  submitGameData,
+  fetchLeaderboard,
+  computeMvp,
+  fetchPlayerStateFromCloud,
+  syncPlayerStateToCloud,
+} from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
 
 function App() {
@@ -182,6 +188,8 @@ function App() {
   const tracker = useGameTracker()
   const hasSubmittedRef = useRef(false)
   const alreadyCompleteOnLoadRef = useRef(false)
+  const cloudHydrationAttemptedRef = useRef(false)
+  const cloudSyncTimerRef = useRef<number | null>(null)
   const titleTapCountRef = useRef(0)
   const titleTapTimerRef = useRef<number | null>(null)
 
@@ -376,6 +384,46 @@ function App() {
     }
   }, [])
 
+  // On page load: hydrate localStorage from Sheet2 cloud state if newer/different.
+  useEffect(() => {
+    if (cloudHydrationAttemptedRef.current) return
+    cloudHydrationAttemptedRef.current = true
+
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    const displayName = prefix
+      ? `${prefix} ${firstName}`
+      : lastInitial
+      ? `${firstName} ${lastInitial}`
+      : firstName
+    const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+    if (!displayName || !gradeRaw) return
+
+    fetchPlayerStateFromCloud(displayName, gradeRaw)
+      .then((snapshot) => {
+        if (!snapshot || !snapshot.state) return
+        const lastApplied = localStorage.getItem('cloudStateAppliedAt') || ''
+        if (lastApplied === snapshot.updatedAt) return
+
+        let changed = false
+        for (const [k, v] of Object.entries(snapshot.state)) {
+          if (localStorage.getItem(k) !== v) {
+            localStorage.setItem(k, v)
+            changed = true
+          }
+        }
+
+        if (changed) {
+          localStorage.setItem('cloudStateAppliedAt', snapshot.updatedAt)
+          window.location.reload()
+        }
+      })
+      .catch(() => {
+        // Keep local state if cloud read fails.
+      })
+  }, [])
+
   // On page load: check all-time MVP and see if current player has earned it
   useEffect(() => {
     const firstName = localStorage.getItem('playerName') || ''
@@ -546,6 +594,83 @@ function App() {
     }
   }, [guesses, isBonusRound, isTeachersRound, isGradeRound, gradeRoundGrade])
 
+  // Debounced full-state sync to Sheet2 for seamless cross-device continuity.
+  useEffect(() => {
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    const displayName = prefix
+      ? `${prefix} ${firstName}`
+      : lastInitial
+      ? `${firstName} ${lastInitial}`
+      : firstName
+    const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+    if (!displayName || !gradeRaw) return
+
+    if (cloudSyncTimerRef.current !== null) {
+      window.clearTimeout(cloudSyncTimerRef.current)
+    }
+
+    cloudSyncTimerRef.current = window.setTimeout(() => {
+      const baseKeys = [
+        'gradeNumber',
+        'playerName',
+        'playerLastInitial',
+        'playerPrefix',
+        'gameState',
+        'archiveGameState',
+        'bonusGameState',
+        'teachersGameState',
+        'gameStats',
+        'bonusRoundPlayedDate',
+        'teachersRoundPlayedDate',
+        'firstToPlayDate',
+        'theme',
+        'highContrast',
+        'mvpAwardedTo',
+        'historicalStatsSubmitted',
+        'hasSeenInfo',
+      ]
+
+      const dynamicKeys: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (!k) continue
+        if (k.startsWith('gradeRoundGameState_') || k.startsWith('gradeRoundPlayedDate_')) {
+          dynamicKeys.push(k)
+        }
+      }
+
+      const state: Record<string, string> = {}
+      for (const key of Array.from(new Set([...baseKeys, ...dynamicKeys]))) {
+        const val = localStorage.getItem(key)
+        if (val !== null) state[key] = val
+      }
+
+      syncPlayerStateToCloud(displayName, gradeRaw, state).catch(() => {
+        // Keep local gameplay fully offline-first.
+      })
+    }, 800)
+
+    return () => {
+      if (cloudSyncTimerRef.current !== null) {
+        window.clearTimeout(cloudSyncTimerRef.current)
+      }
+    }
+  }, [
+    guesses,
+    stats,
+    isGameWon,
+    isGameLost,
+    isBonusRound,
+    isTeachersRound,
+    isGradeRound,
+    gradeRoundGrade,
+    gradeRoundsPlayed,
+    isDarkMode,
+    isHighContrastMode,
+  ])
+
   useEffect(() => {
     if (isGameWon && !alreadyCompleteOnLoadRef.current) {
       const winMessage =
@@ -607,7 +732,8 @@ function App() {
         const existing = await fetchLeaderboard(today)
         const gradeRawCheck = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
         const gradeCleanCheck = ({ '8': '11', '27': '11', '7': '10', '28': '10' } as Record<string,string>)[gradeRawCheck] || gradeRawCheck
-        if (existing.filter((e) => e.gameType === `grade${gradeCleanCheck}`).length === 0) {
+        const dailyGameTypeCheck = gradeCleanCheck === '0' ? 'teachers' : `grade${gradeCleanCheck}`
+        if (existing.filter((e) => e.gameType === dailyGameTypeCheck).length === 0) {
           setIsFirstToday(true)
           localStorage.setItem('firstToPlayDate', today)
         }
@@ -642,6 +768,8 @@ function App() {
     const trackingData = tracker.getSubmissionData()
     const d = solutionGameDate
     const puzzleDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const dailyGameType: 'teachers' | `grade${string}` =
+      gradeClean === '0' ? 'teachers' : `grade${gradeClean}`
 
     submitGameData({
       name: playerName,
@@ -650,7 +778,7 @@ function App() {
       word: activeSolution,
       won,
       guessCount,
-      gameType: isGradeRound ? `grade${gradeRoundGrade}` : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : `grade${gradeClean}`,
+      gameType: isGradeRound ? `grade${gradeRoundGrade}` : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : dailyGameType,
       ...trackingData,
     })
   }

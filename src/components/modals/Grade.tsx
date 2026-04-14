@@ -13,6 +13,7 @@ import {
 } from '../../lib/localStorage'
 import { setBonusPlayedToday } from '../../utils/bonusRound'
 import { setTeachersPlayedToday } from '../../utils/teachersRound'
+import { setGradeRoundPlayedToday } from '../../utils/gradeRound'
 import { fetchLeaderboard, submitHistoricalStats, submitSignupEvent, LeaderboardEntry } from '../../lib/api'
 import { getSolution, getGameDate } from '../../lib/words'
 import { Cell } from '../grid/Cell'
@@ -40,6 +41,7 @@ type ExistingAccount = {
   totalGames: number
   wins: number
   grade: string
+  gradeCode: string
   avgGuesses: number
   todayResult: 'won' | 'lost' | null
   todayGuessCount: number | null
@@ -47,6 +49,7 @@ type ExistingAccount = {
   reconstructedStats: GameStats
   todayBonusPlayed: boolean
   todayTeachersPlayed: boolean
+  todayGradeRoundsPlayed: string[]
 }
 
 type Props = {
@@ -175,7 +178,9 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       }
       // Build a quick stats summary for the confirmation screen
       const wins = matches.filter((e) => e.won)
-      const gradeNum = matches[0].grade
+      const gradeNumRaw = String(matches[0].grade)
+      const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
+      const gradeNum = gradeNormMap[gradeNumRaw] || gradeNumRaw
       const gradeLabel: Record<string, string> = {
         '0': 'Teachers',
         '9': 'Freshman (9th)',
@@ -183,16 +188,24 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         '11': 'Junior (11th)',
         '12': 'Senior (12th)',
       }
+      const isOwnDailyType = (e: LeaderboardEntry) => {
+        const type = String(e.gameType || '').toLowerCase().trim()
+        return (
+          type === 'daily' ||
+          type === `grade${gradeNum}` ||
+          (gradeNum === '0' && type === 'teachers')
+        )
+      }
       const avgGuesses =
         wins.length > 0
           ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
           : 0
       const today = new Date().toISOString().split('T')[0]
       const todayEntry = matches.find(
-        (e) => e.gameType === 'daily' && String(e.date).startsWith(today)
+        (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
       )
       const dailyMatches = matches.filter(
-        (e) => e.gameType === 'daily' && !String(e.date).startsWith('1970')
+        (e) => isOwnDailyType(e) && !String(e.date).startsWith('1970')
       )
       const dailyWins = dailyMatches.filter((e) => e.won)
       const dailyLosses = dailyMatches.filter((e) => !e.won)
@@ -224,6 +237,13 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       const todayTeachersEntry = matches.find(
         (e) => e.gameType === 'teachers' && String(e.date).startsWith(today)
       )
+      const todayGradeRoundsPlayed = ['9', '10', '11', '12'].filter((g) =>
+        matches.some(
+          (e) =>
+            String(e.gameType || '').toLowerCase().trim() === `grade${g}` &&
+            String(e.date).startsWith(today)
+        )
+      )
 
       // Store account silently — modal will open once game is idle
       setPendingAccountData({
@@ -231,6 +251,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         totalGames: matches.length,
         wins: wins.length,
         grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
+        gradeCode: String(gradeNum),
         avgGuesses,
         todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
         todayGuessCount: todayEntry ? todayEntry.guessCount : null,
@@ -238,6 +259,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         reconstructedStats,
         todayBonusPlayed: !!todayBonusEntry,
         todayTeachersPlayed: !!todayTeachersEntry,
+        todayGradeRoundsPlayed,
       })
     }).catch(() => {
       localStorage.removeItem('pendingAccountCheck')
@@ -280,6 +302,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
     }
+    localStorage.setItem('gradeNumber', JSON.stringify(account.gradeCode))
 
     localStorage.removeItem('pendingAccountCheck')
 
@@ -316,6 +339,9 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     // Cross-device: restore bonus/teachers played status from server data
     if (account.todayBonusPlayed) setBonusPlayedToday()
     if (account.todayTeachersPlayed) setTeachersPlayedToday()
+    for (const g of account.todayGradeRoundsPlayed) {
+      setGradeRoundPlayedToday(g)
+    }
 
     // reload immediately after synchronous writes; isSaving shows briefly
     handleClose()

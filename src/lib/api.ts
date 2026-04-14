@@ -66,6 +66,11 @@ export type SignupEvent = {
   screenHeight: number
 }
 
+export type CloudPlayerState = {
+  updatedAt: string
+  state: Record<string, string>
+}
+
 export const submitSignupEvent = async (
   playerName: string,
   grade: string,
@@ -191,7 +196,11 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
 export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number> => {
   const isDailyForPlayer = (e: LeaderboardEntry): boolean => {
     const type = String(e.gameType || '').toLowerCase().trim()
-    return type === 'daily' || type === `grade${String(e.grade)}`
+    return (
+      type === 'daily' ||
+      type === `grade${String(e.grade)}` ||
+      (String(e.grade) === '0' && type === 'teachers')
+    )
   }
 
   const dailyWins = entries.filter(
@@ -303,6 +312,7 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
 
 const SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`
+const GVIZ_STATE_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet2`
 
 const normalizeLegacyGrade = (rawGrade: string): string => {
   const clean = String(rawGrade || '').replace(/"/g, '').trim()
@@ -317,6 +327,70 @@ const normalizeLegacyGrade = (rawGrade: string): string => {
 
 const normalizeNameKey = (name: string): string =>
   String(name || '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+const buildPlayerStateKey = (playerName: string, grade: string): string =>
+  `${normalizeNameKey(playerName)}|${normalizeLegacyGrade(grade)}`
+
+export const syncPlayerStateToCloud = async (
+  playerName: string,
+  grade: string,
+  state: Record<string, string>
+): Promise<void> => {
+  const cleanName = String(playerName || '').trim()
+  const cleanGrade = normalizeLegacyGrade(grade)
+  if (!cleanName || !cleanGrade) return
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'state_sync',
+        playerName: cleanName,
+        grade: cleanGrade,
+        state,
+        device: navigator.userAgent || '',
+        appVersion: 'v1',
+      }),
+    })
+  } catch {
+    // Never block gameplay on sync failures.
+  }
+}
+
+export const fetchPlayerStateFromCloud = async (
+  playerName: string,
+  grade: string
+): Promise<CloudPlayerState | null> => {
+  const key = buildPlayerStateKey(playerName, grade)
+  if (!key || key === '|') return null
+
+  try {
+    const res = await fetch(GVIZ_STATE_URL)
+    const text = await res.text()
+    const rows = parseGvizResponse(text)
+
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const r = rows[i]
+      const rowKey = String(r[1] || '')
+      if (rowKey !== key) continue
+
+      const updatedAt = String(r[0] || '')
+      const rawState = String(r[4] || '{}')
+      try {
+        const parsed = JSON.parse(rawState) as Record<string, string>
+        return { updatedAt, state: parsed }
+      } catch {
+        return null
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
 
 const parseGvizResponse = (text: string): any[][] => {
   // Response is: /*O_o*/\ngoogle.visualization.Query.setResponse({...})
@@ -363,6 +437,7 @@ export type AllTimeEntry = {
 const isOwnGradeDailyEntry = (e: LeaderboardEntry): boolean => {
   const type = String(e.gameType || '').toLowerCase().trim()
   if (type === 'daily') return true // legacy daily rows
+  if (String(e.grade) === '0' && type === 'teachers') return true
   return type === `grade${String(e.grade)}`
 }
 

@@ -12,6 +12,34 @@
 
 var SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg';
 
+function normalizeGrade_(raw) {
+  var clean = String(raw || '').replace(/"/g, '').trim();
+  var legacyMap = { '8': '11', '27': '11', '7': '10', '28': '10' };
+  return legacyMap[clean] || clean;
+}
+
+function normalizeNameKey_(name) {
+  return String(name || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function getOrCreateStateSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var s = ss.getSheetByName('Sheet2');
+  if (!s) s = ss.insertSheet('Sheet2');
+  if (s.getLastRow() === 0) {
+    s.appendRow([
+      'updatedAt',
+      'playerKey',
+      'playerName',
+      'grade',
+      'stateJson',
+      'device',
+      'appVersion'
+    ]);
+  }
+  return s;
+}
+
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -60,6 +88,53 @@ function doPost(e) {
     if (data.action === 'signup') {
       return ContentService
         .createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ── Cross-device full local state sync (Sheet2) ─────────────────────────
+    if (data.action === 'state_sync') {
+      var stateSheet = getOrCreateStateSheet_();
+      var playerName = String(data.playerName || '').trim();
+      var grade = normalizeGrade_(data.grade || '');
+      if (!playerName || !grade) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ status: 'error', message: 'Missing playerName or grade' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var playerKey = normalizeNameKey_(playerName) + '|' + grade;
+      var payload = JSON.stringify(data.state || {});
+      var updatedAt = new Date().toISOString();
+      var rowData = [
+        updatedAt,
+        playerKey,
+        playerName,
+        grade,
+        payload,
+        String(data.device || ''),
+        String(data.appVersion || '')
+      ];
+
+      var lastRow = stateSheet.getLastRow();
+      var targetRow = -1;
+      if (lastRow >= 2) {
+        var keyVals = stateSheet.getRange(2, 2, lastRow - 1, 1).getValues();
+        for (var i = 0; i < keyVals.length; i++) {
+          if (String(keyVals[i][0]) === playerKey) {
+            targetRow = i + 2;
+            break;
+          }
+        }
+      }
+
+      if (targetRow !== -1) {
+        stateSheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
+      } else {
+        stateSheet.appendRow(rowData);
+      }
+
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'ok', playerKey: playerKey, updatedAt: updatedAt }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
