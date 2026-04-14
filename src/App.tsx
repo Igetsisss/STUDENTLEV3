@@ -187,6 +187,9 @@ function App() {
   const cloudSyncTimerRef = useRef<number | null>(null)
   const titleTapCountRef = useRef(0)
   const titleTapTimerRef = useRef<number | null>(null)
+  const isSpaceHeldRef = useRef(false)
+  const resetArmedRef = useRef(false)
+  const releasedSpaceAfterArmedRef = useRef(false)
 
   const [isFirstToday, setIsFirstToday] = useState(() => {
     const stored = localStorage.getItem('firstToPlayDate')
@@ -207,6 +210,11 @@ function App() {
   const showCompletedLayout = bothComplete && hasAnyCompletedBoard
 
   const handleTitleTap = () => {
+    // Reset gesture: hold Space while tapping logo 10+ times.
+    if (!isSpaceHeldRef.current) {
+      return
+    }
+
     titleTapCountRef.current += 1
 
     if (titleTapTimerRef.current !== null) {
@@ -214,22 +222,58 @@ function App() {
     }
 
     if (titleTapCountRef.current >= 10) {
-      titleTapCountRef.current = 0
-      titleTapTimerRef.current = null
-      window.localStorage.clear()
-      window.location.reload()
-      return
+      // Arm reset; actual reset requires releasing Space and pressing 9.
+      resetArmedRef.current = true
     }
 
-    // Require 10 taps within a short window to avoid accidental resets.
+    // Require sequence within a short window to avoid accidental resets.
     titleTapTimerRef.current = window.setTimeout(() => {
       titleTapCountRef.current = 0
       titleTapTimerRef.current = null
+      resetArmedRef.current = false
+      releasedSpaceAfterArmedRef.current = false
     }, 8000)
   }
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code === 'Space') {
+        isSpaceHeldRef.current = true
+      }
+
+      if (
+        (event.key === '9' || event.code === 'Digit9') &&
+        resetArmedRef.current &&
+        releasedSpaceAfterArmedRef.current &&
+        !isSpaceHeldRef.current
+      ) {
+        titleTapCountRef.current = 0
+        resetArmedRef.current = false
+        releasedSpaceAfterArmedRef.current = false
+        if (titleTapTimerRef.current !== null) {
+          window.clearTimeout(titleTapTimerRef.current)
+          titleTapTimerRef.current = null
+        }
+        window.localStorage.clear()
+        window.location.reload()
+      }
+    }
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code === 'Space') {
+        isSpaceHeldRef.current = false
+        if (resetArmedRef.current) {
+          releasedSpaceAfterArmedRef.current = true
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+
     return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
       if (titleTapTimerRef.current !== null) {
         window.clearTimeout(titleTapTimerRef.current)
       }
