@@ -299,7 +299,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     setPendingAccountData(null)
   }, [pendingAccountData, isGameActive, isInfoOpen])
 
-  const handleClaimAccount = () => {
+  const handleClaimAccount = async () => {
     setIsSaving(true)
     // "Yes, that's me" — use the exact name from the sheet
     const account = existingAccount!
@@ -328,6 +328,57 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
 
     localStorage.removeItem('pendingAccountCheck')
 
+    // Treat Sheet1 leaderboard/API as source of truth for "played today" status.
+    // Re-fetch here so claim restore always uses fresh server data.
+    let todayResult: 'won' | 'lost' | null = account.todayResult
+    let todayGuessCount: number | null = account.todayGuessCount
+    let todayBonusPlayed = account.todayBonusPlayed
+    let todayTeachersPlayed = account.todayTeachersPlayed
+    let todayGradeRoundsPlayed = account.todayGradeRoundsPlayed
+
+    try {
+      const rows = await fetchLeaderboard()
+      const nameNorm = normalizeAccountName(account.displayName)
+      const gradeNorm = normalizeGradeCode(account.gradeCode)
+      const matches = rows.filter(
+        (e) =>
+          normalizeAccountName(e.name) === nameNorm &&
+          normalizeGradeCode(e.grade) === gradeNorm
+      )
+
+      const gameDay = getGameDate()
+      const today = `${gameDay.getFullYear()}-${String(gameDay.getMonth() + 1).padStart(2, '0')}-${String(gameDay.getDate()).padStart(2, '0')}`
+      const isOwnDailyType = (e: LeaderboardEntry) => {
+        const type = String(e.gameType || '').toLowerCase().trim()
+        return (
+          type === 'daily' ||
+          type === `grade${gradeNorm}` ||
+          (gradeNorm === '0' && type === 'teachers')
+        )
+      }
+
+      const todayEntry = matches.find(
+        (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
+      )
+      todayResult = todayEntry ? (todayEntry.won ? 'won' : 'lost') : null
+      todayGuessCount = todayEntry ? todayEntry.guessCount : null
+      todayBonusPlayed = matches.some(
+        (e) => String(e.gameType || '').toLowerCase().trim() === 'bonus' && String(e.date).startsWith(today)
+      )
+      todayTeachersPlayed = matches.some(
+        (e) => String(e.gameType || '').toLowerCase().trim() === 'teachers' && String(e.date).startsWith(today)
+      )
+      todayGradeRoundsPlayed = ['9', '10', '11', '12'].filter((g) =>
+        matches.some(
+          (e) =>
+            String(e.gameType || '').toLowerCase().trim() === `grade${g}` &&
+            String(e.date).startsWith(today)
+        )
+      )
+    } catch {
+      // Keep previously computed account values if live fetch fails.
+    }
+
     // Treat leaderboard/API as source of truth for "played today" status.
     // Clear local round state first, then restore only what API confirms.
     localStorage.removeItem('gameState')
@@ -351,11 +402,11 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       const todaySolution = getSolution(getGameDate()).solution
       let guessesToSave: string[] = account.inProgressGuesses
 
-      if (guessesToSave.length === 0 && account.todayResult === 'won') {
+      if (guessesToSave.length === 0 && todayResult === 'won') {
         // No keystroke data but we know they won — write solution as the only guess.
         // App.tsx sees guesses.includes(solution) → isGameWon = true.
         guessesToSave = [todaySolution]
-      } else if (guessesToSave.length === 0 && account.todayResult === 'lost') {
+      } else if (guessesToSave.length === 0 && todayResult === 'lost') {
         // No keystroke data but we know they lost — write 6 non-solution guesses.
         // App.tsx sees length === MAX_CHALLENGES && !includes(solution) → isGameLost = true.
         guessesToSave = Array(6).fill('AAAAA')
@@ -372,9 +423,9 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     }
 
     // Cross-device: restore bonus/teachers played status from server data
-    if (account.todayBonusPlayed) setBonusPlayedToday()
-    if (account.todayTeachersPlayed) setTeachersPlayedToday()
-    for (const g of account.todayGradeRoundsPlayed) {
+    if (todayBonusPlayed) setBonusPlayedToday()
+    if (todayTeachersPlayed) setTeachersPlayedToday()
+    for (const g of todayGradeRoundsPlayed) {
       setGradeRoundPlayedToday(g)
     }
 
