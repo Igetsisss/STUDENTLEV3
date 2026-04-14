@@ -10,8 +10,12 @@ export const InfoModal = ({ isOpen, handleClose }: Props) => {
   return (
     <BaseModal title="How to play" isOpen={isOpen} handleClose={handleClose}>
       <p className="text-sm text-gray-500 dark:text-gray-300">
-        Guess the Student. After each guess, the color of the tiles will change
-        to show how close your guess was to the Student.
+        Studentle works like Wordle. Guess the student, and tile colors show
+        how close you are.
+      </p>
+      <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">
+        The key twist: answers come from your grade, so your guesses should be
+        people in your grade.
       </p>
 
       <div className="mb-1 mt-4 flex justify-center">
@@ -57,13 +61,12 @@ export const InfoModal = ({ isOpen, handleClose }: Props) => {
       </p>
 
       <p className="mt-6 text-sm italic text-gray-500 dark:text-gray-300">
-        Studentle was forked from Reactle an open source version of the word
-        guessing game we all know and love -{' '}
+        Forked from Reactle —{' '}
         <a
           href="https://github.com/Igetsisss/STUDENTLEV3"
           className="font-bold underline"
         >
-          check out the code here
+          view source
         </a>{' '}
       </p>
     </BaseModal>
