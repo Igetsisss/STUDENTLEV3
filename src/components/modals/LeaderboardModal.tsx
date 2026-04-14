@@ -83,9 +83,10 @@ const MvpExplainerModal = ({
         </p>
         <p className="mb-4 text-sm" style={{ color: '#e8d5a0' }}>
           The <strong style={{ color: '#f5c518' }}>MVP</strong> is the best overall Studentle player at the
-          school, based on <em>all-time</em> stats — not just today. To qualify
+          school, based on <em>all-time</em> stats — not just today. To qualify,
           you need at least <strong style={{ color: '#f5c518' }}>3 games</strong> played.
-          Every round counts — bonus, teachers, and grade rounds too!
+          MVP uses total games across all modes (daily, bonus, teachers, and grade rounds).
+          The All-Time table above is separate and counts <strong style={{ color: '#f5c518' }}>days</strong>.
         </p>
         <div className="mb-4 rounded-xl px-4 py-3" style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid #7b5800' }}>
           <p className="mb-2 text-xs font-bold uppercase" style={{ color: '#f5c518', letterSpacing: '0.1em' }}>
@@ -93,10 +94,10 @@ const MvpExplainerModal = ({
           </p>
           <ul className="space-y-1 text-sm" style={{ color: '#e8d5a0' }}>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>35 pts</span> — Volume (total rounds played — daily, bonus, teachers, grade picks all count!)
+              <span className="font-bold" style={{ color: '#f5c518' }}>35 pts</span> — Volume (total games played across all modes)
             </li>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>40 pts</span> — Win rate (% of all rounds solved)
+              <span className="font-bold" style={{ color: '#f5c518' }}>40 pts</span> — Win rate (% of all games solved)
             </li>
             <li>
               <span className="font-bold" style={{ color: '#f5c518' }}>25 pts</span> — Guess efficiency (fewer guesses = higher score)
@@ -104,7 +105,7 @@ const MvpExplainerModal = ({
           </ul>
         </div>
         <p className="text-center text-xs italic" style={{ color: '#a07820' }}>
-          Recalculated live from all-time data. Anyone can take the crown — keep playing!
+          Recalculated live from all-time game data. Anyone can take the crown — keep playing!
         </p>
         {/* gold shimmer bar bottom */}
         <div className="absolute inset-x-0 bottom-0 h-1 rounded-b-2xl" style={{ background: 'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)' }} />
@@ -531,7 +532,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
           </div>
 
           <p className="mt-2 text-center text-xs italic" style={{ color: '#7b5800' }}>
-            Calculated from all-time stats across every game they've played.{' '}
+            MVP uses all-time games. The table above tracks all-time daily days.{' '}
             <button
               onClick={() => setIsMvpExplainerOpen(true)}
               className="underline decoration-dotted underline-offset-2"
