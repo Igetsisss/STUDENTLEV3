@@ -1,6 +1,9 @@
 const API_URL =
   'https://script.google.com/macros/s/AKfycbz7Q2SSXWC3yuT2TdsMN10X-YwKIEIZlBTXAp_C30YEy22wcwRzOYAlmLjSP97KAzna/exec'
 
+import { TEACHER_WORDS } from '../teacherWords'
+import { getIndex, getSolution, localeAwareUpperCase } from './words'
+
 export type GuessData = {
   word: string
   timeSec: number
@@ -138,6 +141,47 @@ export type MvpEntry = {
   score: number
 }
 
+const getDateFromYmd = (dateLike: string): Date | null => {
+  const ymd = String(dateLike || '').slice(0, 10)
+  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  const y = Number(m[1])
+  const mo = Number(m[2]) - 1
+  const d = Number(m[3])
+  return new Date(y, mo, d)
+}
+
+const getExpectedDailyWord = (entry: LeaderboardEntry): string | null => {
+  const day = getDateFromYmd(entry.date)
+  if (!day) return null
+  if (String(entry.grade) === '0') {
+    const idx = getIndex(day)
+    const offset = Math.floor(TEACHER_WORDS.length / 2)
+    return localeAwareUpperCase(TEACHER_WORDS[(idx + offset) % TEACHER_WORDS.length])
+  }
+  return getSolution(day).solution
+}
+
+export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
+  const type = String(entry.gameType || '').toLowerCase().trim()
+  const rowWord = String(entry.word || '').toUpperCase().trim()
+  const expectedWord = getExpectedDailyWord(entry)
+
+  if (type === 'daily') {
+    return !expectedWord || !rowWord || rowWord === expectedWord
+  }
+  if (String(entry.grade) === '0' && type === 'teachers') {
+    return !expectedWord || !rowWord || rowWord === expectedWord
+  }
+
+  // Legacy compatibility: some old daily rows were stored as grade{grade}.
+  if (type === `grade${String(entry.grade)}`) {
+    return !!expectedWord && !!rowWord && rowWord === expectedWord
+  }
+
+  return false
+}
+
 export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
   // Include ALL game types (daily, bonus, teachers, grade rounds)
   const valid = entries.filter((e) => !String(e.date).startsWith('1970'))
@@ -195,17 +239,8 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
 
 // Per-player current win streak (consecutive daily wins ending today or yesterday)
 export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number> => {
-  const isDailyForPlayer = (e: LeaderboardEntry): boolean => {
-    const type = String(e.gameType || '').toLowerCase().trim()
-    return (
-      type === 'daily' ||
-      type === `grade${String(e.grade)}` ||
-      (String(e.grade) === '0' && type === 'teachers')
-    )
-  }
-
   const dailyWins = entries.filter(
-    (e) => isDailyForPlayer(e) && e.won && e.name && !String(e.date).startsWith('1970')
+    (e) => isTrueDailyEntry(e) && e.won && e.name && !String(e.date).startsWith('1970')
   )
 
   const byPlayer = new Map<string, Set<string>>()
@@ -436,10 +471,7 @@ export type AllTimeEntry = {
 }
 
 const isOwnGradeDailyEntry = (e: LeaderboardEntry): boolean => {
-  const type = String(e.gameType || '').toLowerCase().trim()
-  if (type === 'daily') return true // legacy daily rows
-  if (String(e.grade) === '0' && type === 'teachers') return true
-  return type === `grade${String(e.grade)}`
+  return isTrueDailyEntry(e)
 }
 
 const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {

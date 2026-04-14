@@ -88,6 +88,7 @@ import {
   fetchLeaderboard,
   fetchPlayerStateFromCloud,
   syncPlayerStateToCloud,
+  isTrueDailyEntry,
 } from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
 
@@ -766,8 +767,12 @@ function App() {
         const existing = await fetchLeaderboard(today)
         const gradeRawCheck = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
         const gradeCleanCheck = ({ '8': '11', '27': '11', '7': '10', '28': '10' } as Record<string,string>)[gradeRawCheck] || gradeRawCheck
-        const dailyGameTypeCheck = gradeCleanCheck === '0' ? 'teachers' : 'daily'
-        if (existing.filter((e) => e.gameType === dailyGameTypeCheck).length === 0) {
+        const existingDailyCount = existing.filter(
+          (e) =>
+            String(e.grade) === gradeCleanCheck &&
+            isTrueDailyEntry(e)
+        ).length
+        if (existingDailyCount === 0) {
           setIsFirstToday(true)
           localStorage.setItem('firstToPlayDate', today)
         }
