@@ -766,7 +766,7 @@ function App() {
         const existing = await fetchLeaderboard(today)
         const gradeRawCheck = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
         const gradeCleanCheck = ({ '8': '11', '27': '11', '7': '10', '28': '10' } as Record<string,string>)[gradeRawCheck] || gradeRawCheck
-        const dailyGameTypeCheck = gradeCleanCheck === '0' ? 'teachers' : `grade${gradeCleanCheck}`
+        const dailyGameTypeCheck = gradeCleanCheck === '0' ? 'teachers' : 'daily'
         if (existing.filter((e) => e.gameType === dailyGameTypeCheck).length === 0) {
           setIsFirstToday(true)
           localStorage.setItem('firstToPlayDate', today)
@@ -802,8 +802,8 @@ function App() {
     const trackingData = tracker.getSubmissionData()
     const d = solutionGameDate
     const puzzleDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const dailyGameType: 'teachers' | `grade${string}` =
-      gradeClean === '0' ? 'teachers' : `grade${gradeClean}`
+    const dailyGameType: 'daily' | 'teachers' =
+      gradeClean === '0' ? 'teachers' : 'daily'
 
     submitGameData({
       name: playerName,
