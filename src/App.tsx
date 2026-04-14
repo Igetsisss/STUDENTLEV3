@@ -384,6 +384,10 @@ function App() {
     if (cloudHydrationAttemptedRef.current) return
     cloudHydrationAttemptedRef.current = true
 
+    // During account-claim flow, leaderboard/API should drive restoration.
+    // Skip cloud hydration so stale snapshots cannot override claim results.
+    if (localStorage.getItem('pendingAccountCheck')) return
+
     const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''
     const prefix = localStorage.getItem('playerPrefix') || ''

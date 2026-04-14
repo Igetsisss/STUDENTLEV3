@@ -5,15 +5,18 @@ import { useState, useEffect } from 'react'
 import {
   GradeNumber,
   GameStats,
+  clearBonusGameState,
+  clearGradeRoundGameState,
+  clearTeachersGameState,
   loadGradeFromLocalStorage,
   saveGradeToLocalStorage,
   saveGameStateToLocalStorage,
   saveStatsToLocalStorage,
   loadStatsFromLocalStorage,
 } from '../../lib/localStorage'
-import { setBonusPlayedToday } from '../../utils/bonusRound'
-import { setTeachersPlayedToday } from '../../utils/teachersRound'
-import { setGradeRoundPlayedToday } from '../../utils/gradeRound'
+import { clearBonusPlayedToday, setBonusPlayedToday } from '../../utils/bonusRound'
+import { clearTeachersPlayedToday, setTeachersPlayedToday } from '../../utils/teachersRound'
+import { clearGradeRoundPlayedToday, setGradeRoundPlayedToday } from '../../utils/gradeRound'
 import { fetchLeaderboard, submitHistoricalStats, submitSignupEvent, LeaderboardEntry } from '../../lib/api'
 import { getSolution, getGameDate } from '../../lib/words'
 import { Cell } from '../grid/Cell'
@@ -311,6 +314,19 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     localStorage.setItem('gradeNumber', JSON.stringify(account.gradeCode))
 
     localStorage.removeItem('pendingAccountCheck')
+
+    // Treat leaderboard/API as source of truth for "played today" status.
+    // Clear local round state first, then restore only what API confirms.
+    localStorage.removeItem('gameState')
+    localStorage.removeItem('archiveGameState')
+    clearBonusGameState()
+    clearTeachersGameState()
+    clearBonusPlayedToday()
+    clearTeachersPlayedToday()
+    for (const g of ['9', '10', '11', '12']) {
+      clearGradeRoundGameState(g)
+      clearGradeRoundPlayedToday(g)
+    }
 
     // Write reconstructed stats to localStorage so the stats modal shows real data
     saveStatsToLocalStorage(account.reconstructedStats)
