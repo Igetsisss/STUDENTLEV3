@@ -83,7 +83,8 @@ const MvpExplainerModal = ({
         </p>
         <p className="mb-4 text-sm" style={{ color: '#e8d5a0' }}>
           The <strong style={{ color: '#f5c518' }}>MVP</strong> is the best overall Studentle player at the
-          school, based on <em>all-time</em> stats — not just today. To qualify,
+          school, based on <em>all-time</em> stats — not just today. There is only
+          <strong style={{ color: '#f5c518' }}> one MVP</strong> at a time. To qualify,
           you need at least <strong style={{ color: '#f5c518' }}>3 games</strong> played.
           MVP uses total games across all modes (daily, bonus, teachers, and grade rounds).
           The All-Time table above is separate and counts <strong style={{ color: '#f5c518' }}>days</strong>.
@@ -105,7 +106,8 @@ const MvpExplainerModal = ({
           </ul>
         </div>
         <p className="text-center text-xs italic" style={{ color: '#a07820' }}>
-          Recalculated live from all-time game data. Anyone can take the crown — keep playing!
+          Recalculated live from all-time game data. One crown, one leader.
+          Anyone can take it — keep playing!
         </p>
         {/* gold shimmer bar bottom */}
         <div className="absolute inset-x-0 bottom-0 h-1 rounded-b-2xl" style={{ background: 'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)' }} />
@@ -534,7 +536,8 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
           </div>
 
           <p className="mt-2 text-center text-xs italic" style={{ color: '#7b5800' }}>
-            MVP uses all-time games. The table above tracks all-time daily days.{' '}
+            One school-wide MVP is calculated from all-time games across all modes.
+            The table above tracks all-time daily days.{' '}
             <button
               onClick={() => setIsMvpExplainerOpen(true)}
               className="underline decoration-dotted underline-offset-2"

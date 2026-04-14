@@ -167,10 +167,15 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
   useEffect(() => {
     const pending = localStorage.getItem('pendingAccountCheck')
     if (!pending) return
+    const pendingGradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+    const pendingGradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
+    const pendingGrade = pendingGradeNormMap[pendingGradeRaw] || pendingGradeRaw
 
     fetchLeaderboard().then((data: LeaderboardEntry[]) => {
       const matches = data.filter(
-        (e) => e.name.toLowerCase() === pending.toLowerCase()
+        (e) =>
+          e.name.toLowerCase() === pending.toLowerCase() &&
+          String(e.grade) === pendingGrade
       )
       if (matches.length === 0) {
         localStorage.removeItem('pendingAccountCheck')
