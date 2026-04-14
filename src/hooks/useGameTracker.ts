@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { GuessData } from '../lib/api'
 
@@ -21,21 +21,70 @@ export type GameTracker = {
 
 export const useGameTracker = (): GameTracker => {
   const gameStartTimeRef = useRef<Date | null>(null)
-  const lastGuessTimeRef = useRef<Date | null>(null)
+  const activeSegmentStartMsRef = useRef<number | null>(null)
+  const activeElapsedMsRef = useRef(0)
+  const lastGuessElapsedMsRef = useRef(0)
   const currentKeystrokesRef = useRef(0)
   const currentDeletesRef = useRef(0)
   const guessesRef = useRef<GuessData[]>([])
   const firstGuessTimeRef = useRef<number | null>(null)
+  const activityHandlerRef = useRef<(() => void) | null>(null)
+
+  const isWindowActive = () => !document.hidden && document.hasFocus()
+
+  const detachActivityListeners = useCallback(() => {
+    if (activityHandlerRef.current) {
+      window.removeEventListener('focus', activityHandlerRef.current)
+      window.removeEventListener('blur', activityHandlerRef.current)
+      document.removeEventListener('visibilitychange', activityHandlerRef.current)
+      activityHandlerRef.current = null
+    }
+  }, [])
+
+  const reconcileActivityState = useCallback(() => {
+    const nowMs = Date.now()
+    const activeNow = isWindowActive()
+
+    if (activeNow) {
+      if (activeSegmentStartMsRef.current === null) {
+        activeSegmentStartMsRef.current = nowMs
+      }
+      return
+    }
+
+    if (activeSegmentStartMsRef.current !== null) {
+      activeElapsedMsRef.current += Math.max(0, nowMs - activeSegmentStartMsRef.current)
+      activeSegmentStartMsRef.current = null
+    }
+  }, [])
+
+  const getCurrentActiveElapsedMs = useCallback(() => {
+    reconcileActivityState()
+    const runningSegment =
+      activeSegmentStartMsRef.current !== null
+        ? Math.max(0, Date.now() - activeSegmentStartMsRef.current)
+        : 0
+    return activeElapsedMsRef.current + runningSegment
+  }, [reconcileActivityState])
 
   const startGame = useCallback(() => {
     const now = new Date()
     gameStartTimeRef.current = now
-    lastGuessTimeRef.current = now
+    activeSegmentStartMsRef.current = null
+    activeElapsedMsRef.current = 0
+    lastGuessElapsedMsRef.current = 0
     currentKeystrokesRef.current = 0
     currentDeletesRef.current = 0
     guessesRef.current = []
     firstGuessTimeRef.current = null
-  }, [])
+
+    detachActivityListeners()
+    activityHandlerRef.current = () => reconcileActivityState()
+    window.addEventListener('focus', activityHandlerRef.current)
+    window.addEventListener('blur', activityHandlerRef.current)
+    document.addEventListener('visibilitychange', activityHandlerRef.current)
+    reconcileActivityState()
+  }, [detachActivityListeners, reconcileActivityState])
 
   const recordKeystroke = useCallback(() => {
     currentKeystrokesRef.current += 1
@@ -47,14 +96,13 @@ export const useGameTracker = (): GameTracker => {
   }, [])
 
   const recordGuess = useCallback((word: string) => {
-    const now = new Date()
-    const prevTime = lastGuessTimeRef.current || now
-    const timeSec = Math.round((now.getTime() - prevTime.getTime()) / 1000)
+    const activeElapsedMs = getCurrentActiveElapsedMs()
+    const timeSec = Math.round(
+      Math.max(0, activeElapsedMs - lastGuessElapsedMsRef.current) / 1000
+    )
 
-    if (firstGuessTimeRef.current === null && gameStartTimeRef.current) {
-      firstGuessTimeRef.current = Math.round(
-        (now.getTime() - gameStartTimeRef.current.getTime()) / 1000
-      )
+    if (firstGuessTimeRef.current === null) {
+      firstGuessTimeRef.current = Math.round(activeElapsedMs / 1000)
     }
 
     guessesRef.current.push({
@@ -64,15 +112,15 @@ export const useGameTracker = (): GameTracker => {
       deletes: currentDeletesRef.current,
     })
 
-    lastGuessTimeRef.current = now
+    lastGuessElapsedMsRef.current = activeElapsedMs
     currentKeystrokesRef.current = 0
     currentDeletesRef.current = 0
-  }, [])
+  }, [getCurrentActiveElapsedMs])
 
   const getSubmissionData = useCallback(() => {
     const now = new Date()
     const start = gameStartTimeRef.current || now
-    const totalSec = Math.round((now.getTime() - start.getTime()) / 1000)
+    const totalSec = Math.round(getCurrentActiveElapsedMs() / 1000)
     const isMobile = window.innerWidth < 768
 
     return {
@@ -84,16 +132,25 @@ export const useGameTracker = (): GameTracker => {
       screenWidth: window.innerWidth,
       guesses: [...guessesRef.current],
     }
-  }, [])
+  }, [getCurrentActiveElapsedMs])
 
   const reset = useCallback(() => {
+    detachActivityListeners()
     gameStartTimeRef.current = null
-    lastGuessTimeRef.current = null
+    activeSegmentStartMsRef.current = null
+    activeElapsedMsRef.current = 0
+    lastGuessElapsedMsRef.current = 0
     currentKeystrokesRef.current = 0
     currentDeletesRef.current = 0
     guessesRef.current = []
     firstGuessTimeRef.current = null
-  }, [])
+  }, [detachActivityListeners])
+
+  useEffect(() => {
+    return () => {
+      detachActivityListeners()
+    }
+  }, [detachActivityListeners])
 
   return {
     startGame,

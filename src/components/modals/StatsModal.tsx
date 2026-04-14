@@ -14,13 +14,48 @@ import {
   SHARE_TEXT,
   STATISTICS_TITLE,
 } from '../../constants/strings'
-import { GameStats } from '../../lib/localStorage'
+import { GameStats, saveStatsToLocalStorage } from '../../lib/localStorage'
 import { fetchLeaderboard } from '../../lib/api'
 import { shareStatus } from '../../lib/share'
 import { solutionGameDate, tomorrow } from '../../lib/words'
 import { Histogram } from '../stats/Histogram'
 import { StatBar } from '../stats/StatBar'
 import { BaseModal } from './BaseModal'
+
+const PLAYER_STATS_CACHE_PREFIX = 'playerAllTimeStats_v1_'
+const PLAYER_STATS_CACHE_TTL_MS = 10 * 60 * 1000
+
+type CachedPlayerStats = {
+  fetchedAt: string
+  stats: GameStats
+  leaderboard?: {
+    date: string
+    rank: number | null
+    total: number | null
+    solveRate: number | null
+  }
+}
+
+const normalizeName = (name: string) =>
+  String(name || '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+const getMyDisplayName = () => {
+  const fn = localStorage.getItem('playerName') || ''
+  const li = localStorage.getItem('playerLastInitial') || ''
+  const prefix = localStorage.getItem('playerPrefix') || ''
+  return prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
+}
+
+const isOwnDailyType = (gameType: string, grade: number) => {
+  const type = String(gameType || '').toLowerCase().trim()
+  return type === 'daily' || type === `grade${String(grade)}`
+}
+
+const isBetterEntry = (a: { won: boolean; guessCount: number; totalDurationSec: number }, b: { won: boolean; guessCount: number; totalDurationSec: number }) => {
+  if (a.won !== b.won) return a.won && !b.won
+  if (a.guessCount !== b.guessCount) return a.guessCount < b.guessCount
+  return a.totalDurationSec < b.totalDurationSec
+}
 
 type Props = {
   isOpen: boolean
@@ -91,39 +126,163 @@ export const StatsModal = ({
   const [leaderboardTotal, setLeaderboardTotal] = useState<number | null>(null)
   const [solveRate, setSolveRate] = useState<number | null>(null)
   const [lockMessage, setLockMessage] = useState('')
+  const [displayStats, setDisplayStats] = useState<GameStats>(gameStats)
 
   useEffect(() => {
-    if (!isOpen || (!isGameWon && !isGameLost)) return
-    const fn = localStorage.getItem('playerName') || ''
-    const li = localStorage.getItem('playerLastInitial') || ''
-    const prefix = localStorage.getItem('playerPrefix') || ''
-    const myName = prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
+    setDisplayStats(gameStats)
+  }, [gameStats])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const myName = getMyDisplayName()
     if (!myName) return
 
+    const myKey = normalizeName(myName)
+    const cacheKey = `${PLAYER_STATS_CACHE_PREFIX}${myKey}`
+    const today = new Date().toISOString().split('T')[0]
+    let cachedPayload: CachedPlayerStats | null = null
+
+    const cachedRaw = localStorage.getItem(cacheKey)
+    if (cachedRaw) {
+      try {
+        cachedPayload = JSON.parse(cachedRaw) as CachedPlayerStats
+        if (cachedPayload?.stats) {
+          setDisplayStats({
+            ...cachedPayload.stats,
+            currentStreak: gameStats.currentStreak,
+            bestStreak: gameStats.bestStreak,
+          })
+        }
+
+        if (cachedPayload?.leaderboard?.date === today) {
+          setLeaderboardRank(cachedPayload.leaderboard.rank)
+          setLeaderboardTotal(cachedPayload.leaderboard.total)
+          setSolveRate(cachedPayload.leaderboard.solveRate)
+        }
+      } catch {
+        // ignore malformed cache and refetch
+      }
+    }
+
+    const cacheAgeMs = cachedPayload?.fetchedAt
+      ? Date.now() - new Date(cachedPayload.fetchedAt).getTime()
+      : Number.POSITIVE_INFINITY
+    const hasFreshCache = cacheAgeMs < PLAYER_STATS_CACHE_TTL_MS
+    const hasTodayLeaderboardCache = cachedPayload?.leaderboard?.date === today
+
+    if (hasFreshCache && hasTodayLeaderboardCache) {
+      return
+    }
+
     fetchLeaderboard().then((entries) => {
-      const today = new Date().toISOString().split('T')[0]
       const todayDaily = entries.filter(
-        (e) => e.gameType === 'daily' && String(e.date).startsWith(today)
+        (e) => String(e.date).startsWith(today) && isOwnDailyType(e.gameType, e.grade)
       )
-      const myIdx = todayDaily.findIndex((e) => e.name === myName)
+
+      // Deduplicate per player for ranking consistency with leaderboard modal
+      const byPlayer = new Map<string, (typeof todayDaily)[number]>()
+      for (const e of todayDaily) {
+        const key = normalizeName(e.name)
+        const existing = byPlayer.get(key)
+        if (!existing || isBetterEntry(e, existing)) {
+          byPlayer.set(key, e)
+        }
+      }
+      const rankedDaily = Array.from(byPlayer.values()).sort((a, b) => {
+        if (a.won !== b.won) return a.won ? -1 : 1
+        if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
+        return a.totalDurationSec - b.totalDurationSec
+      })
+
+      const myIdx = rankedDaily.findIndex((e) => normalizeName(e.name) === myKey)
+      let nextRank: number | null = null
+      let nextTotal: number | null = null
+      let nextSolveRate: number | null = null
+
       if (myIdx !== -1) {
-        setLeaderboardRank(myIdx + 1)
-        setLeaderboardTotal(todayDaily.length)
+        nextRank = myIdx + 1
+        nextTotal = rankedDaily.length
+        setLeaderboardRank(nextRank)
+        setLeaderboardTotal(nextTotal)
       }
-      if (todayDaily.length >= 3) {
-        const wins = todayDaily.filter((e) => e.won).length
-        setSolveRate(Math.round((wins / todayDaily.length) * 100))
+      if (rankedDaily.length >= 3) {
+        const wins = rankedDaily.filter((e) => e.won).length
+        nextSolveRate = Math.round((wins / rankedDaily.length) * 100)
+        setSolveRate(nextSolveRate)
       }
+
+      // Sync all-time per-player stats from API and cache to avoid repeated pulls
+      const mine = entries.filter((e) => normalizeName(e.name) === myKey)
+      if (mine.length > 0) {
+        const winDistribution = [0, 0, 0, 0, 0, 0]
+        let gamesFailed = 0
+        let totalGames = 0
+
+        for (const e of mine) {
+          totalGames += 1
+          if (e.won && e.guessCount >= 1 && e.guessCount <= 6) {
+            winDistribution[e.guessCount - 1] += 1
+          } else if (!e.won) {
+            gamesFailed += 1
+          }
+        }
+
+        const syncedStats: GameStats = {
+          winDistribution,
+          gamesFailed,
+          totalGames,
+          successRate: Math.round((100 * (totalGames - gamesFailed)) / Math.max(totalGames, 1)),
+          // Keep existing streak fields from local gameplay state.
+          currentStreak: gameStats.currentStreak,
+          bestStreak: gameStats.bestStreak,
+        }
+
+        setDisplayStats(syncedStats)
+        saveStatsToLocalStorage(syncedStats)
+        localStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            fetchedAt: new Date().toISOString(),
+            stats: syncedStats,
+            leaderboard: {
+              date: today,
+              rank: nextRank,
+              total: nextTotal,
+              solveRate: nextSolveRate,
+            },
+          })
+        )
+      } else {
+        localStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            fetchedAt: new Date().toISOString(),
+            stats: {
+              ...gameStats,
+              currentStreak: gameStats.currentStreak,
+              bestStreak: gameStats.bestStreak,
+            },
+            leaderboard: {
+              date: today,
+              rank: nextRank,
+              total: nextTotal,
+              solveRate: nextSolveRate,
+            },
+          })
+        )
+      }
+    }).catch(() => {
+      // Keep cached/local stats if network fails.
     })
-  }, [isOpen])
-  if (gameStats.totalGames <= 0) {
+  }, [isOpen, gameStats])
+  if (displayStats.totalGames <= 0) {
     return (
       <BaseModal
         title={STATISTICS_TITLE}
         isOpen={isOpen}
         handleClose={handleClose}
       >
-        <StatBar gameStats={gameStats} />
+        <StatBar gameStats={displayStats} />
       </BaseModal>
     )
   }
@@ -160,25 +319,25 @@ export const StatsModal = ({
           Bonus Round
         </p>
       )}
-      <StatBar gameStats={gameStats} />
+      <StatBar gameStats={displayStats} />
       <h4 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
         {GUESS_DISTRIBUTION_TEXT}
       </h4>
       <Histogram
         isLatestGame={isLatestGame}
-        gameStats={gameStats}
+        gameStats={displayStats}
         isGameWon={isGameWon}
         numberOfGuessesMade={numberOfGuessesMade}
       />
       {/* Personal bests card */}
       {(() => {
-        const bestIdx = gameStats.winDistribution.findIndex((c) => c > 0)
+        const bestIdx = displayStats.winDistribution.findIndex((c) => c > 0)
         const bestGuessCount = bestIdx >= 0 ? bestIdx + 1 : null
         return (
           <div className="mt-4 flex justify-around rounded-lg border border-gray-200 bg-gray-50 px-2 py-3 dark:border-slate-600 dark:bg-slate-800">
             <div className="text-center">
               <div className="text-xl font-bold text-orange-500">
-                🔥 {gameStats.currentStreak}
+                🔥 {displayStats.currentStreak}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 Days Played
@@ -275,10 +434,27 @@ export const StatsModal = ({
         >
           <StarIcon className="h-4 w-4 flex-shrink-0" />
           {leaderboardRank !== null && leaderboardTotal !== null ? (
-            <span>
-              You're <strong>#{leaderboardRank}</strong> out of {leaderboardTotal} today —{' '}
-              <span className="underline">see full leaderboard</span>
-            </span>
+            (() => {
+              const beatPct =
+                leaderboardTotal > 1
+                  ? Math.round(((leaderboardTotal - leaderboardRank) / (leaderboardTotal - 1)) * 100)
+                  : 0
+              const message =
+                leaderboardRank === 1
+                  ? `YOU are #1 today. Everyone is chasing you.`
+                  : beatPct >= 90
+                  ? `YOU beat ${beatPct}% of players today. Keep the pressure on.`
+                  : beatPct >= 70
+                  ? `YOU beat ${beatPct}% of players today. Climb a little more.`
+                  : `YOU are in the mix. Beat your rank and jump the board.`
+
+              return (
+                <span>
+                  <strong>#{leaderboardRank}</strong> of {leaderboardTotal} today. {message}{' '}
+                  <span className="underline">See full leaderboard</span>
+                </span>
+              )
+            })()
           ) : (
             <span>
               See how you compare —{' '}

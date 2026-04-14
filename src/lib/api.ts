@@ -189,8 +189,13 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
 
 // Per-player current win streak (consecutive daily wins ending today or yesterday)
 export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number> => {
+  const isDailyForPlayer = (e: LeaderboardEntry): boolean => {
+    const type = String(e.gameType || '').toLowerCase().trim()
+    return type === 'daily' || type === `grade${String(e.grade)}`
+  }
+
   const dailyWins = entries.filter(
-    (e) => e.gameType === 'daily' && e.won && e.name && !String(e.date).startsWith('1970')
+    (e) => isDailyForPlayer(e) && e.won && e.name && !String(e.date).startsWith('1970')
   )
 
   const byPlayer = new Map<string, Set<string>>()

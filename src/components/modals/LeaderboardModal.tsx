@@ -129,8 +129,10 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const _ld = new Date()
   const today = `${_ld.getFullYear()}-${String(_ld.getMonth() + 1).padStart(2, '0')}-${String(_ld.getDate()).padStart(2, '0')}`
 
-  // Grade rounds are filtered client-side by gameType, not by player's registered grade
-  const effectiveFetchGrade = filterType === 'graderound' ? '' : filterGrade
+  // Grade rounds are filtered client-side by gameType and only exist in Today view.
+  // Keep grade filtering active for All-Time regardless of last selected Today tab.
+  const effectiveFetchGrade =
+    viewMode === 'today' && filterType === 'graderound' ? '' : filterGrade
 
   useEffect(() => {
     if (!isOpen) return
@@ -236,7 +238,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
           >All&#8209;Time</button>
         </div>
         {/* Grade filter — hidden when viewing grade rounds */}
-        {filterType !== 'graderound' && (
+        {(viewMode === 'alltime' || filterType !== 'graderound') && (
           <select
             className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-slate-800 dark:text-white"
             value={filterGrade}
