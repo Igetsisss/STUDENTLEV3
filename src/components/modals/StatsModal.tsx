@@ -279,17 +279,6 @@ export const StatsModal = ({
       // Keep cached/local stats if network fails.
     })
   }, [isOpen, gameStats])
-  if (displayStats.totalGames <= 0) {
-    return (
-      <BaseModal
-        title={STATISTICS_TITLE}
-        isOpen={isOpen}
-        handleClose={handleClose}
-      >
-        <StatBar gameStats={displayStats} />
-      </BaseModal>
-    )
-  }
   return (
     <BaseModal
       title={STATISTICS_TITLE}
