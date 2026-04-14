@@ -209,13 +209,17 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         '11': 'Junior (11th)',
         '12': 'Senior (12th)',
       }
+      const todaySolution = getSolution(getGameDate()).solution
       const isOwnDailyType = (e: LeaderboardEntry) => {
         const type = String(e.gameType || '').toLowerCase().trim()
-        return (
+        const isDailyType = (
           type === 'daily' ||
           type === `grade${gradeNum}` ||
           (gradeNum === '0' && type === 'teachers')
         )
+        if (!isDailyType) return false
+        const rowWord = String(e.word || '').toUpperCase().trim()
+        return !rowWord || rowWord === todaySolution
       }
       const avgGuesses =
         wins.length > 0
@@ -346,15 +350,19 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
           normalizeGradeCode(e.grade) === gradeNorm
       )
 
+      const todaySolution = getSolution(getGameDate()).solution
       const gameDay = getGameDate()
       const today = `${gameDay.getFullYear()}-${String(gameDay.getMonth() + 1).padStart(2, '0')}-${String(gameDay.getDate()).padStart(2, '0')}`
       const isOwnDailyType = (e: LeaderboardEntry) => {
         const type = String(e.gameType || '').toLowerCase().trim()
-        return (
+        const isDailyType = (
           type === 'daily' ||
           type === `grade${gradeNorm}` ||
           (gradeNorm === '0' && type === 'teachers')
         )
+        if (!isDailyType) return false
+        const rowWord = String(e.word || '').toUpperCase().trim()
+        return !rowWord || rowWord === todaySolution
       }
 
       const todayEntry = matches.find(

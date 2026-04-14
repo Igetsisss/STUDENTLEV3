@@ -120,6 +120,7 @@ export type LeaderboardEntry = {
   name: string
   grade: number
   date: string
+  word: string
   won: boolean
   guessCount: number
   gameType: string
@@ -539,6 +540,7 @@ export const fetchLeaderboard = async (
         name: finalName,
         grade: Number(finalGrade) || 0,
         date: rowDate,
+        word: r[3] ? String(r[3]) : '',
         won: r[4] === true || r[4] === 'TRUE',
         guessCount: Number(r[5]) || 0,
         gameType: rowType,
