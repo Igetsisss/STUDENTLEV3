@@ -222,6 +222,17 @@ export const StatsModal = ({
       // Sync all-time per-player stats from API and cache to avoid repeated pulls
       const mine = entries.filter((e) => normalizeName(e.name) === myKey)
       if (mine.length > 0) {
+        const mineDaily = mine.filter(
+          (e) =>
+            isOwnDailyType(e.gameType, e.grade) &&
+            !String(e.date).startsWith('1970')
+        )
+        const daysPlayed = new Set(
+          mineDaily
+            .map((e) => String(e.date || '').slice(0, 10))
+            .filter(Boolean)
+        ).size
+
         const winDistribution = [0, 0, 0, 0, 0, 0]
         let gamesFailed = 0
         let totalGames = 0
@@ -240,8 +251,8 @@ export const StatsModal = ({
           gamesFailed,
           totalGames,
           successRate: Math.round((100 * (totalGames - gamesFailed)) / Math.max(totalGames, 1)),
-          // Keep existing streak fields from local gameplay state.
-          currentStreak: gameStats.currentStreak,
+          // In this UI, currentStreak is displayed as Days Played.
+          currentStreak: daysPlayed,
           bestStreak: gameStats.bestStreak,
         }
 
