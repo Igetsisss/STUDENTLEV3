@@ -151,8 +151,10 @@ export const StatsModal = ({
       try {
         cachedPayload = JSON.parse(cachedRaw) as CachedPlayerStats
         if (cachedPayload?.stats) {
+          const useCachedTotals =
+            cachedPayload.stats.totalGames >= gameStats.totalGames
           setDisplayStats({
-            ...cachedPayload.stats,
+            ...(useCachedTotals ? cachedPayload.stats : gameStats),
             currentStreak: gameStats.currentStreak,
             bestStreak: gameStats.bestStreak,
           })
@@ -173,8 +175,10 @@ export const StatsModal = ({
       : Number.POSITIVE_INFINITY
     const hasFreshCache = cacheAgeMs < PLAYER_STATS_CACHE_TTL_MS
     const hasTodayLeaderboardCache = cachedPayload?.leaderboard?.date === today
+    const hasUsableStatsCache =
+      (cachedPayload?.stats?.totalGames ?? -1) >= gameStats.totalGames
 
-    if (hasFreshCache && hasTodayLeaderboardCache) {
+    if (hasFreshCache && hasTodayLeaderboardCache && hasUsableStatsCache) {
       return
     }
 
