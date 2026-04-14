@@ -408,7 +408,12 @@ function App() {
   useEffect(() => {
     const hasGrade = grade != null && grade !== 'undefined' && grade !== 'null'
     const hasName = !!localStorage.getItem('playerName')
-    if (hasGrade && !hasName) {
+    const currentGrade = (grade || '').replace(/"/g, '')
+    const isTeacher = currentGrade === '0'
+    const hasPrefix = !!localStorage.getItem('playerPrefix')
+    const hasInitial = !!localStorage.getItem('playerLastInitial')
+    const hasRequiredIdentifier = isTeacher ? hasPrefix : hasInitial
+    if (hasGrade && (!hasName || !hasRequiredIdentifier)) {
       // Delay past stats modal (1000ms) so name prompt always appears on top
       setTimeout(() => {
         setIsStatsModalOpen(false)

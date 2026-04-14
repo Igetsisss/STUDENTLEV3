@@ -110,7 +110,6 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     }
     const capitalized = capitalizeName(playerName)
     setPlayerName(capitalized)
-    localStorage.setItem('playerName', capitalized)
     setNameError('')
     // Check grade directly — handle both '"0"' (JSON.stringify) and '0' (plain) storage
     const rawGrade = localStorage.getItem(gradeStatKey) || ''
@@ -145,6 +144,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
   }
 
   const handleInitialDone = () => {
+    if (!lastInitial.trim()) return
     // Student only: "Jack S"
     const displayName = lastInitial.trim()
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
@@ -457,7 +457,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         'Is this you?'
       }
       isOpen={isOpen || forceOpen}
-      handleClose={step === 'confirm' || isSaving ? () => {} : handleClose}
+      handleClose={() => {}}
     >
       <br />
 
@@ -550,7 +550,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
             Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.
           </p>
           <div className="enterbutton" onClick={handleInitialDone}>
-            <button>Done</button>
+            <button disabled={!lastInitial.trim()}>Done</button>
           </div>
         </>
       )}
