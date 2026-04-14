@@ -199,6 +199,12 @@ function App() {
   const [teachersGuesses, setTeachersGuesses] = useState<string[]>([])
   const [gradeRoundGuessesMap, setGradeRoundGuessesMap] = useState<Record<string, string[]>>({})
   const [bothComplete, setBothComplete] = useState(false)
+  const hasAnyCompletedBoard =
+    dailyGuesses.length > 0 ||
+    bonusGuesses.length > 0 ||
+    teachersGuesses.length > 0 ||
+    Object.keys(gradeRoundGuessesMap).length > 0
+  const showCompletedLayout = bothComplete && hasAnyCompletedBoard
 
   const handleTitleTap = () => {
     titleTapCountRef.current += 1
@@ -1034,7 +1040,7 @@ function App() {
         )}
 
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 sm:px-6 md:max-w-7xl lg:px-8 short:pb-2 short:pt-2">
-          {bothComplete ? (
+          {showCompletedLayout ? (
             <div className="flex grow flex-col overflow-y-auto pb-2 short:pb-1">
               <div className="flex flex-wrap justify-center gap-3 py-2">
                 <CompletedGrid
@@ -1083,7 +1089,7 @@ function App() {
               />
             </div>
           )}
-          {!bothComplete && (
+          {!showCompletedLayout && (
             <Keyboard
               onChar={onChar}
               onDelete={onDelete}

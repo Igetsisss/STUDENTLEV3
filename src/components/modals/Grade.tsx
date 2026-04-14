@@ -37,6 +37,17 @@ const containsProfanity = (text: string): boolean => {
 const capitalizeName = (name: string): string =>
   name.trim().replace(/\b\w/g, (c) => c.toUpperCase())
 
+const normalizeAccountName = (value: string): string =>
+  String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const normalizeGradeCode = (value: string | number): string =>
+  String(value ?? '')
+    .replace(/"/g, '')
+    .trim()
+
 type Step = 'grade' | 'name' | 'initial' | 'prefix' | 'checking' | 'confirm'
 
 type ExistingAccount = {
@@ -175,11 +186,13 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     const pendingGrade = pendingGradeNormMap[pendingGradeRaw] || pendingGradeRaw
 
     fetchLeaderboard().then((data: LeaderboardEntry[]) => {
-      const matches = data.filter(
-        (e) =>
-          e.name.toLowerCase() === pending.toLowerCase() &&
-          String(e.grade) === pendingGrade
-      )
+      const pendingNameNorm = normalizeAccountName(pending)
+      const pendingGradeNorm = normalizeGradeCode(pendingGrade)
+      const matches = data.filter((e) => {
+        const rowNameNorm = normalizeAccountName(e.name)
+        const rowGradeNorm = normalizeGradeCode(e.grade)
+        return rowNameNorm === pendingNameNorm && rowGradeNorm === pendingGradeNorm
+      })
       if (matches.length === 0) {
         localStorage.removeItem('pendingAccountCheck')
         return
