@@ -245,6 +245,20 @@ export const loadStoredGameStateMetadata = (
   return loadVersionedStoredGameState(key)
 }
 
+export const saveGameStateToLocalStorage = (
+  isLatestGame: boolean,
+  gameState: StoredGameState
+) => {
+  const key = isLatestGame ? gameStateKey : archiveGameStateKey
+  saveVersionedState(key, buildVersionedStoredGameState(gameState))
+}
+
+export const loadGameStateFromLocalStorage = (
+  isLatestGame: boolean
+): StoredGameState | null => {
+  return loadStoredGameStateMetadata(isLatestGame)?.state ?? null
+}
+
 export const loadBonusGameStateMetadata = () =>
   loadVersionedStoredGameState(bonusGameStateKey)
 

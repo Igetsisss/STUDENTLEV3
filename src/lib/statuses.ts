@@ -1,4 +1,4 @@
-import { unicodeSplit } from './words.js'
+import { unicodeSplit } from './words'
 
 export type CharStatus = 'absent' | 'present' | 'correct'
 

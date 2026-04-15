@@ -1,8 +1,8 @@
 
 
-import { hasSupabaseConfig, supabase } from './supabase.js'
-import { TEACHER_WORDS } from '../teacherWords.js'
-import { getIndex, getSolution, localeAwareUpperCase } from './words.js'
+import { hasSupabaseConfig, supabase } from './supabase'
+import { TEACHER_WORDS } from '../teacherWords'
+import { getIndex, getSolution, localeAwareUpperCase } from './words'
 
 const SUPABASE_TABLES = {
   gameSubmissions: 'game_submissions',
