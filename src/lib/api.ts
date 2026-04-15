@@ -1,5 +1,4 @@
-const API_URL =
-  'https://script.google.com/macros/s/AKfycbz7Q2SSXWC3yuT2TdsMN10X-YwKIEIZlBTXAp_C30YEy22wcwRzOYAlmLjSP97KAzna/exec'
+
 
 import { hasSupabaseConfig, supabase } from './supabase'
 import { TEACHER_WORDS } from '../teacherWords'
@@ -49,7 +48,6 @@ export type KeystrokeBatchPayload = {
   events: KeystrokeEvent[]
 }
 
-export const sendKeystrokeBatch = async (
   sessionId: string,
   meta: { playerName: string; grade: string; date: string; gameType: string },
   events: KeystrokeEvent[]
@@ -86,17 +84,6 @@ export const sendKeystrokeBatch = async (
     } catch (error) {
       console.error('Failed to write keystroke batch to Supabase:', error)
     }
-  }
-
-  try {
-    fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'keystrokes', sessionId, ...meta, events }),
-    })
-  } catch {
-    // fire-and-forget, never block the game
   }
 }
 
@@ -168,27 +155,6 @@ export const submitSignupEvent = async (
     } catch (error) {
       console.error('Failed to write signup data to Supabase:', error)
     }
-  }
-
-  try {
-    const payload: SignupEvent = {
-      action: 'signup',
-      playerName,
-      grade,
-      registeredAtClient: new Date().toISOString(),
-      source,
-      userAgent: navigator.userAgent || '',
-      screenWidth: window.innerWidth || 0,
-      screenHeight: window.innerHeight || 0,
-    }
-    fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-  } catch {
-    // fire-and-forget, never block registration
   }
 }
 
@@ -378,50 +344,8 @@ export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number>
 // gamesFailed = total losses. Submitted with placeholder date/word since we only
 // have aggregate data. The Apps Script simply appends rows — duplicates are safe
 // because the leaderboard fetches by date and historical entries use a past placeholder.
-export const submitHistoricalStats = async (
-  name: string,
-  grade: string,
-  winDistribution: number[],
-  gamesFailed: number
-): Promise<void> => {
-  const placeholder = '1970-01-01'
-  const now = new Date().toISOString()
-  const base = {
-    gameType: 'daily' as const,
-    date: placeholder,
-    word: 'XXXXX',
-    gameStartTime: now,
-    gameEndTime: now,
-    totalDurationSec: 0,
-    timeToFirstGuessSec: 0,
-    device: 'historical',
-    screenWidth: 0,
-    guesses: [],
-  }
-
-  const submissions: GameSubmission[] = []
-
-  winDistribution.forEach((count, i) => {
-    for (let j = 0; j < count; j++) {
-      submissions.push({ ...base, name, grade, won: true, guessCount: i + 1 })
-    }
-  })
-  for (let j = 0; j < gamesFailed; j++) {
-    submissions.push({ ...base, name, grade, won: false, guessCount: 6 })
-  }
-
-  // Fire-and-forget each one; failures are silent so they don't block account creation
-  for (const data of submissions) {
-    try {
-      await fetch(API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-    } catch { /* ignore */ }
-  }
-}
+// All historical stats are now handled by Supabase. No-op for legacy batch.
+export const submitHistoricalStats = async () => { return }
 
 export const submitGameData = async (data: GameSubmission): Promise<void> => {
   if (hasSupabaseConfig && supabase) {
@@ -456,22 +380,9 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
       console.error('Failed to write game submission to Supabase:', error)
     }
   }
-
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-  } catch (err) {
-    console.error('Failed to submit game data:', err)
-  }
 }
 
-const SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
-const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`
-const GVIZ_STATE_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet2`
+
 
 const normalizeLegacyGrade = (rawGrade: string): string => {
   const clean = String(rawGrade || '').replace(/"/g, '').trim()
@@ -517,30 +428,11 @@ export const syncPlayerStateToCloud = async (
           },
           { onConflict: 'player_key' }
         )
-
       if (!error) return
       console.error('Failed to sync player state to Supabase:', error)
     } catch (error) {
       console.error('Failed to write cloud state to Supabase:', error)
     }
-  }
-
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'state_sync',
-        playerName: cleanName,
-        grade: cleanGrade,
-        state,
-        device: navigator.userAgent || '',
-        appVersion: 'v1',
-      }),
-    })
-  } catch {
-    // Never block gameplay on sync failures.
   }
 }
 
@@ -570,65 +462,10 @@ export const fetchPlayerStateFromCloud = async (
       console.error('Failed to read cloud state from Supabase:', error)
     }
   }
-
-  try {
-    const res = await fetch(GVIZ_STATE_URL)
-    const text = await res.text()
-    const rows = parseGvizResponse(text)
-
-    for (let i = rows.length - 1; i >= 0; i--) {
-      const r = rows[i]
-      const rowKey = String(r[1] || '')
-      if (rowKey !== key) continue
-
-      const updatedAt = String(r[0] || '')
-      const rawState = String(r[4] || '{}')
-      try {
-        const parsed = JSON.parse(rawState) as Record<string, string>
-        return { updatedAt, state: parsed }
-      } catch {
-        return null
-      }
-    }
-
-    return null
-  } catch {
-    return null
-  }
+  return null
 }
 
-const parseGvizResponse = (text: string): any[][] => {
-  // Response is: /*O_o*/\ngoogle.visualization.Query.setResponse({...})
-  const jsonStr = text
-    .replace(/^[^(]*\(/, '')
-    .replace(/\);?\s*$/, '')
-  const data = JSON.parse(jsonStr)
-  const rows: any[][] = []
-  if (data.table && data.table.rows) {
-    for (const row of data.table.rows) {
-      rows.push(
-        row.c.map((cell: any) => {
-          if (!cell) return null
-          // gviz encodes date cells as Date(YYYY,M,D) with 0-indexed month.
-          // Always convert these to ISO YYYY-MM-DD so date comparisons are reliable
-          // regardless of the sheet's display locale/format.
-          if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
-            const m = cell.v.match(/Date\((\d+),(\d+),(\d+)\)/)
-            if (m) {
-              const y = m[1]
-              const mo = String(Number(m[2]) + 1).padStart(2, '0')
-              const d = String(Number(m[3])).padStart(2, '0')
-              return `${y}-${mo}-${d}`
-            }
-          }
-          if (cell.f != null) return cell.f
-          return cell.v
-        })
-      )
-    }
-  }
-  return rows
-}
+
 
 export type AllTimeEntry = {
   name: string
