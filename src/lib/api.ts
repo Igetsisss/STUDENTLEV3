@@ -4,6 +4,9 @@ import { hasSupabaseConfig, supabase } from './supabase'
 import { TEACHER_WORDS } from '../teacherWords'
 import { getIndex, getSolution, localeAwareUpperCase } from './words'
 
+const DEFAULT_LEGACY_GOOGLE_SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
+const legacyGvizUrl = `https://docs.google.com/spreadsheets/d/${DEFAULT_LEGACY_GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json`
+
 const SUPABASE_TABLES = {
   gameSubmissions: 'game_submissions',
   keystrokeLogs: 'keystroke_logs',
@@ -11,6 +14,35 @@ const SUPABASE_TABLES = {
   playerStateSnapshots: 'player_state_snapshots',
   signupEvents: 'signup_events',
 } as const
+
+const parseGvizResponse = (text: string): any[] => {
+  const jsonStr = text.replace(/^[^(]*\(/, '').replace(/\);?\s*$/, '')
+  const data = JSON.parse(jsonStr)
+  const rows: any[] = []
+
+  if (data.table && data.table.rows) {
+    for (const row of data.table.rows) {
+      rows.push(
+        row.c.map((cell: any) => {
+          if (!cell) return null
+          if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
+            const match = cell.v.match(/Date\((\d+),(\d+),(\d+)\)/)
+            if (match) {
+              const year = match[1]
+              const month = String(Number(match[2]) + 1).padStart(2, '0')
+              const day = String(Number(match[3])).padStart(2, '0')
+              return `${year}-${month}-${day}`
+            }
+          }
+          if (cell.f != null) return cell.f
+          return cell.v
+        })
+      )
+    }
+  }
+
+  return rows
+}
 
 export type GuessData = {
   word: string
@@ -604,7 +636,9 @@ export const fetchLeaderboard = async (
           return a.totalDurationSec - b.totalDurationSec
         })
 
-        return results
+        if (results.length > 0) {
+          return results
+        }
       }
     } catch (error) {
       console.error('Failed to read leaderboard from Supabase:', error)
@@ -612,11 +646,7 @@ export const fetchLeaderboard = async (
   }
 
   try {
-    // TODO: Replace with actual Google Sheets integration or remove if not used
-    const GVIZ_URL = ''
-    const SHEET_ID = ''
-    const parseGvizResponse = (text: string): any[] => []
-    const res = await fetch(GVIZ_URL)
+    const res = await fetch(legacyGvizUrl)
     const text = await res.text()
     const rows = parseGvizResponse(text)
     const results: LeaderboardEntry[] = []
