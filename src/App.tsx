@@ -922,8 +922,8 @@ function App() {
     const trackingData = tracker.getSubmissionData()
     const d = solutionGameDate
     const puzzleDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const dailyGameType: 'daily' | 'teachers' =
-      gradeClean === '0' ? 'teachers' : 'daily'
+    const dailyGameType: 'teachers' | `grade${string}` =
+      gradeClean === '0' ? 'teachers' : `grade${gradeClean}`
 
     submitGameData({
       name: playerName,
