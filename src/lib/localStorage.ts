@@ -2,10 +2,16 @@ const gameStateKey = 'gameState'
 const archiveGameStateKey = 'archiveGameState'
 const bonusGameStateKey = 'bonusGameState'
 const highContrastKey = 'highContrast'
+const activeRoundStateKey = 'activeRoundState'
 
 export type StoredGameState = {
   guesses: string[]
   solution: string
+}
+
+export type ActiveRoundState = {
+  type: 'daily' | 'bonus' | 'teachers' | 'grade'
+  grade?: string
 }
 
 export const saveGameStateToLocalStorage = (
@@ -70,6 +76,28 @@ export const loadGradeRoundGameStateFromLocalStorage = (grade: string) => {
 
 export const clearGradeRoundGameState = (grade: string) => {
   localStorage.removeItem(gradeRoundGameStateKeyPrefix + grade)
+}
+
+export const saveActiveRoundToLocalStorage = (
+  activeRoundState: ActiveRoundState
+) => {
+  localStorage.setItem(activeRoundStateKey, JSON.stringify(activeRoundState))
+}
+
+export const loadActiveRoundFromLocalStorage = () => {
+  const state = localStorage.getItem(activeRoundStateKey)
+  if (!state) return null
+
+  try {
+    return JSON.parse(state) as ActiveRoundState
+  } catch {
+    localStorage.removeItem(activeRoundStateKey)
+    return null
+  }
+}
+
+export const clearActiveRoundFromLocalStorage = () => {
+  localStorage.removeItem(activeRoundStateKey)
 }
 
 const gameStatKey = 'gameStats'

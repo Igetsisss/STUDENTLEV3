@@ -40,6 +40,7 @@ import { useAlert } from './context/AlertContext'
 import { isInAppBrowser } from './lib/browser'
 import {
   getStoredIsHighContrastMode,
+  loadActiveRoundFromLocalStorage,
   loadGameStateFromLocalStorage,
   loadBonusGameStateFromLocalStorage,
   saveBonusGameStateToLocalStorage,
@@ -48,6 +49,7 @@ import {
   saveTeachersGameStateToLocalStorage,
   saveGradeRoundGameStateToLocalStorage,
   loadGradeRoundGameStateFromLocalStorage,
+  saveActiveRoundToLocalStorage,
   setStoredIsHighContrastMode,
 } from './lib/localStorage'
 import {
@@ -92,6 +94,56 @@ import {
 } from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
 
+type RoundRestoreMode = 'daily' | 'bonus' | 'teachers' | 'grade'
+
+type ResolvedRoundState = {
+  mode: RoundRestoreMode
+  guesses: string[]
+  solution: string
+  outcome: 'empty' | 'in-progress' | 'won' | 'lost'
+  grade?: string
+}
+
+const getStoredRoundOutcome = (
+  guesses: string[],
+  solution: string,
+  maxChallenges: number
+): ResolvedRoundState['outcome'] => {
+  if (guesses.includes(solution)) {
+    return 'won'
+  }
+
+  if (guesses.length >= maxChallenges) {
+    return 'lost'
+  }
+
+  if (guesses.length > 0) {
+    return 'in-progress'
+  }
+
+  return 'empty'
+}
+
+const resolveStoredRoundState = (
+  mode: RoundRestoreMode,
+  storedState: { guesses: string[]; solution: string } | null,
+  solution: string,
+  maxChallenges: number,
+  grade?: string
+): ResolvedRoundState | null => {
+  if (!storedState || storedState.solution !== solution) {
+    return null
+  }
+
+  return {
+    mode,
+    guesses: storedState.guesses,
+    solution,
+    outcome: getStoredRoundOutcome(storedState.guesses, solution, maxChallenges),
+    grade,
+  }
+}
+
 function App() {
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
@@ -124,11 +176,89 @@ function App() {
   const prefersDarkMode = window.matchMedia(
     '(prefers-color-scheme: dark)'
   ).matches
+  const effectiveDailySolution = (() => {
+    const g = localStorage.getItem('gradeNumber')
+    return g === '"0"' ? teachersSolution : dailySolution
+  })()
+  const restoredDailyState = resolveStoredRoundState(
+    'daily',
+    loadGameStateFromLocalStorage(isLatestGame),
+    effectiveDailySolution,
+    MAX_CHALLENGES
+  )
+  const restoredBonusState = resolveStoredRoundState(
+    'bonus',
+    loadBonusGameStateFromLocalStorage(),
+    bonusSolution,
+    MAX_BONUS_CHALLENGES
+  )
+  const restoredTeachersState = resolveStoredRoundState(
+    'teachers',
+    loadTeachersGameStateFromLocalStorage(),
+    teachersSolution,
+    MAX_CHALLENGES
+  )
+  const restoredGradeStates = ['9', '10', '11', '12']
+    .map((grade) =>
+      resolveStoredRoundState(
+        'grade',
+        loadGradeRoundGameStateFromLocalStorage(grade),
+        getGradeRoundSolution(grade),
+        MAX_CHALLENGES,
+        grade
+      )
+    )
+    .filter((state): state is ResolvedRoundState => state !== null)
+  const activeRoundPreference = loadActiveRoundFromLocalStorage()
+  const inProgressRoundFallback =
+    restoredTeachersState?.outcome === 'in-progress'
+      ? restoredTeachersState
+      : restoredBonusState?.outcome === 'in-progress'
+      ? restoredBonusState
+      : restoredGradeStates.find((state) => state.outcome === 'in-progress') ?? null
+  const initialRoundState = (() => {
+    if (
+      activeRoundPreference?.type === 'teachers' &&
+      restoredTeachersState?.outcome === 'in-progress'
+    ) {
+      return restoredTeachersState
+    }
+
+    if (
+      activeRoundPreference?.type === 'bonus' &&
+      restoredBonusState?.outcome === 'in-progress'
+    ) {
+      return restoredBonusState
+    }
+
+    if (activeRoundPreference?.type === 'grade') {
+      const matchingGradeState = restoredGradeStates.find(
+        (state) =>
+          state.outcome === 'in-progress' && state.grade === activeRoundPreference.grade
+      )
+      if (matchingGradeState) {
+        return matchingGradeState
+      }
+    }
+
+    if (activeRoundPreference?.type === 'daily' && restoredDailyState) {
+      return restoredDailyState
+    }
+
+    return (
+      inProgressRoundFallback ??
+      restoredDailyState ?? {
+        mode: 'daily' as const,
+        guesses: [],
+        solution: effectiveDailySolution,
+        outcome: 'empty' as const,
+      }
+    )
+  })()
 
   const { showError: showErrorAlert, showSuccess: showSuccessAlert } =
     useAlert()
   const [currentGuess, setCurrentGuess] = useState('')
-  const [isGameWon, setIsGameWon] = useState(false)
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
@@ -137,7 +267,8 @@ function App() {
   const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false)
   const [isPersonalBest, setIsPersonalBest] = useState(false)
   const [currentRowClass, setCurrentRowClass] = useState('')
-  const [isGameLost, setIsGameLost] = useState(false)
+  const [isGameWon, setIsGameWon] = useState(initialRoundState.outcome === 'won')
+  const [isGameLost, setIsGameLost] = useState(initialRoundState.outcome === 'lost')
   const [isDarkMode, setIsDarkMode] = useState(
     localStorage.getItem('theme')
       ? localStorage.getItem('theme') === 'dark'
@@ -150,10 +281,12 @@ function App() {
   )
 
   const [isRevealing, setIsRevealing] = useState(false)
-  const [isBonusRound, setIsBonusRound] = useState(false)
-  const [isTeachersRound, setIsTeachersRound] = useState(false)
-  const [isGradeRound, setIsGradeRound] = useState(false)
-  const [gradeRoundGrade, setGradeRoundGrade] = useState<string>('')
+  const [isBonusRound, setIsBonusRound] = useState(initialRoundState.mode === 'bonus')
+  const [isTeachersRound, setIsTeachersRound] = useState(initialRoundState.mode === 'teachers')
+  const [isGradeRound, setIsGradeRound] = useState(initialRoundState.mode === 'grade')
+  const [gradeRoundGrade, setGradeRoundGrade] = useState<string>(
+    initialRoundState.mode === 'grade' ? initialRoundState.grade ?? '' : ''
+  )
   const [gradeRoundsPlayed, setGradeRoundsPlayed] = useState<string[]>(() => {
     // Restore which grade rounds were completed today
     const today = new Date().toISOString().slice(0, 10)
@@ -171,12 +304,7 @@ function App() {
     return played
   })
   const currentMaxChallenges = isBonusRound ? MAX_BONUS_CHALLENGES : MAX_CHALLENGES
-  // Teachers' daily IS the teacher-names word (same as students' Teachers Round)
-  const effectiveDailySolution = (() => {
-    const g = localStorage.getItem('gradeNumber')
-    return g === '"0"' ? teachersSolution : dailySolution
-  })()
-  const [activeSolution, setActiveSolution] = useState(effectiveDailySolution)
+  const [activeSolution, setActiveSolution] = useState(initialRoundState.solution)
   const [isClearing, setIsClearing] = useState(false)
   const [bonusEnter, setBonusEnter] = useState<'grow' | 'shrink' | null>(null)
   const [isGridHidden, setIsGridHidden] = useState(false)
@@ -198,11 +326,39 @@ function App() {
   })
 
   // Store completed daily game for side-by-side display
-  const [dailyGuesses, setDailyGuesses] = useState<string[]>([])
-  const [bonusGuesses, setBonusGuesses] = useState<string[]>([])
-  const [teachersGuesses, setTeachersGuesses] = useState<string[]>([])
-  const [gradeRoundGuessesMap, setGradeRoundGuessesMap] = useState<Record<string, string[]>>({})
-  const [bothComplete, setBothComplete] = useState(false)
+  const [dailyGuesses, setDailyGuesses] = useState<string[]>(
+    restoredDailyState && ['won', 'lost'].includes(restoredDailyState.outcome)
+      ? restoredDailyState.guesses
+      : []
+  )
+  const [bonusGuesses, setBonusGuesses] = useState<string[]>(
+    restoredBonusState && ['won', 'lost'].includes(restoredBonusState.outcome)
+      ? restoredBonusState.guesses
+      : []
+  )
+  const [teachersGuesses, setTeachersGuesses] = useState<string[]>(
+    restoredTeachersState && ['won', 'lost'].includes(restoredTeachersState.outcome)
+      ? restoredTeachersState.guesses
+      : []
+  )
+  const [gradeRoundGuessesMap, setGradeRoundGuessesMap] = useState<Record<string, string[]>>(
+    () =>
+      restoredGradeStates.reduce<Record<string, string[]>>((acc, state) => {
+        if (state.grade && ['won', 'lost'].includes(state.outcome)) {
+          acc[state.grade] = state.guesses
+        }
+        return acc
+      }, {})
+  )
+  const [bothComplete, setBothComplete] = useState(() => {
+    const hasCompletedDaily = !!restoredDailyState && ['won', 'lost'].includes(restoredDailyState.outcome)
+    const hasCompletedExtra =
+      (!!restoredBonusState && ['won', 'lost'].includes(restoredBonusState.outcome)) ||
+      (!!restoredTeachersState && ['won', 'lost'].includes(restoredTeachersState.outcome)) ||
+      restoredGradeStates.some((state) => ['won', 'lost'].includes(state.outcome))
+
+    return hasCompletedDaily && hasCompletedExtra
+  })
   const hasAnyCompletedBoard =
     dailyGuesses.length > 0 ||
     bonusGuesses.length > 0 ||
@@ -281,107 +437,7 @@ function App() {
     }
   }, [])
 
-  const [guesses, setGuesses] = useState<string[]>(() => {
-    // Check if there's a teachers round in progress (check first so it restores properly)
-    const teachersSolution = getTeachersSolution()
-    const teachersLoaded = loadTeachersGameStateFromLocalStorage()
-    if (teachersLoaded && teachersLoaded.solution === teachersSolution) {
-      const dailyLoaded = loadGameStateFromLocalStorage(isLatestGame)
-      if (dailyLoaded) {
-        setDailyGuesses(dailyLoaded.guesses)
-      }
-
-      setIsTeachersRound(true)
-      setActiveSolution(teachersSolution)
-
-      const teachersWon = teachersLoaded.guesses.includes(teachersSolution)
-      const teachersLost =
-        teachersLoaded.guesses.length === MAX_CHALLENGES && !teachersWon
-
-      if (teachersWon) {
-        setIsGameWon(true)
-        setTeachersGuesses(teachersLoaded.guesses)
-        if (dailyLoaded) {
-          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
-          const dailyDone =
-            dailyLoaded.guesses.includes(effectiveSol) ||
-            dailyLoaded.guesses.length === MAX_CHALLENGES
-          if (dailyDone) setBothComplete(true)
-        }
-      }
-      if (teachersLost) {
-        setIsGameLost(true)
-        setTeachersGuesses(teachersLoaded.guesses)
-        if (dailyLoaded) {
-          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
-          const dailyDone =
-            dailyLoaded.guesses.includes(effectiveSol) ||
-            dailyLoaded.guesses.length === MAX_CHALLENGES
-          if (dailyDone) setBothComplete(true)
-        }
-      }
-      return teachersLoaded.guesses
-    }
-
-    // Check if there's a bonus round in progress
-    const bonusLoaded = loadBonusGameStateFromLocalStorage()
-    if (bonusLoaded && bonusLoaded.solution === bonusSolution) {
-      // Bonus round was in progress — restore it
-      const dailyLoaded = loadGameStateFromLocalStorage(isLatestGame)
-      if (dailyLoaded) {
-        setDailyGuesses(dailyLoaded.guesses)
-      }
-
-      setIsBonusRound(true)
-      setActiveSolution(bonusSolution)
-
-      const bonusWon = bonusLoaded.guesses.includes(bonusSolution)
-      const bonusLost =
-        bonusLoaded.guesses.length === MAX_CHALLENGES && !bonusWon
-
-      if (bonusWon) {
-        setIsGameWon(true)
-        setBonusGuesses(bonusLoaded.guesses)
-        // Check if both are done for side-by-side
-        if (dailyLoaded) {
-          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
-          const dailyDone =
-            dailyLoaded.guesses.includes(effectiveSol) ||
-            dailyLoaded.guesses.length === MAX_CHALLENGES
-          if (dailyDone) setBothComplete(true)
-        }
-      }
-      if (bonusLost) {
-        setIsGameLost(true)
-        setBonusGuesses(bonusLoaded.guesses)
-        if (dailyLoaded) {
-          const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
-          const dailyDone =
-            dailyLoaded.guesses.includes(effectiveSol) ||
-            dailyLoaded.guesses.length === MAX_CHALLENGES
-          if (dailyDone) setBothComplete(true)
-        }
-      }
-      return bonusLoaded.guesses
-    }
-
-    // Normal daily game load (use teacher solution for teacher players)
-    const effectiveSol = (() => { const g = localStorage.getItem('gradeNumber'); return g === '"0"' ? teachersSolution : dailySolution })()
-    const loaded = loadGameStateFromLocalStorage(isLatestGame)
-    if (loaded?.solution !== effectiveSol) {
-      return []
-    }
-    const gameWasWon = loaded.guesses.includes(effectiveSol)
-    if (gameWasWon) {
-      setIsGameWon(true)
-      setDailyGuesses(loaded.guesses)
-    }
-    if (loaded.guesses.length === MAX_CHALLENGES && !gameWasWon) {
-      setIsGameLost(true)
-      setDailyGuesses(loaded.guesses)
-    }
-    return loaded.guesses
-  })
+  const [guesses, setGuesses] = useState<string[]>(initialRoundState.guesses)
 
   const [stats, setStats] = useState(() => loadStats())
 
@@ -608,21 +664,25 @@ function App() {
   // Persist game state
   useEffect(() => {
     if (isGradeRound && gradeRoundGrade) {
+      saveActiveRoundToLocalStorage({ type: 'grade', grade: gradeRoundGrade })
       saveGradeRoundGameStateToLocalStorage(gradeRoundGrade, {
         guesses,
         solution: getGradeRoundSolution(gradeRoundGrade),
       })
     } else if (isTeachersRound) {
+      saveActiveRoundToLocalStorage({ type: 'teachers' })
       saveTeachersGameStateToLocalStorage({
         guesses,
         solution: teachersSolution,
       })
     } else if (isBonusRound) {
+      saveActiveRoundToLocalStorage({ type: 'bonus' })
       saveBonusGameStateToLocalStorage({
         guesses,
         solution: bonusSolution,
       })
     } else {
+      saveActiveRoundToLocalStorage({ type: 'daily' })
       saveGameStateToLocalStorage(getIsLatestGame(), {
         guesses,
         solution: effectiveDailySolution,
@@ -657,6 +717,7 @@ function App() {
         'archiveGameState',
         'bonusGameState',
         'teachersGameState',
+        'activeRoundState',
         'gameStats',
         'bonusRoundPlayedDate',
         'teachersRoundPlayedDate',

@@ -3,6 +3,7 @@ import './gradestyle.css'
 import { useState, useEffect } from 'react'
 
 import {
+  clearActiveRoundFromLocalStorage,
   GradeNumber,
   GameStats,
   clearBonusGameState,
@@ -389,6 +390,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     localStorage.removeItem('gameState')
     localStorage.removeItem('archiveGameState')
     clearBonusGameState()
+    clearActiveRoundFromLocalStorage()
     clearTeachersGameState()
     clearBonusPlayedToday()
     clearTeachersPlayedToday()
