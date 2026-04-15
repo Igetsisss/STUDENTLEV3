@@ -105,6 +105,28 @@ type ResolvedRoundState = {
   grade?: string
 }
 
+const LEGACY_GRADE_NORMALIZATION_MAP: Record<string, string> = {
+  '7': '10',
+  '8': '11',
+  '27': '11',
+  '28': '10',
+}
+
+const LEGACY_TEACHER_KEYS = [
+  'harvey m',
+  'katie cruce',
+  'katie c',
+  'evan bassett',
+  'bassett evan',
+  'amanda adams',
+]
+
+const formatDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(date.getDate()).padStart(2, '0')}`
+
 const getStoredRoundOutcome = (
   guesses: string[],
   solution: string,
@@ -204,8 +226,7 @@ function App() {
     const prefix = localStorage.getItem('playerPrefix') || ''
     const storedName = prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
     const key = storedName.toLowerCase().replace(/\s+/g, ' ').trim()
-    const legacyTeacherKeys = ['harvey m', 'katie cruce', 'katie c', 'evan bassett', 'bassett evan', 'amanda adams']
-    if (legacyTeacherKeys.includes(key)) {
+    if (LEGACY_TEACHER_KEYS.includes(key)) {
       const currentGrade = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
       if (currentGrade !== '0') {
         localStorage.setItem('gradeNumber', '"0"')
@@ -255,7 +276,8 @@ function App() {
       ? restoredTeachersState
       : restoredBonusState?.outcome === 'in-progress'
       ? restoredBonusState
-      : restoredGradeStates.find((state) => state.outcome === 'in-progress') ?? null
+      : restoredGradeStates.find((state) => state.outcome === 'in-progress') ??
+        null
   const initialRoundState = (() => {
     if (
       activeRoundPreference?.type === 'teachers' &&
@@ -308,7 +330,9 @@ function App() {
   const [isPersonalBest, setIsPersonalBest] = useState(false)
   const [currentRowClass, setCurrentRowClass] = useState('')
   const [isGameWon, setIsGameWon] = useState(initialRoundState.outcome === 'won')
-  const [isGameLost, setIsGameLost] = useState(initialRoundState.outcome === 'lost')
+  const [isGameLost, setIsGameLost] = useState(
+    initialRoundState.outcome === 'lost'
+  )
   const [isDarkMode, setIsDarkMode] = useState(
     localStorage.getItem('theme')
       ? localStorage.getItem('theme') === 'dark'
@@ -321,9 +345,15 @@ function App() {
   )
 
   const [isRevealing, setIsRevealing] = useState(false)
-  const [isBonusRound, setIsBonusRound] = useState(initialRoundState.mode === 'bonus')
-  const [isTeachersRound, setIsTeachersRound] = useState(initialRoundState.mode === 'teachers')
-  const [isGradeRound, setIsGradeRound] = useState(initialRoundState.mode === 'grade')
+  const [isBonusRound, setIsBonusRound] = useState(
+    initialRoundState.mode === 'bonus'
+  )
+  const [isTeachersRound, setIsTeachersRound] = useState(
+    initialRoundState.mode === 'teachers'
+  )
+  const [isGradeRound, setIsGradeRound] = useState(
+    initialRoundState.mode === 'grade'
+  )
   const [gradeRoundGrade, setGradeRoundGrade] = useState<string>(
     initialRoundState.mode === 'grade' ? initialRoundState.grade ?? '' : ''
   )
@@ -337,7 +367,11 @@ function App() {
     const ownGrade = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
     if (['9', '10', '11', '12'].includes(ownGrade) && !played.includes(ownGrade)) {
       const dLoaded = loadGameStateFromLocalStorage(true)
-      if (dLoaded && (dLoaded.guesses.includes(dailySolution) || dLoaded.guesses.length >= MAX_CHALLENGES)) {
+      if (
+        dLoaded &&
+        (dLoaded.guesses.includes(dailySolution) ||
+          dLoaded.guesses.length >= MAX_CHALLENGES)
+      ) {
         played.push(ownGrade)
       }
     }
@@ -381,17 +415,20 @@ function App() {
       ? restoredTeachersState.guesses
       : []
   )
-  const [gradeRoundGuessesMap, setGradeRoundGuessesMap] = useState<Record<string, string[]>>(
-    () =>
-      restoredGradeStates.reduce<Record<string, string[]>>((acc, state) => {
-        if (state.grade && ['won', 'lost'].includes(state.outcome)) {
-          acc[state.grade] = state.guesses
-        }
-        return acc
-      }, {})
+  const [gradeRoundGuessesMap, setGradeRoundGuessesMap] = useState<
+    Record<string, string[]>
+  >(() =>
+    restoredGradeStates.reduce<Record<string, string[]>>((acc, state) => {
+      if (state.grade && ['won', 'lost'].includes(state.outcome)) {
+        acc[state.grade] = state.guesses
+      }
+      return acc
+    }, {})
   )
   const [bothComplete, setBothComplete] = useState(() => {
-    const hasCompletedDaily = !!restoredDailyState && ['won', 'lost'].includes(restoredDailyState.outcome)
+    const hasCompletedDaily =
+      !!restoredDailyState &&
+      ['won', 'lost'].includes(restoredDailyState.outcome)
     const hasCompletedExtra =
       (!!restoredBonusState && ['won', 'lost'].includes(restoredBonusState.outcome)) ||
       (!!restoredTeachersState && ['won', 'lost'].includes(restoredTeachersState.outcome)) ||
@@ -876,31 +913,39 @@ function App() {
     if (!isBonusRound) {
       try {
         const _d = solutionGameDate
-        const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
+        const today = formatDateKey(_d)
         const existing = await fetchLeaderboard(today)
-        const gradeRawCheck = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
-        const gradeCleanCheck = ({ '8': '11', '27': '11', '7': '10', '28': '10' } as Record<string,string>)[gradeRawCheck] || gradeRawCheck
+        const gradeRawCheck = (localStorage.getItem('gradeNumber') || '').replace(
+          /"/g,
+          ''
+        )
+        const gradeCleanCheck =
+          LEGACY_GRADE_NORMALIZATION_MAP[gradeRawCheck] || gradeRawCheck
         const existingDailyCount = existing.filter(
-          (e) =>
-            String(e.grade) === gradeCleanCheck &&
-            isTrueDailyEntry(e)
+          (e) => String(e.grade) === gradeCleanCheck && isTrueDailyEntry(e)
         ).length
         if (existingDailyCount === 0) {
           setIsFirstToday(true)
           localStorage.setItem('firstToPlayDate', today)
         }
-      } catch { /* ignore — don't block submission */ }
+      } catch {
+        // ignore - don't block submission
+      }
     }
 
     const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''
     const prefix = localStorage.getItem('playerPrefix') || ''
-    let playerName = prefix ? `${prefix} ${firstName}` : lastInitial ? `${firstName} ${lastInitial}` : firstName
+    let playerName = prefix
+      ? `${prefix} ${firstName}`
+      : lastInitial
+      ? `${firstName} ${lastInitial}`
+      : firstName
     if (!firstName) return // don't submit nameless games
     const gradeRaw = localStorage.getItem('gradeNumber') || ''
     const gradeCleanRaw = gradeRaw.replace(/"/g, '')
-    const gradeNorm: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
-    let gradeClean = gradeNorm[gradeCleanRaw] || gradeCleanRaw
+    let gradeClean =
+      LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
     // Legacy name/grade corrections (players who registered before certain features existed)
     const normalizePlayerKey = (name: string) =>
       String(name || '').toLowerCase().replace(/\s+/g, ' ').trim()
@@ -916,10 +961,13 @@ function App() {
       'Harvey M': { name: 'Mrs. Harvey', grade: '0' },
     }
     const legacyFix = legacyNameFixes[normalizePlayerKey(playerName)]
-    if (legacyFix) { playerName = legacyFix.name; gradeClean = legacyFix.grade }
+    if (legacyFix) {
+      playerName = legacyFix.name
+      gradeClean = legacyFix.grade
+    }
     const trackingData = tracker.getSubmissionData()
     const d = solutionGameDate
-    const puzzleDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const puzzleDateStr = formatDateKey(d)
     const dailyGameType: 'teachers' | `grade${string}` =
       gradeClean === '0' ? 'teachers' : `grade${gradeClean}`
 
@@ -930,7 +978,13 @@ function App() {
       word: activeSolution,
       won,
       guessCount,
-      gameType: isGradeRound ? `grade${gradeRoundGrade}` : isTeachersRound ? 'teachers' : isBonusRound ? 'bonus' : dailyGameType,
+      gameType: isGradeRound
+        ? `grade${gradeRoundGrade}`
+        : isTeachersRound
+        ? 'teachers'
+        : isBonusRound
+        ? 'bonus'
+        : dailyGameType,
       ...trackingData,
     })
   }
@@ -986,7 +1040,10 @@ function App() {
           if (isFirstWin || beatsBest) setIsPersonalBest(true)
           // Pre-mark own grade as done so it can't be replayed
           const ownGrade = (grade || '').replace(/"/g, '')
-          if (['9', '10', '11', '12'].includes(ownGrade) && !gradeRoundsPlayed.includes(ownGrade)) {
+          if (
+            ['9', '10', '11', '12'].includes(ownGrade) &&
+            !gradeRoundsPlayed.includes(ownGrade)
+          ) {
             setGradeRoundsPlayed((prev: string[]) => [...prev, ownGrade])
           }
         }
@@ -1003,7 +1060,10 @@ function App() {
         if (isGradeRound && gradeRoundGrade) {
           setGradeRoundPlayedToday(gradeRoundGrade)
           setGradeRoundsPlayed((prev: string[]) => [...prev, gradeRoundGrade])
-          setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({ ...prev, [gradeRoundGrade]: newGuesses }))
+          setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({
+            ...prev,
+            [gradeRoundGrade]: newGuesses,
+          }))
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
         submitGame(true, newGuesses.length)
@@ -1016,7 +1076,10 @@ function App() {
           setDailyGuesses(newGuesses)
           // Pre-mark own grade as done so it can't be replayed
           const ownGrade = (grade || '').replace(/"/g, '')
-          if (['9', '10', '11', '12'].includes(ownGrade) && !gradeRoundsPlayed.includes(ownGrade)) {
+          if (
+            ['9', '10', '11', '12'].includes(ownGrade) &&
+            !gradeRoundsPlayed.includes(ownGrade)
+          ) {
             setGradeRoundsPlayed((prev: string[]) => [...prev, ownGrade])
           }
         }
@@ -1033,7 +1096,10 @@ function App() {
         if (isGradeRound && gradeRoundGrade) {
           setGradeRoundPlayedToday(gradeRoundGrade)
           setGradeRoundsPlayed((prev: string[]) => [...prev, gradeRoundGrade])
-          setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({ ...prev, [gradeRoundGrade]: newGuesses }))
+          setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({
+            ...prev,
+            [gradeRoundGrade]: newGuesses,
+          }))
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
         submitGame(false, newGuesses.length)
@@ -1213,7 +1279,7 @@ function App() {
           </div>
         )}
 
-        <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 sm:px-6 md:max-w-7xl lg:px-8 short:pb-2 short:pt-2">
+        <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 short:pb-2 short:pt-2 sm:px-6 md:max-w-7xl lg:px-8">
           {showCompletedLayout ? (
             <div className="flex grow flex-col overflow-y-auto pb-2 short:pb-1">
               <div className="flex flex-wrap justify-center gap-3 py-2">
@@ -1237,7 +1303,10 @@ function App() {
                     label="Teachers"
                   />
                 )}
-                {(Object.entries(gradeRoundGuessesMap) as [string, string[]][]).map(([g, gGuesses]) => (
+                {(Object.entries(gradeRoundGuessesMap) as [
+                  string,
+                  string[],
+                ][]).map(([g, gGuesses]) => (
                   <CompletedGrid
                     key={g}
                     solution={getGradeRoundSolution(g)}
