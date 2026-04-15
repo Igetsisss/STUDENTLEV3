@@ -3,10 +3,18 @@ const archiveGameStateKey = 'archiveGameState'
 const bonusGameStateKey = 'bonusGameState'
 const highContrastKey = 'highContrast'
 const activeRoundStateKey = 'activeRoundState'
+const roundStateSchemaVersionKey = 'roundStateSchemaVersion'
+const ROUND_STATE_SCHEMA_VERSION = 2
 
 export type StoredGameState = {
   guesses: string[]
   solution: string
+}
+
+type VersionedStoredGameState = {
+  version: number
+  updatedAt: string
+  state: StoredGameState
 }
 
 export type ActiveRoundState = {
@@ -14,29 +22,184 @@ export type ActiveRoundState = {
   grade?: string
 }
 
+type VersionedActiveRoundState = {
+  version: number
+  updatedAt: string
+  state: ActiveRoundState
+}
+
+const saveRoundStateSchemaVersion = () => {
+  localStorage.setItem(
+    roundStateSchemaVersionKey,
+    String(ROUND_STATE_SCHEMA_VERSION)
+  )
+}
+
+const buildVersionedStoredGameState = (
+  gameState: StoredGameState
+): VersionedStoredGameState => ({
+  version: ROUND_STATE_SCHEMA_VERSION,
+  updatedAt: new Date().toISOString(),
+  state: gameState,
+})
+
+const buildVersionedActiveRoundState = (
+  activeRoundState: ActiveRoundState
+): VersionedActiveRoundState => ({
+  version: ROUND_STATE_SCHEMA_VERSION,
+  updatedAt: new Date().toISOString(),
+  state: activeRoundState,
+})
+
+const isStoredGameState = (value: unknown): value is StoredGameState => {
+  if (!value || typeof value !== 'object') return false
+  const maybeState = value as StoredGameState
+  return Array.isArray(maybeState.guesses) && typeof maybeState.solution === 'string'
+}
+
+const isVersionedStoredGameState = (
+  value: unknown
+): value is VersionedStoredGameState => {
+  if (!value || typeof value !== 'object') return false
+  const maybeState = value as VersionedStoredGameState
+  return (
+    typeof maybeState.version === 'number' &&
+    typeof maybeState.updatedAt === 'string' &&
+    isStoredGameState(maybeState.state)
+  )
+}
+
+const isActiveRoundState = (value: unknown): value is ActiveRoundState => {
+  if (!value || typeof value !== 'object') return false
+  const maybeState = value as ActiveRoundState
+  return (
+    (maybeState.type === 'daily' ||
+      maybeState.type === 'bonus' ||
+      maybeState.type === 'teachers' ||
+      maybeState.type === 'grade') &&
+    (maybeState.grade == null || typeof maybeState.grade === 'string')
+  )
+}
+
+const isVersionedActiveRoundState = (
+  value: unknown
+): value is VersionedActiveRoundState => {
+  if (!value || typeof value !== 'object') return false
+  const maybeState = value as VersionedActiveRoundState
+  return (
+    typeof maybeState.version === 'number' &&
+    typeof maybeState.updatedAt === 'string' &&
+    isActiveRoundState(maybeState.state)
+  )
+}
+
+const saveVersionedState = <T>(key: string, state: T) => {
+  localStorage.setItem(key, JSON.stringify(state))
+  saveRoundStateSchemaVersion()
+}
+
+const loadVersionedStoredGameState = (
+  key: string
+): VersionedStoredGameState | null => {
+  const state = localStorage.getItem(key)
+  if (!state) return null
+
+  try {
+    const parsed = JSON.parse(state) as unknown
+    if (isVersionedStoredGameState(parsed)) {
+      saveRoundStateSchemaVersion()
+      return parsed
+    }
+
+    if (isStoredGameState(parsed)) {
+      const migrated = buildVersionedStoredGameState(parsed)
+      saveVersionedState(key, migrated)
+      return migrated
+    }
+  } catch {
+    localStorage.removeItem(key)
+  }
+
+  return null
+}
+
+const loadVersionedActiveRoundState = (
+  key: string
+): VersionedActiveRoundState | null => {
+  const state = localStorage.getItem(key)
+  if (!state) return null
+
+  try {
+    const parsed = JSON.parse(state) as unknown
+    if (isVersionedActiveRoundState(parsed)) {
+      saveRoundStateSchemaVersion()
+      return parsed
+    }
+
+    if (isActiveRoundState(parsed)) {
+      const migrated = buildVersionedActiveRoundState(parsed)
+      saveVersionedState(key, migrated)
+      return migrated
+    }
+  } catch {
+    localStorage.removeItem(key)
+  }
+
+  return null
+}
+
+export const getStoredRoundStateSchemaVersion = () => {
+  const raw = localStorage.getItem(roundStateSchemaVersionKey)
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
+export const ensureRoundStateSchemaVersion = () => {
+  saveRoundStateSchemaVersion()
+}
+
+export const loadStoredGameStateMetadata = (
+  isLatestGame: boolean
+): VersionedStoredGameState | null => {
+  const key = isLatestGame ? gameStateKey : archiveGameStateKey
+  return loadVersionedStoredGameState(key)
+}
+
+export const loadBonusGameStateMetadata = () =>
+  loadVersionedStoredGameState(bonusGameStateKey)
+
+export const loadTeachersGameStateMetadata = () =>
+  loadVersionedStoredGameState(teachersGameStateKey)
+
+export const loadGradeRoundGameStateMetadata = (grade: string) =>
+  loadVersionedStoredGameState(gradeRoundGameStateKeyPrefix + grade)
+
+export const loadActiveRoundStateMetadata = () =>
+  loadVersionedActiveRoundState(activeRoundStateKey)
+
 export const saveGameStateToLocalStorage = (
   isLatestGame: boolean,
   gameState: StoredGameState
 ) => {
   const key = isLatestGame ? gameStateKey : archiveGameStateKey
-  localStorage.setItem(key, JSON.stringify(gameState))
+  saveVersionedState(key, buildVersionedStoredGameState(gameState))
 }
 
 export const loadGameStateFromLocalStorage = (isLatestGame: boolean) => {
-  const key = isLatestGame ? gameStateKey : archiveGameStateKey
-  const state = localStorage.getItem(key)
-  return state ? (JSON.parse(state) as StoredGameState) : null
+  return loadStoredGameStateMetadata(isLatestGame)?.state ?? null
 }
 
 export const saveBonusGameStateToLocalStorage = (
   gameState: StoredGameState
 ) => {
-  localStorage.setItem(bonusGameStateKey, JSON.stringify(gameState))
+  saveVersionedState(
+    bonusGameStateKey,
+    buildVersionedStoredGameState(gameState)
+  )
 }
 
 export const loadBonusGameStateFromLocalStorage = () => {
-  const state = localStorage.getItem(bonusGameStateKey)
-  return state ? (JSON.parse(state) as StoredGameState) : null
+  return loadBonusGameStateMetadata()?.state ?? null
 }
 
 export const clearBonusGameState = () => {
@@ -48,12 +211,14 @@ const teachersGameStateKey = 'teachersGameState'
 export const saveTeachersGameStateToLocalStorage = (
   gameState: StoredGameState
 ) => {
-  localStorage.setItem(teachersGameStateKey, JSON.stringify(gameState))
+  saveVersionedState(
+    teachersGameStateKey,
+    buildVersionedStoredGameState(gameState)
+  )
 }
 
 export const loadTeachersGameStateFromLocalStorage = () => {
-  const state = localStorage.getItem(teachersGameStateKey)
-  return state ? (JSON.parse(state) as StoredGameState) : null
+  return loadTeachersGameStateMetadata()?.state ?? null
 }
 
 export const clearTeachersGameState = () => {
@@ -66,12 +231,14 @@ export const saveGradeRoundGameStateToLocalStorage = (
   grade: string,
   gameState: StoredGameState
 ) => {
-  localStorage.setItem(gradeRoundGameStateKeyPrefix + grade, JSON.stringify(gameState))
+  saveVersionedState(
+    gradeRoundGameStateKeyPrefix + grade,
+    buildVersionedStoredGameState(gameState)
+  )
 }
 
 export const loadGradeRoundGameStateFromLocalStorage = (grade: string) => {
-  const state = localStorage.getItem(gradeRoundGameStateKeyPrefix + grade)
-  return state ? (JSON.parse(state) as StoredGameState) : null
+  return loadGradeRoundGameStateMetadata(grade)?.state ?? null
 }
 
 export const clearGradeRoundGameState = (grade: string) => {
@@ -81,19 +248,14 @@ export const clearGradeRoundGameState = (grade: string) => {
 export const saveActiveRoundToLocalStorage = (
   activeRoundState: ActiveRoundState
 ) => {
-  localStorage.setItem(activeRoundStateKey, JSON.stringify(activeRoundState))
+  saveVersionedState(
+    activeRoundStateKey,
+    buildVersionedActiveRoundState(activeRoundState)
+  )
 }
 
 export const loadActiveRoundFromLocalStorage = () => {
-  const state = localStorage.getItem(activeRoundStateKey)
-  if (!state) return null
-
-  try {
-    return JSON.parse(state) as ActiveRoundState
-  } catch {
-    localStorage.removeItem(activeRoundStateKey)
-    return null
-  }
+  return loadActiveRoundStateMetadata()?.state ?? null
 }
 
 export const clearActiveRoundFromLocalStorage = () => {

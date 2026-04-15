@@ -39,6 +39,7 @@ import {
 import { useAlert } from './context/AlertContext'
 import { isInAppBrowser } from './lib/browser'
 import {
+  ensureRoundStateSchemaVersion,
   getStoredIsHighContrastMode,
   loadActiveRoundFromLocalStorage,
   loadGameStateFromLocalStorage,
@@ -142,6 +143,45 @@ const resolveStoredRoundState = (
     outcome: getStoredRoundOutcome(storedState.guesses, solution, maxChallenges),
     grade,
   }
+}
+
+const isRoundStateStorageKey = (key: string) =>
+  key === 'gameState' ||
+  key === 'archiveGameState' ||
+  key === 'bonusGameState' ||
+  key === 'teachersGameState' ||
+  key === 'activeRoundState' ||
+  key.startsWith('gradeRoundGameState_')
+
+const getRoundStateUpdatedAtFromSerializedValue = (value: string | null) => {
+  if (!value) return null
+
+  try {
+    const parsed = JSON.parse(value) as { updatedAt?: string }
+    return typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null
+  } catch {
+    return null
+  }
+}
+
+const isCloudRoundStateNewer = (
+  localValue: string | null,
+  cloudValue: string
+) => {
+  if (!localValue) return true
+
+  const localUpdatedAt = getRoundStateUpdatedAtFromSerializedValue(localValue)
+  const cloudUpdatedAt = getRoundStateUpdatedAtFromSerializedValue(cloudValue)
+
+  if (!cloudUpdatedAt) {
+    return false
+  }
+
+  if (!localUpdatedAt) {
+    return true
+  }
+
+  return new Date(cloudUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()
 }
 
 function App() {
@@ -495,6 +535,7 @@ function App() {
   useEffect(() => {
     if (cloudHydrationAttemptedRef.current) return
     cloudHydrationAttemptedRef.current = true
+    ensureRoundStateSchemaVersion()
 
     // After account claim restore, skip one hydration cycle to avoid stale
     // cloud state clobbering freshly restored local progress.
@@ -526,10 +567,21 @@ function App() {
 
         let changed = false
         for (const [k, v] of Object.entries(snapshot.state)) {
-          if (localStorage.getItem(k) !== v) {
+          const localValue = localStorage.getItem(k)
+          if (localValue === v) continue
+
+          if (isRoundStateStorageKey(k)) {
+            if (!isCloudRoundStateNewer(localValue, v)) {
+              continue
+            }
+
             localStorage.setItem(k, v)
             changed = true
+            continue
           }
+
+          localStorage.setItem(k, v)
+          changed = true
         }
 
         if (changed) {
@@ -695,6 +747,7 @@ function App() {
     const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''
     const prefix = localStorage.getItem('playerPrefix') || ''
+    ensureRoundStateSchemaVersion()
     const displayName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
@@ -709,6 +762,7 @@ function App() {
 
     cloudSyncTimerRef.current = window.setTimeout(() => {
       const baseKeys = [
+        'roundStateSchemaVersion',
         'gradeNumber',
         'playerName',
         'playerLastInitial',
