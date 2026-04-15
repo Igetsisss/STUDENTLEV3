@@ -2,6 +2,15 @@ name: Migrate Sheets To Supabase
 
 on:
   workflow_dispatch:
+    inputs:
+      truncateDestination:
+        description: Clear Supabase destination tables before migrating
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   migrate:
@@ -32,4 +41,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LEGACY_GOOGLE_SHEET_ID: ${{ secrets.LEGACY_GOOGLE_SHEET_ID }}
+          MIGRATION_TRUNCATE_DESTINATION: ${{ github.event.inputs.truncateDestination }}
         run: npm run migrate:sheets-to-supabase

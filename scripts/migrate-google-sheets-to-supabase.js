@@ -8,6 +8,8 @@ const sheetId = process.env.LEGACY_GOOGLE_SHEET_ID || DEFAULT_SHEET_ID
 const supabaseUrl =
   process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || ''
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const truncateDestination =
+  process.env.MIGRATION_TRUNCATE_DESTINATION === 'true'
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.error(
@@ -138,6 +140,23 @@ const upsertInBatches = async (table, rows, onConflict) => {
   }
 }
 
+const clearDestinationTables = async () => {
+  const tables = [
+    'keystroke_logs',
+    'signup_events',
+    'player_state_snapshots',
+    'player_profiles',
+    'game_submissions',
+  ]
+
+  for (const table of tables) {
+    const { error } = await supabase.from(table).delete().not('id', 'is', null)
+    if (error) {
+      throw new Error(`Failed clearing ${table}: ${error.message}`)
+    }
+  }
+}
+
 const assertEmptyDestination = async () => {
   const tables = [
     'game_submissions',
@@ -206,8 +225,13 @@ const buildGuessArray = (row) => {
 }
 
 const main = async () => {
-  console.log('Checking destination tables...')
-  await assertEmptyDestination()
+  if (truncateDestination) {
+    console.log('Clearing destination tables...')
+    await clearDestinationTables()
+  } else {
+    console.log('Checking destination tables...')
+    await assertEmptyDestination()
+  }
 
   console.log('Fetching Google Sheets data...')
   const [mainRows, stateRows, keystrokeRows] = await Promise.all([
