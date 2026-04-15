@@ -49,6 +49,27 @@ const toStringOrNull = (value) => {
   return stringified ? stringified : null
 }
 
+const looksLikeDateOnly = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim())
+
+const looksLikeTimestamp = (value) => {
+  const stringified = String(value || '').trim()
+  if (!stringified) return false
+  return !Number.isNaN(Date.parse(stringified))
+}
+
+const normalizeGameType = (value) => String(value || '').toLowerCase().trim()
+
+const isKnownGameType = (value) => {
+  const gameType = normalizeGameType(value)
+  return (
+    gameType === 'daily' ||
+    gameType === 'bonus' ||
+    gameType === 'teachers' ||
+    gameType === 'grade' ||
+    /^grade\d+$/.test(gameType)
+  )
+}
+
 const parseGvizResponse = (text) => {
   const jsonStr = text.replace(/^[^(]*\(/, '').replace(/\);?\s*$/, '')
   const data = JSON.parse(jsonStr)
@@ -285,15 +306,33 @@ const main = async () => {
     const grade = normalizeLegacyGrade(row[3] || '')
     if (!sessionId || !playerName || !grade) continue
 
+    const gameDate =
+      row
+        .map((value) => String(value || '').trim())
+        .find((value) => looksLikeDateOnly(value)) || '1970-01-01'
+    const gameType =
+      row
+        .map((value) => String(value || '').trim())
+        .find((value) => isKnownGameType(value)) || 'daily'
+    const eventTimestamp =
+      row
+        .map((value) => String(value || '').trim())
+        .find(
+          (value) =>
+            looksLikeTimestamp(value) &&
+            !looksLikeDateOnly(value) &&
+            value !== receivedAt
+        ) || receivedAt
+
     keystrokeLogs.push({
       session_id: sessionId,
       player_key: buildPlayerKey(playerName, grade),
       player_name: playerName,
       player_name_key: normalizeNameKey(playerName),
       grade: Number(grade) || 0,
-      game_date: String(row[4] || '1970-01-01').slice(0, 10),
-      game_type: String(row[5] || 'daily').toLowerCase().trim(),
-      event_timestamp: toStringOrNull(row[6]) || receivedAt,
+      game_date: String(gameDate).slice(0, 10),
+      game_type: normalizeGameType(gameType),
+      event_timestamp: eventTimestamp,
       sequence_number: toNumber(row[7]),
       key_type: String(row[8] || '').trim(),
       key_value: String(row[9] || '').trim(),
