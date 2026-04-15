@@ -675,10 +675,6 @@ function App() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    window.setGameDate = setGameDate
-  }, [])
-
-  useEffect(() => {
     DISCOURAGE_INAPP_BROWSERS &&
       isInAppBrowser() &&
       showErrorAlert(DISCOURAGE_INAPP_BROWSER_TEXT, {
