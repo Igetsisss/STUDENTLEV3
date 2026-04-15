@@ -48,6 +48,15 @@ const normalizeGradeCode = (value: string | number): string =>
     .replace(/"/g, '')
     .trim()
 
+const isBetterDailyResult = (
+  a: { won: boolean; guessCount: number; totalDurationSec: number },
+  b: { won: boolean; guessCount: number; totalDurationSec: number }
+) => {
+  if (a.won !== b.won) return a.won && !b.won
+  if (a.guessCount !== b.guessCount) return a.guessCount < b.guessCount
+  return a.totalDurationSec < b.totalDurationSec
+}
+
 type Step = 'grade' | 'name' | 'initial' | 'prefix' | 'checking' | 'confirm'
 
 type ExistingAccount = {
@@ -222,14 +231,24 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       const dailyMatches = matches.filter(
         (e) => isOwnDailyType(e) && !String(e.date).startsWith('1970')
       )
-      const dailyWins = dailyMatches.filter((e) => e.won)
-      const dailyLosses = dailyMatches.filter((e) => !e.won)
+      const bestDailyByDate = new Map<string, LeaderboardEntry>()
+      for (const entry of dailyMatches) {
+        const dateKey = String(entry.date || '').slice(0, 10)
+        if (!dateKey) continue
+        const existing = bestDailyByDate.get(dateKey)
+        if (!existing || isBetterDailyResult(entry, existing)) {
+          bestDailyByDate.set(dateKey, entry)
+        }
+      }
+      const dailyOutcomes = Array.from(bestDailyByDate.values())
+      const dailyWins = dailyOutcomes.filter((e) => e.won)
+      const dailyLosses = dailyOutcomes.filter((e) => !e.won)
       const winDist = Array(6).fill(0)
       dailyWins.forEach((e) => {
         const idx = Math.min(e.guessCount - 1, 5)
         if (idx >= 0) winDist[idx]++
       })
-      const totalDailyGames = dailyWins.length + dailyLosses.length
+      const totalDailyGames = dailyOutcomes.length
       const successRate =
         totalDailyGames > 0
           ? Math.round((dailyWins.length / totalDailyGames) * 100)

@@ -218,17 +218,23 @@ export const StatsModal = ({
             isTrueDailyEntry(e) &&
             !String(e.date).startsWith('1970')
         )
-        const daysPlayed = new Set(
-          mineDaily
-            .map((e) => String(e.date || '').slice(0, 10))
-            .filter(Boolean)
-        ).size
+        const bestDailyByDate = new Map<string, (typeof mineDaily)[number]>()
+        for (const entry of mineDaily) {
+          const dateKey = String(entry.date || '').slice(0, 10)
+          if (!dateKey) continue
+          const existing = bestDailyByDate.get(dateKey)
+          if (!existing || isBetterEntry(entry, existing)) {
+            bestDailyByDate.set(dateKey, entry)
+          }
+        }
+        const dailyOutcomes = Array.from(bestDailyByDate.values())
+        const daysPlayed = dailyOutcomes.length
 
         const winDistribution = [0, 0, 0, 0, 0, 0]
         let gamesFailed = 0
         let totalGames = 0
 
-        for (const e of mine) {
+        for (const e of dailyOutcomes) {
           totalGames += 1
           if (e.won && e.guessCount >= 1 && e.guessCount <= 6) {
             winDistribution[e.guessCount - 1] += 1
