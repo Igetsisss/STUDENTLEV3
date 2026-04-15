@@ -17,7 +17,7 @@ import {
 import { clearBonusPlayedToday, setBonusPlayedToday } from '../../utils/bonusRound'
 import { clearTeachersPlayedToday, setTeachersPlayedToday } from '../../utils/teachersRound'
 import { clearGradeRoundPlayedToday, setGradeRoundPlayedToday } from '../../utils/gradeRound'
-import { fetchLeaderboard, submitHistoricalStats, submitSignupEvent, LeaderboardEntry } from '../../lib/api'
+import { fetchLeaderboard, isTrueDailyEntry, submitHistoricalStats, submitSignupEvent, LeaderboardEntry } from '../../lib/api'
 import { getSolution, getGameDate } from '../../lib/words'
 import { Cell } from '../grid/Cell'
 import { BaseModal } from './BaseModal2'
@@ -209,14 +209,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         '11': 'Junior (11th)',
         '12': 'Senior (12th)',
       }
-      const todaySolution = getSolution(getGameDate()).solution
-      const isOwnDailyType = (e: LeaderboardEntry) => {
-        const type = String(e.gameType || '').toLowerCase().trim()
-        const isDailyType = gradeNum === '0' ? type === 'teachers' : type === 'daily'
-        if (!isDailyType) return false
-        const rowWord = String(e.word || '').toUpperCase().trim()
-        return !rowWord || rowWord === todaySolution
-      }
+      const isOwnDailyType = (e: LeaderboardEntry) => isTrueDailyEntry(e)
       const avgGuesses =
         wins.length > 0
           ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
@@ -347,15 +340,8 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       )
 
       const gameDay = getGameDate()
-      const todaySolution = getSolution(getGameDate()).solution
       const today = `${gameDay.getFullYear()}-${String(gameDay.getMonth() + 1).padStart(2, '0')}-${String(gameDay.getDate()).padStart(2, '0')}`
-      const isOwnDailyType = (e: LeaderboardEntry) => {
-        const type = String(e.gameType || '').toLowerCase().trim()
-        const isDailyType = gradeNorm === '0' ? type === 'teachers' : type === 'daily'
-        if (!isDailyType) return false
-        const rowWord = String(e.word || '').toUpperCase().trim()
-        return !rowWord || rowWord === todaySolution
-      }
+      const isOwnDailyType = (e: LeaderboardEntry) => isTrueDailyEntry(e)
 
       const todayEntry = matches.find(
         (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
