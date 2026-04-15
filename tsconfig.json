@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2016",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "checkJs": false,
@@ -10,17 +10,18 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
+    // "baseUrl": ".", // Deprecated, remove or update as needed
     "paths": {
       "@/*": ["./src/*"],
       "@/public/*": ["./public/*"]
-    }
+    },
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src"]
 }

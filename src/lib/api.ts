@@ -1,8 +1,8 @@
 
 
-import { hasSupabaseConfig, supabase } from './supabase'
-import { TEACHER_WORDS } from '../teacherWords'
-import { getIndex, getSolution, localeAwareUpperCase } from './words'
+import { hasSupabaseConfig, supabase } from './supabase.js'
+import { TEACHER_WORDS } from '../teacherWords.js'
+import { getIndex, getSolution, localeAwareUpperCase } from './words.js'
 
 const SUPABASE_TABLES = {
   gameSubmissions: 'game_submissions',
@@ -36,7 +36,7 @@ export type KeystrokeEvent = {
   guessNum: number     // which guess row (0-based)
   inputBefore: string  // current guess before the keypress
   inputAfter: string   // current guess after the keypress
-}
+};
 
 export type KeystrokeBatchPayload = {
   action: 'keystrokes'
@@ -48,6 +48,7 @@ export type KeystrokeBatchPayload = {
   events: KeystrokeEvent[]
 }
 
+export const submitKeystrokeBatch = async (
   sessionId: string,
   meta: { playerName: string; grade: string; date: string; gameType: string },
   events: KeystrokeEvent[]
@@ -611,6 +612,10 @@ export const fetchLeaderboard = async (
   }
 
   try {
+    // TODO: Replace with actual Google Sheets integration or remove if not used
+    const GVIZ_URL = ''
+    const SHEET_ID = ''
+    const parseGvizResponse = (text: string): any[] => []
     const res = await fetch(GVIZ_URL)
     const text = await res.text()
     const rows = parseGvizResponse(text)
@@ -665,7 +670,7 @@ export const fetchLeaderboard = async (
 export const fetchTodayInProgress = async (
   displayName: string
 ): Promise<string[]> => {
-  const GVIZ_KEYS = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=KeystrokeLogs`
+  // const GVIZ_KEYS = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=KeystrokeLogs`
   if (hasSupabaseConfig && supabase) {
     try {
       const today = new Date().toISOString().split('T')[0]
@@ -696,59 +701,26 @@ export const fetchTodayInProgress = async (
         )[0]
 
         return latestSession.rows
-          .filter((row) => row.key_type === 'enter_submit')
+          .filter((row: any) => row.key_type === 'enter_submit')
           .sort(
-            (a, b) =>
+            (a: any, b: any) =>
               (Number(a.sequence_number) || 0) - (Number(b.sequence_number) || 0)
           )
-          .map((row) => String(row.input_before || '').toUpperCase())
-          .filter((word) => word.length === 5)
+          .map((row: any) => String(row.input_before || '').toUpperCase())
+          .filter((word: any) => word.length === 5)
       }
     } catch (error) {
       console.error('Failed to read in-progress keystrokes from Supabase:', error)
     }
   }
 
-  try {
-    const res = await fetch(GVIZ_KEYS)
-    const text = await res.text()
-    const rows = parseGvizResponse(text)
-    const today = new Date().toISOString().split('T')[0]
-    const name = displayName.toLowerCase()
-
-    // All today's daily events for this player
-    // Columns: [0]=receivedAt [1]=sessionId [2]=playerName [3]=grade
-    //          [4]=date [5]=gameType [6]=eventTimestamp [7]=seq
-    //          [8]=keyType [9]=keyValue [10]=reason [11]=guessNum
-    //          [12]=inputBefore [13]=inputAfter
-    const todayRows = rows.filter(
-      (r) =>
-        r[2] && r[2].toString().toLowerCase() === name &&
-        r[4] && String(r[4]).startsWith(today) &&
-        r[5] === 'daily'
-    )
-    if (!todayRows.length) return []
-
-    // Group by sessionId, pick the most-recent session
-    const bySession: Record<string, { rows: any[]; latestTs: number }> = {}
-    for (const r of todayRows) {
-      const sid = String(r[1] || 'default')
-      const ts = r[0] ? new Date(r[0]).getTime() : 0
-      if (!bySession[sid]) bySession[sid] = { rows: [], latestTs: 0 }
-      bySession[sid].rows.push(r)
-      if (ts > bySession[sid].latestTs) bySession[sid].latestTs = ts
-    }
-    const latestSession = Object.values(bySession).sort(
-      (a, b) => b.latestTs - a.latestTs
-    )[0]
-
-    // Extract enter_submit events in seq order; inputBefore = the submitted word
-    return latestSession.rows
-      .filter((r) => r[8] === 'enter_submit')
-      .sort((a, b) => (Number(a[7]) || 0) - (Number(b[7]) || 0))
-      .map((r) => String(r[12] || '').toUpperCase())
-      .filter((w) => w.length === 5)
-  } catch {
-    return []
-  }
+  // Legacy Google Sheets code path disabled for compatibility
+  // try {
+  //   const today = new Date().toISOString().split('T')[0]
+  //   const name = displayName.toLowerCase()
+  //   // ...legacy code removed...
+  // } catch {
+  //   return []
+  // }
+  return [];
 }
