@@ -22,6 +22,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Print runtime info
+        run: |
+          node --version
+          npm --version
+
       - name: Run migration
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
