@@ -30,13 +30,15 @@ keystroke logs, and cloud state snapshots.
 3. Copy [.env.example](.env.example) to `.env.local` and fill in:
 
 ```bash
+REACT_APP_USE_SUPABASE=true
 REACT_APP_SUPABASE_URL=...
 REACT_APP_SUPABASE_ANON_KEY=...
 ```
 
-If these variables are missing, the app falls back to the legacy Google
-Sheets backend. This lets you migrate incrementally instead of switching the
-entire production backend in one release.
+Google Sheets remains the default backend. The app only switches to Supabase
+when `REACT_APP_USE_SUPABASE=true` is set alongside the Supabase URL and anon
+key. This lets you keep the migration code in place without routing live users
+to Supabase until you explicitly enable it.
 
 ### Migrate legacy Google Sheets data
 

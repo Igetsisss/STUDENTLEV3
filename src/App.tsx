@@ -404,7 +404,10 @@ function App() {
     bonusGuesses.length > 0 ||
     teachersGuesses.length > 0 ||
     Object.keys(gradeRoundGuessesMap).length > 0
-  const showCompletedLayout = bothComplete && hasAnyCompletedBoard
+  const hasActiveUnfinishedExtraRound =
+    (isBonusRound || isTeachersRound || isGradeRound) && !isGameWon && !isGameLost
+  const showCompletedLayout =
+    bothComplete && hasAnyCompletedBoard && !hasActiveUnfinishedExtraRound
 
   const handleTitleTap = () => {
     // Reset gesture: hold Space while tapping logo 10+ times.
