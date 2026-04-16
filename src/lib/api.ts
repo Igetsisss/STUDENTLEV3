@@ -687,9 +687,8 @@ export const fetchLeaderboard = async (
   return []
 }
 
-// Reads KeystrokeLogs sheet and returns the list of words submitted today
-// for a given player's daily game, in guess order. Uses the most-recent session
-// when multiple sessions exist (e.g. they started on one device then switched).
+// Returns the list of words submitted today for a player's daily game, in guess
+// order. Uses the most-recent session when multiple sessions exist.
 export const fetchTodayInProgress = async (
   displayName: string
 ): Promise<string[]> => {

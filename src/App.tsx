@@ -909,7 +909,7 @@ function App() {
     if (hasSubmittedRef.current) return
     hasSubmittedRef.current = true
 
-    // Check Google Sheets: if no one has played today yet, this player is first
+    // Check the live leaderboard: if no one has played today yet, this player is first
     if (!isBonusRound) {
       try {
         const _d = solutionGameDate
