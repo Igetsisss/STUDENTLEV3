@@ -34,6 +34,8 @@ export const CURRENT_STREAK_TEXT = 'Days Played'
 export const BEST_STREAK_TEXT = 'Best streak'
 export const DISCOURAGE_INAPP_BROWSER_TEXT =
   "You are using an embedded browser and may experience problems sharing or saving your results. We encourage you rather to use your device's default browser."
+export const MIGRATION_RECOVERY_NOTICE_TEXT =
+  "If your game did not store on today's leaderboard earlier, it was because we were migrating to Supabase. Everything is working now. If you want me to make sure your score is counted anyway, just ask me."
 
 export const DATEPICKER_TITLE = 'Choose a past date'
 export const DATEPICKER_CHOOSE_TEXT = 'Choose'

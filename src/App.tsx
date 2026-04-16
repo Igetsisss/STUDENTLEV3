@@ -31,6 +31,7 @@ import {
   CORRECT_WORD_MESSAGE,
   DISCOURAGE_INAPP_BROWSER_TEXT,
   GAME_COPIED_MESSAGE,
+  MIGRATION_RECOVERY_NOTICE_TEXT,
   NOT_ENOUGH_LETTERS_MESSAGE,
   SHARE_FAILURE_TEXT,
   WIN_MESSAGES,
@@ -126,6 +127,8 @@ const formatDateKey = (date: Date) =>
     2,
     '0'
   )}-${String(date.getDate()).padStart(2, '0')}`
+
+const MIGRATION_RECOVERY_NOTICE_DATE = '2026-04-16'
 
 const getStoredRoundOutcome = (
   guesses: string[],
@@ -719,6 +722,23 @@ function App() {
         durationMs: 7000,
       })
   }, [showErrorAlert])
+
+  useEffect(() => {
+    if (formatDateKey(new Date()) !== MIGRATION_RECOVERY_NOTICE_DATE) {
+      return
+    }
+
+    const noticeStorageKey = `migrationRecoveryNoticeSeen:${MIGRATION_RECOVERY_NOTICE_DATE}`
+    if (localStorage.getItem(noticeStorageKey) === 'true') {
+      return
+    }
+
+    localStorage.setItem(noticeStorageKey, 'true')
+    showSuccessAlert(MIGRATION_RECOVERY_NOTICE_TEXT, {
+      delayMs: 800,
+      durationMs: 18000,
+    })
+  }, [showSuccessAlert])
 
   useEffect(() => {
     if (isDarkMode) {
