@@ -35,11 +35,8 @@ create policy "anon_insert_game_submissions"
   to anon
   with check (true);
 
-create policy "anon_select_keystroke_logs"
-  on public.keystroke_logs
-  for select
-  to anon
-  using (true);
+-- anon_select_keystroke_logs intentionally omitted:
+-- anonymous users should not be able to read raw keystroke data.
 
 create policy "anon_insert_keystroke_logs"
   on public.keystroke_logs

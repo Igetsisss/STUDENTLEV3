@@ -121,7 +121,8 @@ const formatDateKey = (date: Date) =>
     '0'
   )}-${String(date.getDate()).padStart(2, '0')}`
 
-const MIGRATION_RECOVERY_NOTICE_DATE = '2026-04-16'
+const MIGRATION_RECOVERY_NOTICE_DATE =
+  process.env.REACT_APP_MIGRATION_NOTICE_DATE || '2026-04-16'
 
 const getStoredRoundOutcome = (
   guesses: string[],

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { MAX_CHALLENGES } from '../../constants/settings'
 import { CompletedRow } from './CompletedRow'
 import { CurrentRow } from './CurrentRow'
@@ -17,7 +18,7 @@ type Props = {
   maxChallenges?: number
 }
 
-export const Grid = ({
+export const GridInner = ({
   solution,
   guesses,
   currentGuess,
@@ -96,3 +97,5 @@ export const Grid = ({
     </>
   )
 }
+
+export const Grid = memo(GridInner)

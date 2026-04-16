@@ -57,12 +57,13 @@ export const submitKeystrokeBatch = async (
   if (!hasSupabaseConfig || !supabase) return
 
   try {
+    const safePlayerName = sanitizePlayerName(meta.playerName)
     const normalizedGrade = normalizeLegacyGrade(meta.grade)
-    const playerKey = buildPlayerStateKey(meta.playerName, normalizedGrade)
+    const playerKey = buildPlayerStateKey(safePlayerName, normalizedGrade)
     const rows = events.map((event, index) => ({
       session_id: sessionId,
       player_key: playerKey,
-      player_name: meta.playerName,
+      player_name: safePlayerName,
       player_name_key: normalizeNameKey(meta.playerName),
       grade: Number(normalizedGrade) || 0,
       game_date: meta.date,
@@ -114,15 +115,16 @@ export const submitSignupEvent = async (
   if (!playerName || !grade) return
   if (!hasSupabaseConfig || !supabase) return
 
+  const safePlayerName = sanitizePlayerName(playerName)
   const normalizedGrade = normalizeLegacyGrade(grade)
-  const playerKey = buildPlayerStateKey(playerName, normalizedGrade)
+  const playerKey = buildPlayerStateKey(safePlayerName, normalizedGrade)
   const registeredAtClient = new Date().toISOString()
 
   try {
     const profile = {
       player_key: playerKey,
-      player_name: playerName,
-      player_name_key: normalizeNameKey(playerName),
+      player_name: safePlayerName,
+      player_name_key: normalizeNameKey(safePlayerName),
       grade: Number(normalizedGrade) || 0,
       source,
       registered_at_client: registeredAtClient,
@@ -153,8 +155,8 @@ export const submitSignupEvent = async (
         .from(SUPABASE_TABLES.playerStateSnapshots)
         .insert({
           player_key: playerKey,
-          player_name: playerName,
-          player_name_key: normalizeNameKey(playerName),
+          player_name: safePlayerName,
+          player_name_key: normalizeNameKey(safePlayerName),
           grade: Number(normalizedGrade) || 0,
           state: {},
           device: navigator.userAgent || '',
@@ -174,8 +176,8 @@ export const submitSignupEvent = async (
       .from(SUPABASE_TABLES.signupEvents)
       .insert({
         player_key: playerKey,
-        player_name: playerName,
-        player_name_key: normalizeNameKey(playerName),
+        player_name: safePlayerName,
+        player_name_key: normalizeNameKey(safePlayerName),
         grade: Number(normalizedGrade) || 0,
         registered_at_client: registeredAtClient,
         source,
@@ -425,16 +427,17 @@ export const submitHistoricalStats = async (
 export const submitGameData = async (data: GameSubmission): Promise<void> => {
   if (!hasSupabaseConfig || !supabase) return
 
+  const safeName = sanitizePlayerName(data.name)
   const normalizedGrade = normalizeLegacyGrade(data.grade)
-  const playerKey = buildPlayerStateKey(data.name, normalizedGrade)
+  const playerKey = buildPlayerStateKey(safeName, normalizedGrade)
 
   try {
     const { error } = await supabase
       .from(SUPABASE_TABLES.gameSubmissions)
       .insert({
         player_key: playerKey,
-        player_name: data.name,
-        player_name_key: normalizeNameKey(data.name),
+        player_name: safeName,
+        player_name_key: normalizeNameKey(safeName),
         grade: Number(normalizedGrade) || 0,
         game_date: data.date,
         word: data.word,
@@ -476,6 +479,17 @@ const normalizeNameKey = (name: string): string =>
 const buildPlayerStateKey = (playerName: string, grade: string): string =>
   `${normalizeNameKey(playerName)}|${normalizeLegacyGrade(grade)}`
 
+// Strips characters that have no place in a school player name.
+// Allows letters (including accented), spaces, apostrophes, and hyphens.
+const SAFE_NAME_RE = /^[\p{L}\p{M}'\- ]{1,60}$/u
+const sanitizePlayerName = (name: string): string => {
+  const trimmed = String(name || '').trim()
+  if (!SAFE_NAME_RE.test(trimmed)) {
+    // Remove any character that is not a letter, accent, space, apostrophe, or hyphen.
+    return trimmed.replace(/[^\p{L}\p{M}'\- ]/gu, '').slice(0, 60).trim()
+  }
+  return trimmed
+}
 export const syncPlayerStateToCloud = async (
   playerName: string,
   grade: string,

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { memo, useEffect } from 'react'
 
 import { DELETE_TEXT, ENTER_TEXT } from '../../constants/strings'
 import { getStatuses } from '../../lib/statuses'
@@ -14,7 +14,7 @@ type Props = {
   isRevealing?: boolean
 }
 
-export const Keyboard = ({
+export const KeyboardInner = ({
   onChar,
   onDelete,
   onEnter,
@@ -98,3 +98,5 @@ export const Keyboard = ({
     </div>
   )
 }
+
+export const Keyboard = memo(KeyboardInner)

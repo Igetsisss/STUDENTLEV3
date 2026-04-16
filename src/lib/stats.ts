@@ -35,7 +35,6 @@ export const addStatsForCompletedGame = (
   stats.successRate = getSuccessRate(stats)
 
   saveStatsToLocalStorage(stats)
-  console.log(stats)
   return stats
 }
 

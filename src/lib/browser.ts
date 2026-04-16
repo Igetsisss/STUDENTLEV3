@@ -1,18 +1,6 @@
-import { UAParser } from 'ua-parser-js'
+// Detects in-app browsers (Facebook, Instagram, etc.) without a heavy library.
+const IN_APP_BROWSER_PATTERN =
+  /FBAN|FBAV|Instagram|MessengerForiOS|\bLine\/|WeChat|Puffin|Twitter\/\d/i
 
-const inAppBrowserNames = [
-  'Facebook',
-  'Instagram',
-  'Line',
-  'Messenger',
-  'Puffin',
-  'Twitter',
-  'WeChat',
-]
-
-const parser = new UAParser()
-const browser = parser.getBrowser()
-
-export const isInAppBrowser = () => {
-  return inAppBrowserNames.indexOf(browser.name ?? '') > -1
-}
+export const isInAppBrowser = () =>
+  IN_APP_BROWSER_PATTERN.test(navigator.userAgent)

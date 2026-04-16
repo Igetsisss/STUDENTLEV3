@@ -4,14 +4,17 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 
 import App from './App'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { AlertProvider } from './context/AlertContext'
 import reportWebVitals from './reportWebVitals'
 
 ReactDOM.render(
   <React.StrictMode>
-    <AlertProvider>
-      <App />
-    </AlertProvider>
+    <ErrorBoundary>
+      <AlertProvider>
+        <App />
+      </AlertProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
   document.getElementById('root')
 )
