@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: npm install
-      - name: Run tests in CI mode
-        run: CI=true npm test -- --watch=false
+      - run: |
+          npm install
+      - run: |
+          npm run test
