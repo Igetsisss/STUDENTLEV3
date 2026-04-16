@@ -4,8 +4,13 @@ import { hasSupabaseConfig, supabase } from './supabase'
 import { TEACHER_WORDS } from '../teacherWords'
 import { getIndex, getSolution, localeAwareUpperCase } from './words'
 
+const LEGACY_API_URL =
+  'https://script.google.com/macros/s/AKfycbz7Q2SSXWC3yuT2TdsMN10X-YwKIEIZlBTXAp_C30YEy22wcwRzOYAlmLjSP97KAzna/exec'
 const DEFAULT_LEGACY_GOOGLE_SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
 const legacyGvizUrl = `https://docs.google.com/spreadsheets/d/${DEFAULT_LEGACY_GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json`
+const legacyStateGvizUrl = `${legacyGvizUrl}&sheet=Sheet2`
+const legacyKeystrokeGvizUrl = `${legacyGvizUrl}&sheet=KeystrokeLogs`
+const PREFER_LEGACY_GOOGLE_SHEETS = true
 
 const SUPABASE_TABLES = {
   gameSubmissions: 'game_submissions',
@@ -41,6 +46,15 @@ const parseGvizResponse = (text: string): any[] => {
   }
 
   return rows
+}
+
+const postToLegacyApi = async (payload: unknown): Promise<void> => {
+  await fetch(LEGACY_API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 }
 
 export type GuessData = {
@@ -85,6 +99,13 @@ export const submitKeystrokeBatch = async (
   events: KeystrokeEvent[]
 ): Promise<void> => {
   if (!events.length) return
+  if (PREFER_LEGACY_GOOGLE_SHEETS) {
+    try {
+      await postToLegacyApi({ action: 'keystrokes', sessionId, ...meta, events })
+    } catch {
+      // fire-and-forget, never block the game
+    }
+  }
   if (hasSupabaseConfig && supabase) {
     try {
       const normalizedGrade = normalizeLegacyGrade(meta.grade)
@@ -119,6 +140,8 @@ export const submitKeystrokeBatch = async (
   }
 }
 
+export const sendKeystrokeBatch = submitKeystrokeBatch
+
 export type SignupEvent = {
   action: 'signup'
   playerName: string
@@ -141,6 +164,22 @@ export const submitSignupEvent = async (
   source = 'grade_modal'
 ): Promise<void> => {
   if (!playerName || !grade) return
+  if (PREFER_LEGACY_GOOGLE_SHEETS) {
+    try {
+      await postToLegacyApi({
+        action: 'signup',
+        playerName,
+        grade,
+        registeredAtClient: new Date().toISOString(),
+        source,
+        userAgent: navigator.userAgent || '',
+        screenWidth: window.innerWidth || 0,
+        screenHeight: window.innerHeight || 0,
+      })
+    } catch {
+      // fire-and-forget, never block registration
+    }
+  }
   if (hasSupabaseConfig && supabase) {
     const normalizedGrade = normalizeLegacyGrade(grade)
     const playerKey = buildPlayerStateKey(playerName, normalizedGrade)
@@ -394,10 +433,59 @@ export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number>
 // gamesFailed = total losses. Submitted with placeholder date/word since we only
 // have aggregate data. The Apps Script simply appends rows — duplicates are safe
 // because the leaderboard fetches by date and historical entries use a past placeholder.
-// All historical stats are now handled by Supabase. No-op for legacy batch.
-export const submitHistoricalStats = async () => { return }
+export const submitHistoricalStats = async (
+  name: string,
+  grade: string,
+  winDistribution: number[],
+  gamesFailed: number
+) => {
+  if (!PREFER_LEGACY_GOOGLE_SHEETS) return
+
+  const placeholder = '1970-01-01'
+  const now = new Date().toISOString()
+  const base = {
+    gameType: 'daily' as const,
+    date: placeholder,
+    word: 'XXXXX',
+    gameStartTime: now,
+    gameEndTime: now,
+    totalDurationSec: 0,
+    timeToFirstGuessSec: 0,
+    device: 'historical',
+    screenWidth: 0,
+    guesses: [],
+  }
+
+  const submissions: GameSubmission[] = []
+
+  winDistribution.forEach((count, index) => {
+    for (let submitCount = 0; submitCount < count; submitCount++) {
+      submissions.push({ ...base, name, grade, won: true, guessCount: index + 1 })
+    }
+  })
+
+  for (let submitCount = 0; submitCount < gamesFailed; submitCount++) {
+    submissions.push({ ...base, name, grade, won: false, guessCount: 6 })
+  }
+
+  for (const submission of submissions) {
+    try {
+      await postToLegacyApi(submission)
+    } catch {
+      // Never block account creation on historical backfill failures.
+    }
+  }
+}
 
 export const submitGameData = async (data: GameSubmission): Promise<void> => {
+  if (PREFER_LEGACY_GOOGLE_SHEETS) {
+    try {
+      await postToLegacyApi(data)
+    } catch (error) {
+      console.error('Failed to submit game data to Google Sheets:', error)
+    }
+  }
+
   if (hasSupabaseConfig && supabase) {
     const normalizedGrade = normalizeLegacyGrade(data.grade)
     const playerKey = buildPlayerStateKey(data.name, normalizedGrade)
@@ -460,6 +548,21 @@ export const syncPlayerStateToCloud = async (
   const cleanGrade = normalizeLegacyGrade(grade)
   if (!cleanName || !cleanGrade) return
 
+  if (PREFER_LEGACY_GOOGLE_SHEETS) {
+    try {
+      await postToLegacyApi({
+        action: 'state_sync',
+        playerName: cleanName,
+        grade: cleanGrade,
+        state,
+        device: navigator.userAgent || '',
+        appVersion: 'v2',
+      })
+    } catch {
+      // Never block gameplay on sync failures.
+    }
+  }
+
   if (hasSupabaseConfig && supabase) {
     try {
       const now = new Date().toISOString()
@@ -492,6 +595,31 @@ export const fetchPlayerStateFromCloud = async (
 ): Promise<CloudPlayerState | null> => {
   const key = buildPlayerStateKey(playerName, grade)
   if (!key || key === '|') return null
+
+  if (PREFER_LEGACY_GOOGLE_SHEETS) {
+    try {
+      const res = await fetch(legacyStateGvizUrl)
+      const text = await res.text()
+      const rows = parseGvizResponse(text)
+
+      for (let index = rows.length - 1; index >= 0; index--) {
+        const row = rows[index]
+        const rowKey = String(row[1] || '')
+        if (rowKey !== key) continue
+
+        const updatedAt = String(row[0] || '')
+        const rawState = String(row[4] || '{}')
+        try {
+          const parsed = JSON.parse(rawState) as Record<string, string>
+          return { updatedAt, state: parsed }
+        } catch {
+          return null
+        }
+      }
+    } catch {
+      // Fall through to Supabase if Sheets is unavailable.
+    }
+  }
 
   if (hasSupabaseConfig && supabase) {
     try {
@@ -598,6 +726,52 @@ export const fetchLeaderboard = async (
     'bassett evan': { name: 'Dr. Bassett', grade: 0 },
     'katie cruce': { name: 'Mrs. Cruce', grade: 0 },
     'amanda adams': { name: 'Mrs. Adams', grade: 0 },
+  }
+
+  if (PREFER_LEGACY_GOOGLE_SHEETS) {
+    try {
+      const res = await fetch(legacyGvizUrl)
+      const text = await res.text()
+      const rows = parseGvizResponse(text)
+      const results: LeaderboardEntry[] = []
+
+      for (const row of rows) {
+        const rawName = row[0] ? String(row[0]) : ''
+        const rowDate = row[2] ? String(row[2]) : ''
+        const rowType = String(row[6] || 'daily').toLowerCase().trim()
+        const rowGrade = row[1] != null ? normalizeLegacyGrade(String(row[1])) : ''
+        const alias = legacyNameAliases[normalizeNameKey(rawName)]
+        const finalName = alias ? alias.name : rawName
+        const finalGrade = alias ? String(alias.grade) : rowGrade
+
+        if (rowType === 'signup') continue
+        if (today && !rowDate.startsWith(today)) continue
+        if (selectedGrade && finalGrade !== selectedGrade) continue
+        if (!finalName || !String(finalName).trim()) continue
+
+        results.push({
+          name: finalName,
+          grade: Number(finalGrade) || 0,
+          date: rowDate,
+          word: row[3] ? String(row[3]) : '',
+          won: row[4] === true || row[4] === 'TRUE',
+          guessCount: Number(row[5]) || 0,
+          gameType: rowType,
+          totalDurationSec: Number(row[9]) || 0,
+          gameStartTime: row[7] ? String(row[7]) : '',
+        })
+      }
+
+      results.sort((a, b) => {
+        if (a.won !== b.won) return a.won ? -1 : 1
+        if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
+        return a.totalDurationSec - b.totalDurationSec
+      })
+
+      return results
+    } catch (error) {
+      console.error('Failed to fetch leaderboard from Google Sheets:', error)
+    }
   }
 
   if (hasSupabaseConfig && supabase) {
@@ -717,7 +891,46 @@ export const fetchLeaderboard = async (
 export const fetchTodayInProgress = async (
   displayName: string
 ): Promise<string[]> => {
-  // const GVIZ_KEYS = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=KeystrokeLogs`
+  if (PREFER_LEGACY_GOOGLE_SHEETS) {
+    try {
+      const res = await fetch(legacyKeystrokeGvizUrl)
+      const text = await res.text()
+      const rows = parseGvizResponse(text)
+      const today = new Date().toISOString().split('T')[0]
+      const normalizedDisplayName = displayName.toLowerCase()
+
+      const todayRows = rows.filter(
+        (row) =>
+          row[2] && row[2].toString().toLowerCase() === normalizedDisplayName &&
+          row[4] && String(row[4]).startsWith(today) &&
+          row[5] === 'daily'
+      )
+
+      if (!todayRows.length) return []
+
+      const bySession: Record<string, { rows: any[]; latestTs: number }> = {}
+      for (const row of todayRows) {
+        const sessionId = String(row[1] || 'default')
+        const ts = row[0] ? new Date(row[0]).getTime() : 0
+        if (!bySession[sessionId]) bySession[sessionId] = { rows: [], latestTs: 0 }
+        bySession[sessionId].rows.push(row)
+        if (ts > bySession[sessionId].latestTs) bySession[sessionId].latestTs = ts
+      }
+
+      const latestSession = Object.values(bySession).sort(
+        (a, b) => b.latestTs - a.latestTs
+      )[0]
+
+      return latestSession.rows
+        .filter((row) => row[8] === 'enter_submit')
+        .sort((a, b) => (Number(a[7]) || 0) - (Number(b[7]) || 0))
+        .map((row) => String(row[12] || '').toUpperCase())
+        .filter((word) => word.length === 5)
+    } catch {
+      // Fall through to Supabase if Sheets is unavailable.
+    }
+  }
+
   if (hasSupabaseConfig && supabase) {
     try {
       const today = new Date().toISOString().split('T')[0]
@@ -761,13 +974,5 @@ export const fetchTodayInProgress = async (
     }
   }
 
-  // Legacy Google Sheets code path disabled for compatibility
-  // try {
-  //   const today = new Date().toISOString().split('T')[0]
-  //   const name = displayName.toLowerCase()
-  //   // ...legacy code removed...
-  // } catch {
-  //   return []
-  // }
-  return [];
+  return []
 }
