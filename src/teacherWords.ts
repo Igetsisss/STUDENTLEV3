@@ -1,7 +1,32 @@
 // Teacher last names — used for the Teachers daily game mode and Teachers bonus round
 // Rules: all-alphabetic (no hyphens/spaces), 5–8 letters only
 // so the board length is manageable and there are always enough valid guesses.
-import { getGameDate, getIndex, localeAwareUpperCase } from './lib/words'
+
+const firstGameDate = new Date(2023, 2, 1)
+
+const getToday = () => {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+}
+
+const getGameDate = () => getToday()
+
+const getIndex = (gameDate: Date) => {
+  let start = firstGameDate
+  let index = -1
+  do {
+    index++
+    start = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)
+  } while (start <= gameDate)
+
+  return index
+}
+
+const localeAwareUpperCase = (text: string) => {
+  return process.env.REACT_APP_LOCALE_STRING
+    ? text.toLocaleUpperCase(process.env.REACT_APP_LOCALE_STRING)
+    : text.toUpperCase()
+}
 
 export const TEACHER_WORDS: string[] = [
   'adams',

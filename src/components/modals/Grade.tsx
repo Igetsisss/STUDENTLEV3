@@ -3,30 +3,72 @@ import './gradestyle.css'
 import { useState, useEffect } from 'react'
 
 import {
-  GradeNumber,
   GameStats,
+  GradeNumber,
+  clearActiveRoundFromLocalStorage,
   clearBonusGameState,
   clearGradeRoundGameState,
   clearTeachersGameState,
-  loadGradeFromLocalStorage,
-  saveGradeToLocalStorage,
-  saveGameStateToLocalStorage,
-  saveStatsToLocalStorage,
   loadStatsFromLocalStorage,
+  loadGradeFromLocalStorage,
+  saveGameStateToLocalStorage,
+  saveGradeToLocalStorage,
+  saveStatsToLocalStorage,
 } from '../../lib/localStorage'
-import { clearBonusPlayedToday, setBonusPlayedToday } from '../../utils/bonusRound'
-import { clearTeachersPlayedToday, setTeachersPlayedToday } from '../../utils/teachersRound'
-import { clearGradeRoundPlayedToday, setGradeRoundPlayedToday } from '../../utils/gradeRound'
-import { fetchLeaderboard, submitHistoricalStats, submitSignupEvent, LeaderboardEntry } from '../../lib/api'
-import { getSolution, getGameDate } from '../../lib/words'
+import {
+  LeaderboardEntry,
+  fetchLeaderboard,
+  isTrueDailyEntry,
+  submitHistoricalStats,
+  submitSignupEvent,
+} from '../../lib/api'
+import { getGameDate, getSolution } from '../../lib/words'
+import {
+  clearBonusPlayedToday,
+  setBonusPlayedToday,
+} from '../../utils/bonusRound'
+import {
+  clearGradeRoundPlayedToday,
+  setGradeRoundPlayedToday,
+} from '../../utils/gradeRound'
+import {
+  clearTeachersPlayedToday,
+  setTeachersPlayedToday,
+} from '../../utils/teachersRound'
 import { Cell } from '../grid/Cell'
 import { BaseModal } from './BaseModal2'
 
 const gradeStatKey = 'gradeNumber'
 
+const LEGACY_GRADE_NORMALIZATION_MAP: Record<string, string> = {
+  '7': '10',
+  '8': '11',
+  '27': '11',
+  '28': '10',
+}
+
+const formatDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(date.getDate()).padStart(2, '0')}`
+
 const BLOCKED_WORDS = [
-  'nigger', 'nigga', 'n1gger', 'n1gga', 'faggot', 'fag', 'chink', 'spic',
-  'kike', 'wetback', 'beaner', 'gook', 'cunt', 'retard', 'tranny',
+  'nigger',
+  'nigga',
+  'n1gger',
+  'n1gga',
+  'faggot',
+  'fag',
+  'chink',
+  'spic',
+  'kike',
+  'wetback',
+  'beaner',
+  'gook',
+  'cunt',
+  'retard',
+  'tranny',
 ]
 
 const containsProfanity = (text: string): boolean => {
@@ -47,6 +89,15 @@ const normalizeGradeCode = (value: string | number): string =>
   String(value ?? '')
     .replace(/"/g, '')
     .trim()
+
+const isBetterDailyResult = (
+  a: { won: boolean; guessCount: number; totalDurationSec: number },
+  b: { won: boolean; guessCount: number; totalDurationSec: number }
+) => {
+  if (a.won !== b.won) return a.won && !b.won
+  if (a.guessCount !== b.guessCount) return a.guessCount < b.guessCount
+  return a.totalDurationSec < b.totalDurationSec
+}
 
 type Step = 'grade' | 'name' | 'initial' | 'prefix' | 'checking' | 'confirm'
 
@@ -73,7 +124,12 @@ type Props = {
   isInfoOpen?: boolean
 }
 
-export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOpen = false }: Props) => {
+export const GradeModal = ({
+  isOpen,
+  handleClose,
+  isGameActive = false,
+  isInfoOpen = false,
+}: Props) => {
   const hasExistingGrade = !!localStorage.getItem(gradeStatKey)
   const hasExistingName = !!localStorage.getItem('playerName')
 
@@ -88,13 +144,17 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
   const [selectedPrefix, setSelectedPrefix] = useState('')
 
   // Derive whether the current player is a teacher at each step
-  const currentGrade = selectedGrade || (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')
+  const currentGrade =
+    selectedGrade ||
+    (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')
   const isTeacherFlow = currentGrade === '0'
-  const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null)
+  const [existingAccount, setExistingAccount] =
+    useState<ExistingAccount | null>(null)
   const [nameError, setNameError] = useState('')
   const [forceOpen, setForceOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [pendingAccountData, setPendingAccountData] = useState<ExistingAccount | null>(null)
+  const [pendingAccountData, setPendingAccountData] =
+    useState<ExistingAccount | null>(null)
 
   const handleGradeNext = () => {
     if (!selectedGrade) return
@@ -113,7 +173,8 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     setNameError('')
     // Check grade directly — handle both '"0"' (JSON.stringify) and '0' (plain) storage
     const rawGrade = localStorage.getItem(gradeStatKey) || ''
-    const isTeacher = rawGrade === '"0"' || rawGrade === '0' || selectedGrade === '0'
+    const isTeacher =
+      rawGrade === '"0"' || rawGrade === '0' || selectedGrade === '0'
     setStep(isTeacher ? 'prefix' : 'initial')
   }
 
@@ -121,9 +182,12 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     if (!selectedPrefix) return
     const lastName = capitalizeName(playerName)
     const displayName = `${selectedPrefix} ${lastName}`
-    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
-    const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
-    const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
+    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
+    const gradeRaw =
+      LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
     localStorage.setItem('playerName', lastName)
     localStorage.setItem('playerPrefix', selectedPrefix)
     localStorage.removeItem('playerLastInitial')
@@ -135,7 +199,12 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       const stats = loadStatsFromLocalStorage()
       if (stats && stats.totalGames > 0 && gradeRaw) {
         localStorage.setItem('historicalStatsSubmitted', 'true')
-        submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
+        submitHistoricalStats(
+          displayName,
+          gradeRaw,
+          stats.winDistribution,
+          stats.gamesFailed
+        )
       }
     }
     localStorage.setItem('pendingAccountCheck', displayName)
@@ -149,9 +218,12 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     const displayName = lastInitial.trim()
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
       : capitalizeName(playerName)
-    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
-    const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
-    const gradeRaw = gradeNormMap[gradeRawVal] || gradeRawVal
+    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
+    const gradeRaw =
+      LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
     const parts = displayName.split(' ')
     const initial = parts.length > 1 ? parts[parts.length - 1] : ''
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
@@ -166,7 +238,12 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       const stats = loadStatsFromLocalStorage()
       if (stats && stats.totalGames > 0 && gradeRaw) {
         localStorage.setItem('historicalStatsSubmitted', 'true')
-        submitHistoricalStats(displayName, gradeRaw, stats.winDistribution, stats.gamesFailed)
+        submitHistoricalStats(
+          displayName,
+          gradeRaw,
+          stats.winDistribution,
+          stats.gamesFailed
+        )
       }
     }
 
@@ -181,9 +258,12 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
   useEffect(() => {
     const pending = localStorage.getItem('pendingAccountCheck')
     if (!pending) return
-    const pendingGradeRaw = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
-    const pendingGradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
-    const pendingGrade = pendingGradeNormMap[pendingGradeRaw] || pendingGradeRaw
+    const pendingGradeRaw = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
+    const pendingGrade =
+      LEGACY_GRADE_NORMALIZATION_MAP[pendingGradeRaw] || pendingGradeRaw
 
     fetchLeaderboard().then((data: LeaderboardEntry[]) => {
       const pendingNameNorm = normalizeAccountName(pending)
@@ -200,8 +280,8 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       // Build a quick stats summary for the confirmation screen
       const wins = matches.filter((e) => e.won)
       const gradeNumRaw = String(matches[0].grade)
-      const gradeNormMap: Record<string, string> = { '8': '11', '27': '11', '7': '10', '28': '10' }
-      const gradeNum = gradeNormMap[gradeNumRaw] || gradeNumRaw
+      const gradeNum =
+        LEGACY_GRADE_NORMALIZATION_MAP[gradeNumRaw] || gradeNumRaw
       const gradeLabel: Record<string, string> = {
         '0': 'Teachers',
         '9': 'Freshman (9th)',
@@ -209,34 +289,37 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
         '11': 'Junior (11th)',
         '12': 'Senior (12th)',
       }
-      const todaySolution = getSolution(getGameDate()).solution
-      const isOwnDailyType = (e: LeaderboardEntry) => {
-        const type = String(e.gameType || '').toLowerCase().trim()
-        const isDailyType = gradeNum === '0' ? type === 'teachers' : type === 'daily'
-        if (!isDailyType) return false
-        const rowWord = String(e.word || '').toUpperCase().trim()
-        return !rowWord || rowWord === todaySolution
-      }
+      const isOwnDailyType = (e: LeaderboardEntry) => isTrueDailyEntry(e)
       const avgGuesses =
         wins.length > 0
           ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
           : 0
       const gameDay = getGameDate()
-      const today = `${gameDay.getFullYear()}-${String(gameDay.getMonth() + 1).padStart(2, '0')}-${String(gameDay.getDate()).padStart(2, '0')}`
+      const today = formatDateKey(gameDay)
       const todayEntry = matches.find(
         (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
       )
       const dailyMatches = matches.filter(
         (e) => isOwnDailyType(e) && !String(e.date).startsWith('1970')
       )
-      const dailyWins = dailyMatches.filter((e) => e.won)
-      const dailyLosses = dailyMatches.filter((e) => !e.won)
+      const bestDailyByDate = new Map<string, LeaderboardEntry>()
+      for (const entry of dailyMatches) {
+        const dateKey = String(entry.date || '').slice(0, 10)
+        if (!dateKey) continue
+        const existing = bestDailyByDate.get(dateKey)
+        if (!existing || isBetterDailyResult(entry, existing)) {
+          bestDailyByDate.set(dateKey, entry)
+        }
+      }
+      const dailyOutcomes = Array.from(bestDailyByDate.values())
+      const dailyWins = dailyOutcomes.filter((e) => e.won)
+      const dailyLosses = dailyOutcomes.filter((e) => !e.won)
       const winDist = Array(6).fill(0)
       dailyWins.forEach((e) => {
         const idx = Math.min(e.guessCount - 1, 5)
         if (idx >= 0) winDist[idx]++
       })
-      const totalDailyGames = dailyWins.length + dailyLosses.length
+      const totalDailyGames = dailyOutcomes.length
       const successRate =
         totalDailyGames > 0
           ? Math.round((dailyWins.length / totalDailyGames) * 100)
@@ -347,15 +430,8 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       )
 
       const gameDay = getGameDate()
-      const todaySolution = getSolution(getGameDate()).solution
-      const today = `${gameDay.getFullYear()}-${String(gameDay.getMonth() + 1).padStart(2, '0')}-${String(gameDay.getDate()).padStart(2, '0')}`
-      const isOwnDailyType = (e: LeaderboardEntry) => {
-        const type = String(e.gameType || '').toLowerCase().trim()
-        const isDailyType = gradeNorm === '0' ? type === 'teachers' : type === 'daily'
-        if (!isDailyType) return false
-        const rowWord = String(e.word || '').toUpperCase().trim()
-        return !rowWord || rowWord === todaySolution
-      }
+      const today = formatDateKey(gameDay)
+      const isOwnDailyType = (e: LeaderboardEntry) => isTrueDailyEntry(e)
 
       const todayEntry = matches.find(
         (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
@@ -363,10 +439,14 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
       todayResult = todayEntry ? (todayEntry.won ? 'won' : 'lost') : null
       todayGuessCount = todayEntry ? todayEntry.guessCount : null
       todayBonusPlayed = matches.some(
-        (e) => String(e.gameType || '').toLowerCase().trim() === 'bonus' && String(e.date).startsWith(today)
+        (e) =>
+          String(e.gameType || '').toLowerCase().trim() === 'bonus' &&
+          String(e.date).startsWith(today)
       )
       todayTeachersPlayed = matches.some(
-        (e) => String(e.gameType || '').toLowerCase().trim() === 'teachers' && String(e.date).startsWith(today)
+        (e) =>
+          String(e.gameType || '').toLowerCase().trim() === 'teachers' &&
+          String(e.date).startsWith(today)
       )
       todayGradeRoundsPlayed = ['9', '10', '11', '12'].filter((g) =>
         matches.some(
@@ -384,6 +464,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     localStorage.removeItem('gameState')
     localStorage.removeItem('archiveGameState')
     clearBonusGameState()
+    clearActiveRoundFromLocalStorage()
     clearTeachersGameState()
     clearBonusPlayedToday()
     clearTeachersPlayedToday()
@@ -449,12 +530,19 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
   return (
     <BaseModal
       title={
-        isSaving ? 'Restoring your account...' :
-        step === 'grade' ? 'What Grade are you in?' :
-        step === 'name' ? (isTeacherFlow ? 'What is your last name?' : 'What is your first name?') :
-        step === 'prefix' ? 'What is your title?' :
-        step === 'initial' ? 'Last name initial?' :
-        'Is this you?'
+        isSaving
+          ? 'Restoring your account...'
+          : step === 'grade'
+          ? 'What Grade are you in?'
+          : step === 'name'
+          ? isTeacherFlow
+            ? 'What is your last name?'
+            : 'What is your first name?'
+          : step === 'prefix'
+          ? 'What is your title?'
+          : step === 'initial'
+          ? 'Last name initial?'
+          : 'Is this you?'
       }
       isOpen={isOpen || forceOpen}
       handleClose={() => {}}
@@ -547,7 +635,9 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
             />
           </div>
           <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-            Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.
+            Your last initial helps tell apart players with the same first name
+            on the leaderboard (e.g. "Jack S"). We never store your full last
+            name.
           </p>
           <div className="enterbutton" onClick={handleInitialDone}>
             <button disabled={!lastInitial.trim()}>Done</button>
@@ -590,7 +680,8 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
 
           {existingAccount.todayResult === null && existingAccount.inProgressGuesses.length > 0 && (
             <div className="mb-3 rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:border-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-300">
-              🔄 You're on guess {existingAccount.inProgressGuesses.length + 1} of 6 today — logging in will pick up where you left off!
+              🔄 You&apos;re on guess {existingAccount.inProgressGuesses.length + 1}{' '}
+              of 6 today - logging in will pick up where you left off!
             </div>
           )}
 
@@ -602,7 +693,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
             }`}>
               {existingAccount.todayResult === 'won'
                 ? `✅ You already won today's game in ${existingAccount.todayGuessCount ?? '?'} guess${existingAccount.todayGuessCount === 1 ? '' : 'es'}!`
-                : '❌ You already played today — better luck tomorrow!'}
+                : '❌ You already played today - better luck tomorrow!'}
             </div>
           )}
 
@@ -628,7 +719,10 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
               </div>
               <div>
                 <p className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                  {Math.round((existingAccount.wins / existingAccount.totalGames) * 100)}%
+                  {Math.round(
+                    (existingAccount.wins / existingAccount.totalGames) * 100
+                  )}
+                  %
                 </p>
                 <p className="text-gray-500 dark:text-gray-400">Win Rate</p>
               </div>
@@ -651,7 +745,7 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
               onClick={handleMakeNewAccount}
               className="w-full rounded-md py-2 text-sm text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
-              No, this isn't me — make a new account
+              No, this isn&apos;t me - make a new account
             </button>
           </div>
         </>
@@ -659,5 +753,3 @@ export const GradeModal = ({ isOpen, handleClose, isGameActive = false, isInfoOp
     </BaseModal>
   )
 }
-
-const grade = localStorage.getItem(gradeStatKey)

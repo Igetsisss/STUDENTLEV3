@@ -3,8 +3,19 @@ import React from 'react'
 
 import App from './App'
 import { GAME_TITLE } from './constants/strings'
+import { AlertProvider } from './context/AlertContext'
+
+jest.mock('./lib/api', () => ({
+  __esModule: true,
+  fetchLeaderboard: jest.fn().mockResolvedValue([]),
+  fetchPlayerStateFromCloud: jest.fn().mockResolvedValue(null),
+  isTrueDailyEntry: jest.fn(() => true),
+  submitGameData: jest.fn(),
+  syncPlayerStateToCloud: jest.fn().mockResolvedValue(undefined),
+}))
 
 beforeEach(() => {
+  localStorage.clear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: jest.fn().mockImplementation((query) => ({
@@ -21,7 +32,11 @@ beforeEach(() => {
 })
 
 test('renders App component', () => {
-  render(<App />)
+  render(
+    <AlertProvider>
+      <App />
+    </AlertProvider>
+  )
   const linkElement = screen.getByText(GAME_TITLE)
   expect(linkElement).toBeInTheDocument()
 })

@@ -15,7 +15,7 @@ import {
   STATISTICS_TITLE,
 } from '../../constants/strings'
 import { GameStats, saveStatsToLocalStorage } from '../../lib/localStorage'
-import { fetchLeaderboard } from '../../lib/api'
+import { fetchLeaderboard, isTrueDailyEntry } from '../../lib/api'
 import { shareStatus } from '../../lib/share'
 import { solutionGameDate, tomorrow } from '../../lib/words'
 import { Histogram } from '../stats/Histogram'
@@ -44,15 +44,6 @@ const getMyDisplayName = () => {
   const li = localStorage.getItem('playerLastInitial') || ''
   const prefix = localStorage.getItem('playerPrefix') || ''
   return prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
-}
-
-const isOwnDailyType = (gameType: string, grade: number) => {
-  const type = String(gameType || '').toLowerCase().trim()
-  return (
-    type === 'daily' ||
-    type === `grade${String(grade)}` ||
-    (String(grade) === '0' && type === 'teachers')
-  )
 }
 
 const isBetterEntry = (a: { won: boolean; guessCount: number; totalDurationSec: number }, b: { won: boolean; guessCount: number; totalDurationSec: number }) => {
@@ -184,7 +175,7 @@ export const StatsModal = ({
 
     fetchLeaderboard().then((entries) => {
       const todayDaily = entries.filter(
-        (e) => String(e.date).startsWith(today) && isOwnDailyType(e.gameType, e.grade)
+        (e) => String(e.date).startsWith(today) && isTrueDailyEntry(e)
       )
 
       // Deduplicate per player for ranking consistency with leaderboard modal
@@ -224,20 +215,26 @@ export const StatsModal = ({
       if (mine.length > 0) {
         const mineDaily = mine.filter(
           (e) =>
-            isOwnDailyType(e.gameType, e.grade) &&
+            isTrueDailyEntry(e) &&
             !String(e.date).startsWith('1970')
         )
-        const daysPlayed = new Set(
-          mineDaily
-            .map((e) => String(e.date || '').slice(0, 10))
-            .filter(Boolean)
-        ).size
+        const bestDailyByDate = new Map<string, (typeof mineDaily)[number]>()
+        for (const entry of mineDaily) {
+          const dateKey = String(entry.date || '').slice(0, 10)
+          if (!dateKey) continue
+          const existing = bestDailyByDate.get(dateKey)
+          if (!existing || isBetterEntry(entry, existing)) {
+            bestDailyByDate.set(dateKey, entry)
+          }
+        }
+        const dailyOutcomes = Array.from(bestDailyByDate.values())
+        const daysPlayed = dailyOutcomes.length
 
         const winDistribution = [0, 0, 0, 0, 0, 0]
         let gamesFailed = 0
         let totalGames = 0
 
-        for (const e of mine) {
+        for (const e of dailyOutcomes) {
           totalGames += 1
           if (e.won && e.guessCount >= 1 && e.guessCount <= 6) {
             winDistribution[e.guessCount - 1] += 1

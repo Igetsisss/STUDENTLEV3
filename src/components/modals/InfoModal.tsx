@@ -69,6 +69,9 @@ export const InfoModal = ({ isOpen, handleClose }: Props) => {
           view source
         </a>{' '}
       </p>
+      <p className="text-sm italic text-gray-500 dark:text-gray-300">
+        Coded and maintained by Jack Underwood
+      </p>
     </BaseModal>
   )
 }
