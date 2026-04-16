@@ -11,5 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: npm install
+      - name: Normalize formatting
+        run: npm run fix
       - name: Check formatting
         run: npm run lint

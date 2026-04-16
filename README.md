@@ -1,12 +1,12 @@
 # Studentle
 
-Forked From [**Reactle**](https://github.com/cwackerfuss/react-wordle)
+Forked from Reactle.
 
 This is a clone project of the popular word guessing game we all know and love. Made using 
 
 , Typescript, and Tailwind.
 
-[**Try it out!**](https://studentle.jackunderwood.org)
+Try it out: https://studentle.jackunderwood.org
 
 ## Build and run
 
