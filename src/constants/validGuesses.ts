@@ -1,8 +1,3 @@
-import {
-  GradeNumber,
-  loadGradeFromLocalStorage,
-  saveGradeToLocalStorage,
-} from '../lib/localStorage'
 import { TEACHER_WORDS } from '../teacherWords'
 
 const gradeStatKey = 'gradeNumber'
@@ -74,19 +69,19 @@ const FRESHMAN = [
 ]
 
 // Updated logic mapping to the new high school grades/grad years
-if (grade == '"0"') {
+if (grade === '"0"') {
   GRADEWORDS = TEACHER_WORDS
-} else if (grade == null) {
+} else if (grade === null) {
   GRADEWORDS = nogradeyet
-} else if (grade == '"69"') {
+} else if (grade === '"69"') {
   console.log('nah thats crazy ')
-} else if (grade == '"12"' || grade == '"26"') {
+} else if (grade === '"12"' || grade === '"26"') {
   GRADEWORDS = SENIOR
-} else if (grade == '"11"' || grade == '"27"' || grade == '"8"') { // kept "8" logic mapping to current Juniors for backward compatibility
+} else if (grade === '"11"' || grade === '"27"' || grade === '"8"') { // kept "8" logic mapping to current Juniors for backward compatibility
   GRADEWORDS = JUNIOR
-} else if (grade == '"10"' || grade == '"28"') {
+} else if (grade === '"10"' || grade === '"28"') {
   GRADEWORDS = SOPHOMORE
-} else if (grade == '"9"' || grade == '"29"') {
+} else if (grade === '"9"' || grade === '"29"') {
   GRADEWORDS = FRESHMAN
 } else {
   GRADEWORDS = nogradeyet

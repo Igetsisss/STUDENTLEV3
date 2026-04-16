@@ -1,8 +1,3 @@
-import {
-  GradeNumber,
-  loadGradeFromLocalStorage,
-  saveGradeToLocalStorage,
-} from '../lib/localStorage'
 import { TEACHER_WORDS } from '../teacherWords'
 
 const gradeStatKey = 'gradeNumber'
@@ -72,19 +67,19 @@ const FRESHMAN = [
   'mack', 'bobby', 'xavier', 'liza', 'hattie', 'bella', 'mary drew'
 ]
 
-if (grade == '"0"') {
+if (grade === '"0"') {
   GRADEWORDS = TEACHER_WORDS
-} else if (grade == null) {
+} else if (grade === null) {
   GRADEWORDS = JUNIOR // Updated to match previous default behavior
-} else if (grade == '"69"') {
+} else if (grade === '"69"') {
   console.log('nah thats crazy ')
-} else if (grade == '"12"' || grade == '"26"') {
+} else if (grade === '"12"' || grade === '"26"') {
   GRADEWORDS = SENIOR
-} else if (grade == '"11"' || grade == '"27"' || grade == '"8"') { // Keeping 8 mapped to Juniors
+} else if (grade === '"11"' || grade === '"27"' || grade === '"8"') { // Keeping 8 mapped to Juniors
   GRADEWORDS = JUNIOR
-} else if (grade == '"10"' || grade == '"28"' || grade == '"7"') { // Keeping 7 mapped to Sophomores for backward compatibility
+} else if (grade === '"10"' || grade === '"28"' || grade === '"7"') { // Keeping 7 mapped to Sophomores for backward compatibility
   GRADEWORDS = SOPHOMORE
-} else if (grade == '"9"' || grade == '"29"') {
+} else if (grade === '"9"' || grade === '"29"') {
   GRADEWORDS = FRESHMAN
 } else {
   GRADEWORDS = nogradeyet

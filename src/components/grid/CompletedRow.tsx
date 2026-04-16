@@ -19,7 +19,6 @@ export const CompletedRow = ({
 }: Props) => {
   const statuses = getGuessStatuses(solution, guess)
   const splitGuess = unicodeSplit(guess)
-  const numCols = splitGuess.length
 
   return (
     <div className="mb-1 flex justify-center">

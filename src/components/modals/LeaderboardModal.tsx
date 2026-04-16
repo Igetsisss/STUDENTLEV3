@@ -136,6 +136,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   const effectiveFetchGrade =
     viewMode === 'today' && filterType === 'graderound' ? '' : filterGrade
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isOpen) return
     setLoading(true)
@@ -156,7 +157,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         })
         .finally(() => setLoading(false))
     }
-  }, [isOpen, filterGrade, filterType, viewMode])
+  }, [isOpen, filterGrade, filterType, viewMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = (() => {
     const byType = entries.filter((e) => {

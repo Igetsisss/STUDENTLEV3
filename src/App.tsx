@@ -25,7 +25,6 @@ import {
   MAX_BONUS_CHALLENGES,
   REVEAL_TIME_MS,
   WELCOME_GRADE_MODAL_MS,
-  WELCOME_INFO_MODAL_MS,
 } from './constants/settings'
 import {
   CORRECT_WORD_MESSAGE,
@@ -54,16 +53,10 @@ import {
   saveActiveRoundToLocalStorage,
   setStoredIsHighContrastMode,
 } from './lib/localStorage'
-import {
-  GradeNumber,
-  loadGradeFromLocalStorage,
-  saveGradeToLocalStorage,
-} from './lib/localStorage'
 import { addStatsForCompletedGame, loadStats } from './lib/stats'
 import {
   getGameDate,
   getIsLatestGame,
-  isWinningWord,
   isWordInWordList,
   setGameDate,
   solution as dailySolution,
@@ -640,6 +633,7 @@ function App() {
   }, [])
 
   // On page load: restore all completed round guesses and bothComplete state
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // Load bonus guesses if bonus was finished today
     const bLoaded = loadBonusGameStateFromLocalStorage()
@@ -797,7 +791,7 @@ function App() {
         solution: effectiveDailySolution,
       })
     }
-  }, [guesses, isBonusRound, isTeachersRound, isGradeRound, gradeRoundGrade])
+  }, [guesses, isBonusRound, isTeachersRound, isGradeRound, gradeRoundGrade]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced full-state sync for seamless cross-device continuity.
   useEffect(() => {
@@ -878,6 +872,7 @@ function App() {
     isHighContrastMode,
   ])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isGameWon && !alreadyCompleteOnLoadRef.current) {
       const winMessage =
@@ -895,7 +890,7 @@ function App() {
         setIsStatsModalOpen(true)
       }, (activeSolution.length + 1) * REVEAL_TIME_MS)
     }
-  }, [isGameWon, isGameLost, showSuccessAlert])
+  }, [isGameWon, isGameLost, showSuccessAlert]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onChar = (value: string) => {
     const canAdd =

@@ -4,15 +4,12 @@ import { useState, useEffect } from 'react'
 
 import {
   GameStats,
-  GradeNumber,
   clearActiveRoundFromLocalStorage,
   clearBonusGameState,
   clearGradeRoundGameState,
   clearTeachersGameState,
   loadStatsFromLocalStorage,
-  loadGradeFromLocalStorage,
   saveGameStateToLocalStorage,
-  saveGradeToLocalStorage,
   saveStatsToLocalStorage,
 } from '../../lib/localStorage'
 import {
@@ -35,7 +32,6 @@ import {
   clearTeachersPlayedToday,
   setTeachersPlayedToday,
 } from '../../utils/teachersRound'
-import { Cell } from '../grid/Cell'
 import { BaseModal } from './BaseModal2'
 
 const gradeStatKey = 'gradeNumber'
@@ -131,7 +127,6 @@ export const GradeModal = ({
   isInfoOpen = false,
 }: Props) => {
   const hasExistingGrade = !!localStorage.getItem(gradeStatKey)
-  const hasExistingName = !!localStorage.getItem('playerName')
 
   // If they already have a grade + name, go straight to nothing (shouldn't open)
   // If they have grade but no name, skip the grade step
@@ -414,7 +409,6 @@ export const GradeModal = ({
     // Treat the live leaderboard/API as source of truth for "played today" status.
     // Re-fetch here so claim restore always uses fresh server data.
     let todayResult: 'won' | 'lost' | null = account.todayResult
-    let todayGuessCount: number | null = account.todayGuessCount
     let todayBonusPlayed = account.todayBonusPlayed
     let todayTeachersPlayed = account.todayTeachersPlayed
     let todayGradeRoundsPlayed = account.todayGradeRoundsPlayed
@@ -437,7 +431,6 @@ export const GradeModal = ({
         (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
       )
       todayResult = todayEntry ? (todayEntry.won ? 'won' : 'lost') : null
-      todayGuessCount = todayEntry ? todayEntry.guessCount : null
       todayBonusPlayed = matches.some(
         (e) =>
           String(e.gameType || '').toLowerCase().trim() === 'bonus' &&
