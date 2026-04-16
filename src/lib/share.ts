@@ -1,14 +1,18 @@
-import { UAParser } from 'ua-parser-js'
-
 import { MAX_CHALLENGES, MAX_BONUS_CHALLENGES } from '../constants/settings'
 import { GAME_TITLE } from '../constants/strings'
 import { getGuessStatuses } from './statuses'
 import { solutionIndex, unicodeSplit } from './words'
 
-const webShareApiDeviceTypes: string[] = ['mobile', 'smarttv', 'wearable']
-const parser = new UAParser()
-const browser = parser.getBrowser()
-const device = parser.getDevice()
+// Detect Firefox without ua-parser-js — Firefox Mobile has a broken Web Share API
+const isFirefoxBrowser = () => /Firefox/i.test(navigator.userAgent)
+
+// Detect mobile/smarttv/wearable devices that actually support Web Share
+const isShareCapableDevice = () =>
+  /Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  ) ||
+  /SmartTV|Tizen|webOS|Android TV/i.test(navigator.userAgent) ||
+  /WearOS|Wear OS|Galaxy Watch/i.test(navigator.userAgent)
 
 export const shareStatus = (
   solution: string,
@@ -96,11 +100,11 @@ export const generateEmojiGrid = (
 const attemptShare = (shareData: object) => {
   return (
     // Deliberately exclude Firefox Mobile, because its Web Share API isn't working correctly
-    browser.name?.toUpperCase().indexOf('FIREFOX') === -1 &&
-    webShareApiDeviceTypes.indexOf(device.type ?? '') !== -1 &&
+    !isFirefoxBrowser() &&
+    isShareCapableDevice() &&
     navigator.canShare &&
     navigator.canShare(shareData) &&
-    navigator.share
+    !!navigator.share
   )
 }
 

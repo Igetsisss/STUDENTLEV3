@@ -33,6 +33,7 @@ import {
   MIGRATION_RECOVERY_NOTICE_TEXT,
   NOT_ENOUGH_LETTERS_MESSAGE,
   SHARE_FAILURE_TEXT,
+  TEACHER_NOT_FOUND_MESSAGE,
   WIN_MESSAGES,
   WORD_NOT_FOUND_MESSAGE,
 } from './constants/strings'
@@ -1021,9 +1022,10 @@ function App() {
 
     if (!isWordInWordList(currentGuess)) {
       setCurrentRowClass('jiggle')
-      return showErrorAlert(WORD_NOT_FOUND_MESSAGE, {
-        onClose: clearCurrentRowClass,
-      })
+      return showErrorAlert(
+        isTeacherPlayer ? TEACHER_NOT_FOUND_MESSAGE : WORD_NOT_FOUND_MESSAGE,
+        { onClose: clearCurrentRowClass }
+      )
     }
 
     // enforce hard mode check removed — hard mode no longer supported
@@ -1132,7 +1134,7 @@ function App() {
     }
   }
 
-  function jack() {
+  function handleGradeModalClose() {
     setIsGradeModalOpen(false)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('hasSeenInfo', 'true')
@@ -1140,73 +1142,24 @@ function App() {
     }
   }
 
-  const handleBonusRound = () => {
-    // Close the stats modal
+  // Shared animation + state wiring for every extra round (bonus, teachers, grade).
+  // Runs the fall-clear animation, resets game state, then plays the fill-in entrance.
+  const startExtraRound = (config: {
+    solution: string
+    setupRound: () => void
+    toastMessage: string
+  }) => {
     setIsStatsModalOpen(false)
-
-    // Save current daily guesses for side-by-side
     setDailyGuesses([...guesses])
-
-    // Start the fall-off-screen clearing animation
     setIsClearing(true)
-
-    // Each row falls 110ms after the previous; last row needs 700ms to finish falling
-    const totalRows = MAX_CHALLENGES
-    const totalClearTime = totalRows * 110 + 700 + 150 // rows * stagger + fall duration + buffer
+    const totalClearTime = MAX_CHALLENGES * 110 + 700 + 150
 
     setTimeout(() => {
       setIsClearing(false)
       setIsGridHidden(true)
 
-      // Set up the bonus round
-      setActiveSolution(bonusSolution)
-      setIsBonusRound(true)
-      setIsTeachersRound(false)
-      setIsGradeRound(false)
-      setGuesses([])
-      setCurrentGuess('')
-      setIsGameWon(false)
-      setIsGameLost(false)
-      setBothComplete(false)
-      tracker.reset()
-      tracker.startGame()
-      hasSubmittedRef.current = false
-
-      // Wait 1 second with nothing visible, then start the fill animation
-      setTimeout(() => {
-        setIsGridHidden(false)
-        setBonusEnter('grow')
-
-        // Show toast
-        showSuccessAlert('Bonus Round!', {
-          delayMs: 100,
-        })
-
-        // Clear the enter animation after it finishes
-        const totalEnterTime = MAX_CHALLENGES * bonusSolution.length * 60 + 500
-        setTimeout(() => {
-          setBonusEnter(null)
-        }, totalEnterTime)
-      }, 1000)
-    }, totalClearTime)
-  }
-
-  const handleTeachersRound = () => {
-    setIsStatsModalOpen(false)
-    setDailyGuesses([...guesses])
-
-    setIsClearing(true)
-    const totalRows = MAX_CHALLENGES
-    const totalClearTime = totalRows * 110 + 700 + 150
-
-    setTimeout(() => {
-      setIsClearing(false)
-      setIsGridHidden(true)
-
-      setActiveSolution(teachersSolution)
-      setIsTeachersRound(true)
-      setIsBonusRound(false)
-      setIsGradeRound(false)
+      setActiveSolution(config.solution)
+      config.setupRound()
       setGuesses([])
       setCurrentGuess('')
       setIsGameWon(false)
@@ -1219,61 +1172,50 @@ function App() {
       setTimeout(() => {
         setIsGridHidden(false)
         setBonusEnter('grow')
-
-        showSuccessAlert('Teachers Round!', {
-          delayMs: 100,
-        })
-
-        const totalEnterTime = MAX_CHALLENGES * teachersSolution.length * 60 + 500
+        showSuccessAlert(config.toastMessage, { delayMs: 100 })
+        const totalEnterTime = MAX_CHALLENGES * config.solution.length * 60 + 500
         setTimeout(() => {
           setBonusEnter(null)
         }, totalEnterTime)
       }, 1000)
     }, totalClearTime)
   }
+
+  const handleBonusRound = () =>
+    startExtraRound({
+      solution: bonusSolution,
+      setupRound: () => {
+        setIsBonusRound(true)
+        setIsTeachersRound(false)
+        setIsGradeRound(false)
+      },
+      toastMessage: 'Bonus Round!',
+    })
+
+  const handleTeachersRound = () =>
+    startExtraRound({
+      solution: teachersSolution,
+      setupRound: () => {
+        setIsTeachersRound(true)
+        setIsBonusRound(false)
+        setIsGradeRound(false)
+      },
+      toastMessage: 'Teachers Round!',
+    })
 
   const handleGradeRound = (grade: string) => {
     const gradeSolution = getGradeRoundSolution(grade)
     if (!gradeSolution) return
-    setIsStatsModalOpen(false)
-    setDailyGuesses([...guesses])
-
-    setIsClearing(true)
-    const totalRows = MAX_CHALLENGES
-    const totalClearTime = totalRows * 110 + 700 + 150
-
-    setTimeout(() => {
-      setIsClearing(false)
-      setIsGridHidden(true)
-
-      setActiveSolution(gradeSolution)
-      setIsGradeRound(true)
-      setGradeRoundGrade(grade)
-      setIsBonusRound(false)
-      setIsTeachersRound(false)
-      setGuesses([])
-      setCurrentGuess('')
-      setIsGameWon(false)
-      setIsGameLost(false)
-      setBothComplete(false)
-      tracker.reset()
-      tracker.startGame()
-      hasSubmittedRef.current = false
-
-      setTimeout(() => {
-        setIsGridHidden(false)
-        setBonusEnter('grow')
-
-        showSuccessAlert(`${GRADE_LABELS[grade] ?? 'Grade'} Round!`, {
-          delayMs: 100,
-        })
-
-        const totalEnterTime = MAX_CHALLENGES * gradeSolution.length * 60 + 500
-        setTimeout(() => {
-          setBonusEnter(null)
-        }, totalEnterTime)
-      }, 1000)
-    }, totalClearTime)
+    startExtraRound({
+      solution: gradeSolution,
+      setupRound: () => {
+        setIsGradeRound(true)
+        setGradeRoundGrade(grade)
+        setIsBonusRound(false)
+        setIsTeachersRound(false)
+      },
+      toastMessage: `${GRADE_LABELS[grade] ?? 'Grade'} Round!`,
+    })
   }
 
   return (
@@ -1449,7 +1391,7 @@ function App() {
           />
           <GradeModal
             isOpen={isGradeModalOpen}
-            handleClose={() => jack()}
+            handleClose={() => handleGradeModalClose()}
             isGameActive={!isGameWon && !isGameLost && guesses.length > 0}
             isInfoOpen={isInfoModalOpen}
           />

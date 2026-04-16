@@ -1,6 +1,24 @@
 export const GAME_TITLE = 'Studentle'
 
-export const WIN_MESSAGES = ['Great Job!', 'Awesome', 'Well done!']
+export const WIN_MESSAGES = [
+  'Great Job!',
+  'Awesome!',
+  'Well done!',
+  'Impressive!',
+  'Nice work!',
+  'Brilliant!',
+  'Genius!',
+  'Outstanding!',
+  'Way to go!',
+  'You nailed it!',
+  'On fire! 🔥',
+  "That's the one!",
+  'Incredible!',
+  'Wordsmith!',
+  'Too easy!',
+  'Flawless!',
+  'Not even close! 🎯',
+]
 export const GAME_COPIED_MESSAGE = 'Game copied to clipboard'
 export const NOT_ENOUGH_LETTERS_MESSAGE = 'Not enough letters'
 export const WORD_NOT_FOUND_MESSAGE = 'Student not found'
