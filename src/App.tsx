@@ -571,7 +571,7 @@ function App() {
     }
   }, [])
 
-  // On page load: hydrate localStorage from Sheet2 cloud state if newer/different.
+  // On page load: hydrate localStorage from cloud state if the remote snapshot is newer.
   useEffect(() => {
     if (cloudHydrationAttemptedRef.current) return
     cloudHydrationAttemptedRef.current = true
@@ -777,7 +777,7 @@ function App() {
     }
   }, [guesses, isBonusRound, isTeachersRound, isGradeRound, gradeRoundGrade])
 
-  // Debounced full-state sync to Sheet2 for seamless cross-device continuity.
+  // Debounced full-state sync for seamless cross-device continuity.
   useEffect(() => {
     const firstName = localStorage.getItem('playerName') || ''
     const lastInitial = localStorage.getItem('playerLastInitial') || ''

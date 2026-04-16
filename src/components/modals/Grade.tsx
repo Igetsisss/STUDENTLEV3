@@ -384,7 +384,7 @@ export const GradeModal = ({
 
   const handleClaimAccount = async () => {
     setIsSaving(true)
-    // "Yes, that's me" — use the exact name from the sheet
+    // "Yes, that's me" — use the exact name returned by the live account check.
     const account = existingAccount!
     const name = account.displayName
     const parts = name.split(' ')
@@ -411,7 +411,7 @@ export const GradeModal = ({
 
     localStorage.removeItem('pendingAccountCheck')
 
-    // Treat Sheet1 leaderboard/API as source of truth for "played today" status.
+    // Treat the live leaderboard/API as source of truth for "played today" status.
     // Re-fetch here so claim restore always uses fresh server data.
     let todayResult: 'won' | 'lost' | null = account.todayResult
     let todayGuessCount: number | null = account.todayGuessCount
@@ -511,7 +511,7 @@ export const GradeModal = ({
     }
 
     // reload immediately after synchronous writes; isSaving shows briefly
-    // Skip one cloud hydration pass after account restore so stale Sheet2 state
+    // Skip one cloud hydration pass after account restore so stale cloud state
     // cannot overwrite the just-restored local daily/round state.
     localStorage.setItem('skipCloudHydrationOnce', 'true')
     handleClose()
