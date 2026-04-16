@@ -1,54 +1,63 @@
 # Studentle
 
-Forked from Reactle.
+Studentle is a school-wide Wordle-style game I started in 8th grade. At its peak, more than 100 students were playing it every day. In junior year I brought it back and expanded it with a live leaderboard, MVP tracking, teacher rounds, bonus rounds, and grade-vs-grade play.
 
-This is a clone project of the popular word guessing game we all know and love. Made using 
-
-, Typescript, and Tailwind.
+The current codebase is built to run on Supabase for all live app data. Google Sheets is kept only as a one-time legacy import source so historical data can be migrated when you are ready.
 
 Try it out: https://studentle.jackunderwood.org
 
-## Build and run
+## Features
 
-### To Run Locally:
+- Daily play for students and teachers
+- Bonus rounds and grade rounds
+- Live leaderboard and all-time leaderboard
+- MVP scoring across all supported game modes
+- Cloud-backed state recovery and keystroke logging
+- Legacy Google Sheets to Supabase migration workflow
 
-Clone the repository and perform the following command line actions:
+## Tech Stack
+
+- React 17
+- TypeScript
+- Tailwind CSS
+- Supabase
+- GitHub Actions
+
+## Local Development
 
 ```bash
-$> cd STUDENTLEV3
-$> npm install
-$> npm run start
+cd STUDENTLEV3
+npm install
+npm run start
 ```
 
-### Supabase setup
-
-The app now supports a Supabase backend for leaderboard data, signup events,
-keystroke logs, and cloud state snapshots.
+## Supabase Setup
 
 1. Create a Supabase project.
-2. Run the SQL in [supabase/schema.sql](supabase/schema.sql).
-3. Copy [.env.example](.env.example) to `.env.local` and fill in:
+2. Run [supabase/schema.sql](supabase/schema.sql).
+3. Run [supabase/fix-rls.sql](supabase/fix-rls.sql).
+4. Copy [.env.example](.env.example) to `.env.local` and set:
 
 ```bash
 REACT_APP_SUPABASE_URL=...
 REACT_APP_SUPABASE_ANON_KEY=...
 ```
 
-The app uses Supabase automatically whenever the URL and anon key are present.
-If those variables are missing, the legacy Google Sheets fallback remains
-available for leaderboard reads.
+The runtime app is Supabase-only. If those variables are missing, the app will not have a live backend.
 
-If your Supabase project was created before these policies were applied, run
-[supabase/fix-rls.sql](supabase/fix-rls.sql) in the Supabase SQL editor. This
-repairs the anon grants and row-level security policies used by signup,
-leaderboard, keystroke logging, and cloud state sync.
+## Legacy Data Migration
 
-### Migrate legacy Google Sheets data
+Google Sheets is no longer part of the live runtime. It is retained only as a legacy import source.
 
-There is a one-off migration script that reads the legacy Google Sheets data
-and inserts it into Supabase.
+There are two migration paths:
 
-Required environment variables for the migration script:
+1. Local script
+
+```bash
+npm run migrate:sheets-to-supabase
+```
+
+Required environment variables:
 
 ```bash
 SUPABASE_URL=...
@@ -56,31 +65,37 @@ SUPABASE_SERVICE_ROLE_KEY=...
 LEGACY_GOOGLE_SHEET_ID=1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg
 ```
 
-Then run:
+2. GitHub Action
+
+Use the workflow at [.github/workflows/migrate-sheets-to-supabase.yml](.github/workflows/migrate-sheets-to-supabase.yml) and provide these repository secrets:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `LEGACY_GOOGLE_SHEET_ID`
+
+The migration script aborts if destination tables already contain rows unless truncation is explicitly enabled.
+
+## Deployment Notes
+
+Set these frontend environment variables in your host:
+
+- `REACT_APP_SUPABASE_URL`
+- `REACT_APP_SUPABASE_ANON_KEY`
+
+Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+
+## Docker
+
+Development:
 
 ```bash
-npm run migrate:sheets-to-supabase
+docker build -t STUDENTLEV3:dev -f docker/Dockerfile .
+docker run -d -p 3000:3000 --name STUDENTLEV3-dev STUDENTLEV3:dev
 ```
 
-The script aborts if any of the destination tables already contain rows, so it
-is safe against accidental duplicate imports.
-
-### To build/run docker container:
-
-#### Development
+Production:
 
 ```bash
-$> docker build -t STUDENTLEV3:dev -f docker/Dockerfile .
-$> docker run -d -p 3000:3000 --name STUDENTLEV3-dev STUDENTLEV3:dev
+docker build --target=prod -t STUDENTLEV3:prod -f docker/Dockerfile .
+docker run -d -p 80:8080 --name STUDENTLEV3-prod STUDENTLEV3:prod
 ```
-
-Open [http://localhost:3000](http://localhost:3000) in browser.
-
-#### Production
-
-```bash
-$> docker build --target=prod -t STUDENTLEV3:prod -f docker/Dockerfile .
-$> docker run -d -p 80:8080  --name STUDENTLEV3-prod STUDENTLEV3:prod
-```
-
-Open [http://localhost](http://localhost) in browser.

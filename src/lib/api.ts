@@ -4,58 +4,13 @@ import { hasSupabaseConfig, supabase } from './supabase'
 import { TEACHER_WORDS } from '../teacherWords'
 import { getIndex, getSolution, localeAwareUpperCase } from './words'
 
-const LEGACY_API_URL =
-  'https://script.google.com/macros/s/AKfycbz7Q2SSXWC3yuT2TdsMN10X-YwKIEIZlBTXAp_C30YEy22wcwRzOYAlmLjSP97KAzna/exec'
-const DEFAULT_LEGACY_GOOGLE_SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
-const legacyGvizUrl = `https://docs.google.com/spreadsheets/d/${DEFAULT_LEGACY_GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json`
-const legacyStateGvizUrl = `${legacyGvizUrl}&sheet=Sheet2`
-const legacyKeystrokeGvizUrl = `${legacyGvizUrl}&sheet=KeystrokeLogs`
-const PREFER_LEGACY_GOOGLE_SHEETS = true
-
 const SUPABASE_TABLES = {
   gameSubmissions: 'game_submissions',
   keystrokeLogs: 'keystroke_logs',
+  playerProfiles: 'player_profiles',
   playerStateSnapshots: 'player_state_snapshots',
   signupEvents: 'signup_events',
 } as const
-
-const parseGvizResponse = (text: string): any[] => {
-  const jsonStr = text.replace(/^[^(]*\(/, '').replace(/\);?\s*$/, '')
-  const data = JSON.parse(jsonStr)
-  const rows: any[] = []
-
-  if (data.table && data.table.rows) {
-    for (const row of data.table.rows) {
-      rows.push(
-        row.c.map((cell: any) => {
-          if (!cell) return null
-          if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
-            const match = cell.v.match(/Date\((\d+),(\d+),(\d+)\)/)
-            if (match) {
-              const year = match[1]
-              const month = String(Number(match[2]) + 1).padStart(2, '0')
-              const day = String(Number(match[3])).padStart(2, '0')
-              return `${year}-${month}-${day}`
-            }
-          }
-          if (cell.f != null) return cell.f
-          return cell.v
-        })
-      )
-    }
-  }
-
-  return rows
-}
-
-const postToLegacyApi = async (payload: unknown): Promise<void> => {
-  await fetch(LEGACY_API_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-}
 
 export type GuessData = {
   word: string
@@ -99,44 +54,37 @@ export const submitKeystrokeBatch = async (
   events: KeystrokeEvent[]
 ): Promise<void> => {
   if (!events.length) return
-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
-    try {
-      await postToLegacyApi({ action: 'keystrokes', sessionId, ...meta, events })
-    } catch {
-      // fire-and-forget, never block the game
-    }
-  }
-  if (hasSupabaseConfig && supabase) {
-    try {
-      const normalizedGrade = normalizeLegacyGrade(meta.grade)
-      const playerKey = buildPlayerStateKey(meta.playerName, normalizedGrade)
-      const rows = events.map((event, index) => ({
-        session_id: sessionId,
-        player_key: playerKey,
-        player_name: meta.playerName,
-        player_name_key: normalizeNameKey(meta.playerName),
-        grade: Number(normalizedGrade) || 0,
-        game_date: meta.date,
-        game_type: meta.gameType,
-        event_timestamp: event.timestamp,
-        sequence_number: index,
-        key_type: event.keyType,
-        key_value: event.keyValue,
-        reason: event.reason ?? null,
-        guess_number: event.guessNum,
-        input_before: event.inputBefore,
-        input_after: event.inputAfter,
-        received_at: new Date().toISOString(),
-      }))
+  if (!hasSupabaseConfig || !supabase) return
 
-      const { error } = await supabase
-        .from(SUPABASE_TABLES.keystrokeLogs)
-        .insert(rows)
-      if (!error) return
-      console.error('Failed to insert keystroke batch into Supabase:', error)
-    } catch (error) {
-      console.error('Failed to write keystroke batch to Supabase:', error)
-    }
+  try {
+    const normalizedGrade = normalizeLegacyGrade(meta.grade)
+    const playerKey = buildPlayerStateKey(meta.playerName, normalizedGrade)
+    const rows = events.map((event, index) => ({
+      session_id: sessionId,
+      player_key: playerKey,
+      player_name: meta.playerName,
+      player_name_key: normalizeNameKey(meta.playerName),
+      grade: Number(normalizedGrade) || 0,
+      game_date: meta.date,
+      game_type: meta.gameType,
+      event_timestamp: event.timestamp,
+      sequence_number: index,
+      key_type: event.keyType,
+      key_value: event.keyValue,
+      reason: event.reason ?? null,
+      guess_number: event.guessNum,
+      input_before: event.inputBefore,
+      input_after: event.inputAfter,
+      received_at: new Date().toISOString(),
+    }))
+
+    const { error } = await supabase
+      .from(SUPABASE_TABLES.keystrokeLogs)
+      .insert(rows)
+    if (!error) return
+    console.error('Failed to insert keystroke batch into Supabase:', error)
+  } catch (error) {
+    console.error('Failed to write keystroke batch to Supabase:', error)
   }
 }
 
@@ -164,86 +112,82 @@ export const submitSignupEvent = async (
   source = 'grade_modal'
 ): Promise<void> => {
   if (!playerName || !grade) return
-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
-    try {
-      await postToLegacyApi({
-        action: 'signup',
-        playerName,
-        grade,
-        registeredAtClient: new Date().toISOString(),
-        source,
-        userAgent: navigator.userAgent || '',
-        screenWidth: window.innerWidth || 0,
-        screenHeight: window.innerHeight || 0,
-      })
-    } catch {
-      // fire-and-forget, never block registration
+  if (!hasSupabaseConfig || !supabase) return
+
+  const normalizedGrade = normalizeLegacyGrade(grade)
+  const playerKey = buildPlayerStateKey(playerName, normalizedGrade)
+  const registeredAtClient = new Date().toISOString()
+
+  try {
+    const profile = {
+      player_key: playerKey,
+      player_name: playerName,
+      player_name_key: normalizeNameKey(playerName),
+      grade: Number(normalizedGrade) || 0,
+      source,
+      registered_at_client: registeredAtClient,
+      updated_at: registeredAtClient,
     }
-  }
-  if (hasSupabaseConfig && supabase) {
-    const normalizedGrade = normalizeLegacyGrade(grade)
-    const playerKey = buildPlayerStateKey(playerName, normalizedGrade)
-    const registeredAtClient = new Date().toISOString()
 
-    try {
-      const { data: existingSnapshot, error: snapshotReadError } = await supabase
+    const { error: profileError } = await supabase
+      .from(SUPABASE_TABLES.playerProfiles)
+      .upsert(profile, { onConflict: 'player_key' })
+
+    if (profileError) {
+      console.error('Failed to upsert player profile in Supabase:', profileError)
+    }
+
+    const { data: existingSnapshot, error: snapshotReadError } = await supabase
+      .from(SUPABASE_TABLES.playerStateSnapshots)
+      .select('player_key')
+      .eq('player_key', playerKey)
+      .limit(1)
+
+    if (snapshotReadError) {
+      console.error(
+        'Failed to check player snapshot before signup bootstrap:',
+        snapshotReadError
+      )
+    } else if (!existingSnapshot || existingSnapshot.length === 0) {
+      const { error: snapshotWriteError } = await supabase
         .from(SUPABASE_TABLES.playerStateSnapshots)
-        .select('player_key')
-        .eq('player_key', playerKey)
-        .limit(1)
-
-      if (snapshotReadError) {
-        console.error(
-          'Failed to check player snapshot before signup bootstrap:',
-          snapshotReadError
-        )
-      } else if (!existingSnapshot || existingSnapshot.length === 0) {
-        const { error: snapshotWriteError } = await supabase
-          .from(SUPABASE_TABLES.playerStateSnapshots)
-          .insert({
-            player_key: playerKey,
-            player_name: playerName,
-            player_name_key: normalizeNameKey(playerName),
-            grade: Number(normalizedGrade) || 0,
-            state: {},
-            device: navigator.userAgent || '',
-            app_version: 'v2',
-            updated_at: registeredAtClient,
-          })
-
-        if (snapshotWriteError) {
-          console.error(
-            'Failed to bootstrap player snapshot in Supabase:',
-            snapshotWriteError
-          )
-        }
-      }
-
-      const { error: signupError } = await supabase
-        .from(SUPABASE_TABLES.signupEvents)
         .insert({
           player_key: playerKey,
           player_name: playerName,
           player_name_key: normalizeNameKey(playerName),
           grade: Number(normalizedGrade) || 0,
-          registered_at_client: registeredAtClient,
-          source,
-          user_agent: navigator.userAgent || '',
-          screen_width: window.innerWidth || 0,
-          screen_height: window.innerHeight || 0,
+          state: {},
+          device: navigator.userAgent || '',
+          app_version: 'v2',
+          updated_at: registeredAtClient,
         })
 
-      if (!signupError) return
-      const isRlsError =
-        signupError.code === '42501' ||
-        /row-level security/i.test(signupError.message || '')
-
-      if (!isRlsError) {
-        console.error('Failed to insert signup event into Supabase:', signupError)
+      if (snapshotWriteError) {
+        console.error(
+          'Failed to bootstrap player snapshot in Supabase:',
+          snapshotWriteError
+        )
       }
-    } catch (error) {
-      console.error('Failed to write signup data to Supabase:', error)
     }
+
+    const { error: signupError } = await supabase
+      .from(SUPABASE_TABLES.signupEvents)
+      .insert({
+        player_key: playerKey,
+        player_name: playerName,
+        player_name_key: normalizeNameKey(playerName),
+        grade: Number(normalizedGrade) || 0,
+        registered_at_client: registeredAtClient,
+        source,
+        user_agent: navigator.userAgent || '',
+        screen_width: window.innerWidth || 0,
+        screen_height: window.innerHeight || 0,
+      })
+
+    if (!signupError) return
+    console.error('Failed to insert signup event into Supabase:', signupError)
+  } catch (error) {
+    console.error('Failed to write signup data to Supabase:', error)
   }
 }
 
@@ -431,15 +375,16 @@ export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number>
 // Submit historical games reconstructed from localStorage stats when a player
 // creates a new account for the first time. winDistribution[i] = wins in i+1 guesses.
 // gamesFailed = total losses. Submitted with placeholder date/word since we only
-// have aggregate data. The Apps Script simply appends rows — duplicates are safe
-// because the leaderboard fetches by date and historical entries use a past placeholder.
+// have aggregate data. These are backfilled into Supabase using placeholder
+// dates so they stay out of date-based leaderboard views while preserving
+// all-time volume and win-rate history.
 export const submitHistoricalStats = async (
   name: string,
   grade: string,
   winDistribution: number[],
   gamesFailed: number
 ) => {
-  if (!PREFER_LEGACY_GOOGLE_SHEETS) return
+  if (!hasSupabaseConfig || !supabase) return
 
   const placeholder = '1970-01-01'
   const now = new Date().toISOString()
@@ -470,7 +415,7 @@ export const submitHistoricalStats = async (
 
   for (const submission of submissions) {
     try {
-      await postToLegacyApi(submission)
+      await submitGameData(submission)
     } catch {
       // Never block account creation on historical backfill failures.
     }
@@ -478,45 +423,37 @@ export const submitHistoricalStats = async (
 }
 
 export const submitGameData = async (data: GameSubmission): Promise<void> => {
-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
-    try {
-      await postToLegacyApi(data)
-    } catch (error) {
-      console.error('Failed to submit game data to Google Sheets:', error)
-    }
-  }
+  if (!hasSupabaseConfig || !supabase) return
 
-  if (hasSupabaseConfig && supabase) {
-    const normalizedGrade = normalizeLegacyGrade(data.grade)
-    const playerKey = buildPlayerStateKey(data.name, normalizedGrade)
+  const normalizedGrade = normalizeLegacyGrade(data.grade)
+  const playerKey = buildPlayerStateKey(data.name, normalizedGrade)
 
-    try {
-      const { error } = await supabase
-        .from(SUPABASE_TABLES.gameSubmissions)
-        .insert({
-          player_key: playerKey,
-          player_name: data.name,
-          player_name_key: normalizeNameKey(data.name),
-          grade: Number(normalizedGrade) || 0,
-          game_date: data.date,
-          word: data.word,
-          won: data.won,
-          guess_count: data.guessCount,
-          game_type: data.gameType,
-          game_start_time: data.gameStartTime,
-          game_end_time: data.gameEndTime,
-          total_duration_sec: data.totalDurationSec,
-          time_to_first_guess_sec: data.timeToFirstGuessSec,
-          device: data.device,
-          screen_width: data.screenWidth,
-          guesses: data.guesses,
-        })
+  try {
+    const { error } = await supabase
+      .from(SUPABASE_TABLES.gameSubmissions)
+      .insert({
+        player_key: playerKey,
+        player_name: data.name,
+        player_name_key: normalizeNameKey(data.name),
+        grade: Number(normalizedGrade) || 0,
+        game_date: data.date,
+        word: data.word,
+        won: data.won,
+        guess_count: data.guessCount,
+        game_type: data.gameType,
+        game_start_time: data.gameStartTime,
+        game_end_time: data.gameEndTime,
+        total_duration_sec: data.totalDurationSec,
+        time_to_first_guess_sec: data.timeToFirstGuessSec,
+        device: data.device,
+        screen_width: data.screenWidth,
+        guesses: data.guesses,
+      })
 
-      if (!error) return
-      console.error('Failed to insert game submission into Supabase:', error)
-    } catch (error) {
-      console.error('Failed to write game submission to Supabase:', error)
-    }
+    if (!error) return
+    console.error('Failed to insert game submission into Supabase:', error)
+  } catch (error) {
+    console.error('Failed to write game submission to Supabase:', error)
   }
 }
 
@@ -548,44 +485,29 @@ export const syncPlayerStateToCloud = async (
   const cleanGrade = normalizeLegacyGrade(grade)
   if (!cleanName || !cleanGrade) return
 
-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
-    try {
-      await postToLegacyApi({
-        action: 'state_sync',
-        playerName: cleanName,
-        grade: cleanGrade,
-        state,
-        device: navigator.userAgent || '',
-        appVersion: 'v2',
-      })
-    } catch {
-      // Never block gameplay on sync failures.
-    }
-  }
+  if (!hasSupabaseConfig || !supabase) return
 
-  if (hasSupabaseConfig && supabase) {
-    try {
-      const now = new Date().toISOString()
-      const { error } = await supabase
-        .from(SUPABASE_TABLES.playerStateSnapshots)
-        .upsert(
-          {
-            player_key: buildPlayerStateKey(cleanName, cleanGrade),
-            player_name: cleanName,
-            player_name_key: normalizeNameKey(cleanName),
-            grade: Number(cleanGrade) || 0,
-            state,
-            device: navigator.userAgent || '',
-            app_version: 'v2',
-            updated_at: now,
-          },
-          { onConflict: 'player_key' }
-        )
-      if (!error) return
-      console.error('Failed to sync player state to Supabase:', error)
-    } catch (error) {
-      console.error('Failed to write cloud state to Supabase:', error)
-    }
+  try {
+    const now = new Date().toISOString()
+    const { error } = await supabase
+      .from(SUPABASE_TABLES.playerStateSnapshots)
+      .upsert(
+        {
+          player_key: buildPlayerStateKey(cleanName, cleanGrade),
+          player_name: cleanName,
+          player_name_key: normalizeNameKey(cleanName),
+          grade: Number(cleanGrade) || 0,
+          state,
+          device: navigator.userAgent || '',
+          app_version: 'v2',
+          updated_at: now,
+        },
+        { onConflict: 'player_key' }
+      )
+    if (!error) return
+    console.error('Failed to sync player state to Supabase:', error)
+  } catch (error) {
+    console.error('Failed to write cloud state to Supabase:', error)
   }
 }
 
@@ -596,49 +518,24 @@ export const fetchPlayerStateFromCloud = async (
   const key = buildPlayerStateKey(playerName, grade)
   if (!key || key === '|') return null
 
-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
-    try {
-      const res = await fetch(legacyStateGvizUrl)
-      const text = await res.text()
-      const rows = parseGvizResponse(text)
+  if (!hasSupabaseConfig || !supabase) return null
 
-      for (let index = rows.length - 1; index >= 0; index--) {
-        const row = rows[index]
-        const rowKey = String(row[1] || '')
-        if (rowKey !== key) continue
+  try {
+    const { data, error } = await supabase
+      .from(SUPABASE_TABLES.playerStateSnapshots)
+      .select('updated_at, state')
+      .eq('player_key', key)
+      .order('updated_at', { ascending: false })
+      .limit(1)
 
-        const updatedAt = String(row[0] || '')
-        const rawState = String(row[4] || '{}')
-        try {
-          const parsed = JSON.parse(rawState) as Record<string, string>
-          return { updatedAt, state: parsed }
-        } catch {
-          return null
-        }
-      }
-    } catch {
-      // Fall through to Supabase if Sheets is unavailable.
+    if (error) {
+      console.error('Failed to fetch cloud state from Supabase:', error)
+    } else if (data && data.length > 0) {
+      const latest = data[0] as { updated_at: string; state: Record<string, string> }
+      return { updatedAt: latest.updated_at, state: latest.state || {} }
     }
-  }
-
-  if (hasSupabaseConfig && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from(SUPABASE_TABLES.playerStateSnapshots)
-        .select('updated_at, state')
-        .eq('player_key', key)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-
-      if (error) {
-        console.error('Failed to fetch cloud state from Supabase:', error)
-      } else if (data && data.length > 0) {
-        const latest = data[0] as { updated_at: string; state: Record<string, string> }
-        return { updatedAt: latest.updated_at, state: latest.state || {} }
-      }
-    } catch (error) {
-      console.error('Failed to read cloud state from Supabase:', error)
-    }
+  } catch (error) {
+    console.error('Failed to read cloud state from Supabase:', error)
   }
   return null
 }
@@ -713,6 +610,8 @@ export const fetchLeaderboard = async (
   grade?: string,
   allTime?: boolean
 ): Promise<LeaderboardEntry[]> => {
+  if (!hasSupabaseConfig || !supabase) return []
+
   const _fd = new Date()
   const localToday = `${_fd.getFullYear()}-${String(_fd.getMonth() + 1).padStart(2, '0')}-${String(_fd.getDate()).padStart(2, '0')}`
   const today = allTime ? '' : (date || localToday)
@@ -727,38 +626,49 @@ export const fetchLeaderboard = async (
     'katie cruce': { name: 'Mrs. Cruce', grade: 0 },
     'amanda adams': { name: 'Mrs. Adams', grade: 0 },
   }
+  try {
+    let query = supabase
+      .from(SUPABASE_TABLES.gameSubmissions)
+      .select(
+        'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
+      )
 
-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
-    try {
-      const res = await fetch(legacyGvizUrl)
-      const text = await res.text()
-      const rows = parseGvizResponse(text)
+    if (today) {
+      query = query.eq('game_date', today)
+    }
+
+    if (selectedGrade) {
+      query = query.eq('grade', Number(selectedGrade) || 0)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      console.error('Failed to fetch leaderboard from Supabase:', error)
+    } else {
       const results: LeaderboardEntry[] = []
 
-      for (const row of rows) {
-        const rawName = row[0] ? String(row[0]) : ''
-        const rowDate = row[2] ? String(row[2]) : ''
-        const rowType = String(row[6] || 'daily').toLowerCase().trim()
-        const rowGrade = row[1] != null ? normalizeLegacyGrade(String(row[1])) : ''
+      for (const row of data ?? []) {
+        const rawName = row.player_name ? String(row.player_name) : ''
+        const rowType = String(row.game_type || 'daily').toLowerCase().trim()
+        const rowGrade = row.grade != null ? normalizeLegacyGrade(String(row.grade)) : ''
         const alias = legacyNameAliases[normalizeNameKey(rawName)]
         const finalName = alias ? alias.name : rawName
         const finalGrade = alias ? String(alias.grade) : rowGrade
 
         if (rowType === 'signup') continue
-        if (today && !rowDate.startsWith(today)) continue
         if (selectedGrade && finalGrade !== selectedGrade) continue
         if (!finalName || !String(finalName).trim()) continue
 
         results.push({
           name: finalName,
           grade: Number(finalGrade) || 0,
-          date: rowDate,
-          word: row[3] ? String(row[3]) : '',
-          won: row[4] === true || row[4] === 'TRUE',
-          guessCount: Number(row[5]) || 0,
+          date: row.game_date ? String(row.game_date) : '',
+          word: row.word ? String(row.word) : '',
+          won: Boolean(row.won),
+          guessCount: Number(row.guess_count) || 0,
           gameType: rowType,
-          totalDurationSec: Number(row[9]) || 0,
-          gameStartTime: row[7] ? String(row[7]) : '',
+          totalDurationSec: Number(row.total_duration_sec) || 0,
+          gameStartTime: row.game_start_time ? String(row.game_start_time) : '',
         })
       }
 
@@ -769,120 +679,12 @@ export const fetchLeaderboard = async (
       })
 
       return results
-    } catch (error) {
-      console.error('Failed to fetch leaderboard from Google Sheets:', error)
     }
-  }
-
-  if (hasSupabaseConfig && supabase) {
-    try {
-      let query = supabase
-        .from(SUPABASE_TABLES.gameSubmissions)
-        .select(
-          'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
-        )
-
-      if (today) {
-        query = query.eq('game_date', today)
-      }
-
-      if (selectedGrade) {
-        query = query.eq('grade', Number(selectedGrade) || 0)
-      }
-
-      const { data, error } = await query
-      if (error) {
-        console.error('Failed to fetch leaderboard from Supabase:', error)
-      } else {
-        const results: LeaderboardEntry[] = []
-
-        for (const row of data ?? []) {
-          const rawName = row.player_name ? String(row.player_name) : ''
-          const rowType = String(row.game_type || 'daily').toLowerCase().trim()
-          const rowGrade = row.grade != null ? normalizeLegacyGrade(String(row.grade)) : ''
-          const alias = legacyNameAliases[normalizeNameKey(rawName)]
-          const finalName = alias ? alias.name : rawName
-          const finalGrade = alias ? String(alias.grade) : rowGrade
-
-          if (rowType === 'signup') continue
-          if (selectedGrade && finalGrade !== selectedGrade) continue
-          if (!finalName || !String(finalName).trim()) continue
-
-          results.push({
-            name: finalName,
-            grade: Number(finalGrade) || 0,
-            date: row.game_date ? String(row.game_date) : '',
-            word: row.word ? String(row.word) : '',
-            won: Boolean(row.won),
-            guessCount: Number(row.guess_count) || 0,
-            gameType: rowType,
-            totalDurationSec: Number(row.total_duration_sec) || 0,
-            gameStartTime: row.game_start_time ? String(row.game_start_time) : '',
-          })
-        }
-
-        results.sort((a, b) => {
-          if (a.won !== b.won) return a.won ? -1 : 1
-          if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
-          return a.totalDurationSec - b.totalDurationSec
-        })
-
-        if (results.length > 0) {
-          return results
-        }
-      }
-    } catch (error) {
-      console.error('Failed to read leaderboard from Supabase:', error)
-    }
-  }
-
-  try {
-    const res = await fetch(legacyGvizUrl)
-    const text = await res.text()
-    const rows = parseGvizResponse(text)
-    const results: LeaderboardEntry[] = []
-
-    for (const r of rows) {
-      // Columns: 0=name, 1=grade, 2=date, 3=word, 4=won, 5=guessCount,
-      //          6=gameType, 7=startTime, 8=endTime, 9=totalDurationSec
-      const rawName = r[0] ? String(r[0]) : ''
-      const rowDate = r[2] ? String(r[2]) : ''
-      const rowType = String(r[6] || 'daily').toLowerCase().trim()
-      const rowGrade = r[1] != null ? normalizeLegacyGrade(String(r[1])) : ''
-      const alias = legacyNameAliases[normalizeNameKey(rawName)]
-      const finalName = alias ? alias.name : rawName
-      const finalGrade = alias ? String(alias.grade) : rowGrade
-
-      // Signup rows are reference-only and must never affect leaderboard views.
-      if (rowType === 'signup') continue
-      if (today && !rowDate.startsWith(today)) continue
-      if (selectedGrade && finalGrade !== selectedGrade) continue
-      if (!finalName || !String(finalName).trim()) continue // skip nameless entries
-
-      results.push({
-        name: finalName,
-        grade: Number(finalGrade) || 0,
-        date: rowDate,
-        word: r[3] ? String(r[3]) : '',
-        won: r[4] === true || r[4] === 'TRUE',
-        guessCount: Number(r[5]) || 0,
-        gameType: rowType,
-        totalDurationSec: Number(r[9]) || 0,
-        gameStartTime: r[7] ? String(r[7]) : '',
-      })
-    }
-
-    results.sort((a, b) => {
-      if (a.won !== b.won) return a.won ? -1 : 1
-      if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
-      return a.totalDurationSec - b.totalDurationSec
-    })
-
-    return results
   } catch (err) {
-    console.error('Failed to fetch leaderboard:', err)
-    return []
+    console.error('Failed to fetch leaderboard from Supabase:', err)
   }
+
+  return []
 }
 
 // Reads KeystrokeLogs sheet and returns the list of words submitted today
@@ -891,30 +693,28 @@ export const fetchLeaderboard = async (
 export const fetchTodayInProgress = async (
   displayName: string
 ): Promise<string[]> => {
-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
-    try {
-      const res = await fetch(legacyKeystrokeGvizUrl)
-      const text = await res.text()
-      const rows = parseGvizResponse(text)
-      const today = new Date().toISOString().split('T')[0]
-      const normalizedDisplayName = displayName.toLowerCase()
+  if (!hasSupabaseConfig || !supabase) return []
 
-      const todayRows = rows.filter(
-        (row) =>
-          row[2] && row[2].toString().toLowerCase() === normalizedDisplayName &&
-          row[4] && String(row[4]).startsWith(today) &&
-          row[5] === 'daily'
-      )
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const { data, error } = await supabase
+      .from(SUPABASE_TABLES.keystrokeLogs)
+      .select('session_id, received_at, key_type, sequence_number, input_before')
+      .eq('player_name_key', normalizeNameKey(displayName))
+      .eq('game_date', today)
+      .eq('game_type', 'daily')
+      .order('received_at', { ascending: false })
 
-      if (!todayRows.length) return []
-
-      const bySession: Record<string, { rows: any[]; latestTs: number }> = {}
-      for (const row of todayRows) {
-        const sessionId = String(row[1] || 'default')
-        const ts = row[0] ? new Date(row[0]).getTime() : 0
-        if (!bySession[sessionId]) bySession[sessionId] = { rows: [], latestTs: 0 }
-        bySession[sessionId].rows.push(row)
-        if (ts > bySession[sessionId].latestTs) bySession[sessionId].latestTs = ts
+    if (error) {
+      console.error('Failed to fetch in-progress keystrokes from Supabase:', error)
+    } else if (data && data.length > 0) {
+      const bySession: Record<string, { rows: typeof data; latestTs: number }> = {}
+      for (const row of data) {
+        const sid = String(row.session_id || 'default')
+        const ts = row.received_at ? new Date(String(row.received_at)).getTime() : 0
+        if (!bySession[sid]) bySession[sid] = { rows: [], latestTs: 0 }
+        bySession[sid].rows.push(row)
+        if (ts > bySession[sid].latestTs) bySession[sid].latestTs = ts
       }
 
       const latestSession = Object.values(bySession).sort(
@@ -922,56 +722,16 @@ export const fetchTodayInProgress = async (
       )[0]
 
       return latestSession.rows
-        .filter((row) => row[8] === 'enter_submit')
-        .sort((a, b) => (Number(a[7]) || 0) - (Number(b[7]) || 0))
-        .map((row) => String(row[12] || '').toUpperCase())
-        .filter((word) => word.length === 5)
-    } catch {
-      // Fall through to Supabase if Sheets is unavailable.
-    }
-  }
-
-  if (hasSupabaseConfig && supabase) {
-    try {
-      const today = new Date().toISOString().split('T')[0]
-      const { data, error } = await supabase
-        .from(SUPABASE_TABLES.keystrokeLogs)
-        .select(
-          'session_id, received_at, key_type, sequence_number, input_before'
+        .filter((row: any) => row.key_type === 'enter_submit')
+        .sort(
+          (a: any, b: any) =>
+            (Number(a.sequence_number) || 0) - (Number(b.sequence_number) || 0)
         )
-        .eq('player_name_key', normalizeNameKey(displayName))
-        .eq('game_date', today)
-        .eq('game_type', 'daily')
-        .order('received_at', { ascending: false })
-
-      if (error) {
-        console.error('Failed to fetch in-progress keystrokes from Supabase:', error)
-      } else if (data && data.length > 0) {
-        const bySession: Record<string, { rows: typeof data; latestTs: number }> = {}
-        for (const row of data) {
-          const sid = String(row.session_id || 'default')
-          const ts = row.received_at ? new Date(String(row.received_at)).getTime() : 0
-          if (!bySession[sid]) bySession[sid] = { rows: [], latestTs: 0 }
-          bySession[sid].rows.push(row)
-          if (ts > bySession[sid].latestTs) bySession[sid].latestTs = ts
-        }
-
-        const latestSession = Object.values(bySession).sort(
-          (a, b) => b.latestTs - a.latestTs
-        )[0]
-
-        return latestSession.rows
-          .filter((row: any) => row.key_type === 'enter_submit')
-          .sort(
-            (a: any, b: any) =>
-              (Number(a.sequence_number) || 0) - (Number(b.sequence_number) || 0)
-          )
-          .map((row: any) => String(row.input_before || '').toUpperCase())
-          .filter((word: any) => word.length === 5)
-      }
-    } catch (error) {
-      console.error('Failed to read in-progress keystrokes from Supabase:', error)
+        .map((row: any) => String(row.input_before || '').toUpperCase())
+        .filter((word: any) => word.length === 5)
     }
+  } catch (error) {
+    console.error('Failed to read in-progress keystrokes from Supabase:', error)
   }
 
   return []

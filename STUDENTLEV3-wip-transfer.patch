@@ -1,0 +1,173 @@
+diff --git a/src/lib/api.ts b/src/lib/api.ts
+index 535fcd3..af54c8a 100644
+--- a/src/lib/api.ts
++++ b/src/lib/api.ts
+@@ -4,13 +4,33 @@ import { hasSupabaseConfig, supabase } from './supabase'
+ import { TEACHER_WORDS } from '../teacherWords'
+ import { getIndex, getSolution, localeAwareUpperCase } from './words'
+ 
++const configuredBackendMode = String(
++  process.env.REACT_APP_BACKEND_MODE || 'auto'
++)
++  .toLowerCase()
++  .trim()
++
++const backendMode =
++  configuredBackendMode === 'supabase' ||
++  configuredBackendMode === 'google-sheets' ||
++  configuredBackendMode === 'auto'
++    ? configuredBackendMode
++    : 'auto'
++
+ const LEGACY_API_URL =
+   'https://script.google.com/macros/s/AKfycbz7Q2SSXWC3yuT2TdsMN10X-YwKIEIZlBTXAp_C30YEy22wcwRzOYAlmLjSP97KAzna/exec'
+ const DEFAULT_LEGACY_GOOGLE_SHEET_ID = '1iHHuks_7DRK0X1y-wtuSmlx9GdceovPlK2RqxOQpZbg'
+ const legacyGvizUrl = `https://docs.google.com/spreadsheets/d/${DEFAULT_LEGACY_GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json`
+ const legacyStateGvizUrl = `${legacyGvizUrl}&sheet=Sheet2`
+ const legacyKeystrokeGvizUrl = `${legacyGvizUrl}&sheet=KeystrokeLogs`
+-const PREFER_LEGACY_GOOGLE_SHEETS = true
++
++const shouldUseLegacyGoogleSheets =
++  backendMode === 'google-sheets' ||
++  (backendMode === 'auto' && !hasSupabaseConfig)
++
++const shouldUseSupabase =
++  hasSupabaseConfig &&
++  (backendMode === 'supabase' || backendMode === 'auto')
+ 
+ const SUPABASE_TABLES = {
+   gameSubmissions: 'game_submissions',
+@@ -99,14 +119,14 @@ export const submitKeystrokeBatch = async (
+   events: KeystrokeEvent[]
+ ): Promise<void> => {
+   if (!events.length) return
+-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
++  if (shouldUseLegacyGoogleSheets) {
+     try {
+       await postToLegacyApi({ action: 'keystrokes', sessionId, ...meta, events })
+     } catch {
+       // fire-and-forget, never block the game
+     }
+   }
+-  if (hasSupabaseConfig && supabase) {
++  if (shouldUseSupabase && supabase) {
+     try {
+       const normalizedGrade = normalizeLegacyGrade(meta.grade)
+       const playerKey = buildPlayerStateKey(meta.playerName, normalizedGrade)
+@@ -164,7 +184,7 @@ export const submitSignupEvent = async (
+   source = 'grade_modal'
+ ): Promise<void> => {
+   if (!playerName || !grade) return
+-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
++  if (shouldUseLegacyGoogleSheets) {
+     try {
+       await postToLegacyApi({
+         action: 'signup',
+@@ -180,7 +200,7 @@ export const submitSignupEvent = async (
+       // fire-and-forget, never block registration
+     }
+   }
+-  if (hasSupabaseConfig && supabase) {
++  if (shouldUseSupabase && supabase) {
+     const normalizedGrade = normalizeLegacyGrade(grade)
+     const playerKey = buildPlayerStateKey(playerName, normalizedGrade)
+     const registeredAtClient = new Date().toISOString()
+@@ -439,7 +459,7 @@ export const submitHistoricalStats = async (
+   winDistribution: number[],
+   gamesFailed: number
+ ) => {
+-  if (!PREFER_LEGACY_GOOGLE_SHEETS) return
++  if (!shouldUseLegacyGoogleSheets) return
+ 
+   const placeholder = '1970-01-01'
+   const now = new Date().toISOString()
+@@ -478,7 +498,7 @@ export const submitHistoricalStats = async (
+ }
+ 
+ export const submitGameData = async (data: GameSubmission): Promise<void> => {
+-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
++  if (shouldUseLegacyGoogleSheets) {
+     try {
+       await postToLegacyApi(data)
+     } catch (error) {
+@@ -486,7 +506,7 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
+     }
+   }
+ 
+-  if (hasSupabaseConfig && supabase) {
++  if (shouldUseSupabase && supabase) {
+     const normalizedGrade = normalizeLegacyGrade(data.grade)
+     const playerKey = buildPlayerStateKey(data.name, normalizedGrade)
+ 
+@@ -548,7 +568,7 @@ export const syncPlayerStateToCloud = async (
+   const cleanGrade = normalizeLegacyGrade(grade)
+   if (!cleanName || !cleanGrade) return
+ 
+-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
++  if (shouldUseLegacyGoogleSheets) {
+     try {
+       await postToLegacyApi({
+         action: 'state_sync',
+@@ -563,7 +583,7 @@ export const syncPlayerStateToCloud = async (
+     }
+   }
+ 
+-  if (hasSupabaseConfig && supabase) {
++  if (shouldUseSupabase && supabase) {
+     try {
+       const now = new Date().toISOString()
+       const { error } = await supabase
+@@ -596,7 +616,7 @@ export const fetchPlayerStateFromCloud = async (
+   const key = buildPlayerStateKey(playerName, grade)
+   if (!key || key === '|') return null
+ 
+-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
++  if (shouldUseLegacyGoogleSheets) {
+     try {
+       const res = await fetch(legacyStateGvizUrl)
+       const text = await res.text()
+@@ -621,7 +641,7 @@ export const fetchPlayerStateFromCloud = async (
+     }
+   }
+ 
+-  if (hasSupabaseConfig && supabase) {
++  if (shouldUseSupabase && supabase) {
+     try {
+       const { data, error } = await supabase
+         .from(SUPABASE_TABLES.playerStateSnapshots)
+@@ -728,7 +748,7 @@ export const fetchLeaderboard = async (
+     'amanda adams': { name: 'Mrs. Adams', grade: 0 },
+   }
+ 
+-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
++  if (shouldUseLegacyGoogleSheets) {
+     try {
+       const res = await fetch(legacyGvizUrl)
+       const text = await res.text()
+@@ -774,7 +794,7 @@ export const fetchLeaderboard = async (
+     }
+   }
+ 
+-  if (hasSupabaseConfig && supabase) {
++  if (shouldUseSupabase && supabase) {
+     try {
+       let query = supabase
+         .from(SUPABASE_TABLES.gameSubmissions)
+@@ -891,7 +911,7 @@ export const fetchLeaderboard = async (
+ export const fetchTodayInProgress = async (
+   displayName: string
+ ): Promise<string[]> => {
+-  if (PREFER_LEGACY_GOOGLE_SHEETS) {
++  if (shouldUseLegacyGoogleSheets) {
+     try {
+       const res = await fetch(legacyKeystrokeGvizUrl)
+       const text = await res.text()
+@@ -931,7 +951,7 @@ export const fetchTodayInProgress = async (
+     }
+   }
+ 
+-  if (hasSupabaseConfig && supabase) {
++  if (shouldUseSupabase && supabase) {
+     try {
+       const today = new Date().toISOString().split('T')[0]
+       const { data, error } = await supabase
