@@ -31,7 +31,7 @@ export const Navbar = ({
   return (
     <div className={`navbar${isMvp ? ' navbar-mvp' : ''}`}>
       <div className="navbar-content px-5 short:h-auto">
-        <div className="flex">
+        <div className="flex items-center">
           <InformationCircleIcon
             className="h-6 w-6 cursor-pointer dark:stroke-white"
             onClick={() => setIsInfoModalOpen(true)}
@@ -43,7 +43,7 @@ export const Navbar = ({
             />
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="navbar-title-group flex items-center gap-1">
           <p
             className={`cursor-pointer select-none text-xl font-bold${isMvp ? ' mvp-title' : ' dark:text-white'}`}
             onClick={onTitleTap}

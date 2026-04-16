@@ -251,13 +251,21 @@ svg.cursor-pointer:hover {
 
 .navbar-content {
   display: flex;
+  position: relative;
   height: 3rem;
   align-items: center;
   justify-content: space-between;
 }
 
+.navbar-title-group {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .right-icons {
   display: flex;
+  align-items: center;
 }
 
 @keyframes revealAbsentCharCell {
