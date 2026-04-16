@@ -10,7 +10,6 @@ const legacyGvizUrl = `https://docs.google.com/spreadsheets/d/${DEFAULT_LEGACY_G
 const SUPABASE_TABLES = {
   gameSubmissions: 'game_submissions',
   keystrokeLogs: 'keystroke_logs',
-  playerProfiles: 'player_profiles',
   playerStateSnapshots: 'player_state_snapshots',
   signupEvents: 'signup_events',
 } as const
@@ -148,23 +147,37 @@ export const submitSignupEvent = async (
     const registeredAtClient = new Date().toISOString()
 
     try {
-      const { error: profileError } = await supabase
-        .from(SUPABASE_TABLES.playerProfiles)
-        .upsert(
-          {
+      const { data: existingSnapshot, error: snapshotReadError } = await supabase
+        .from(SUPABASE_TABLES.playerStateSnapshots)
+        .select('player_key')
+        .eq('player_key', playerKey)
+        .limit(1)
+
+      if (snapshotReadError) {
+        console.error(
+          'Failed to check player snapshot before signup bootstrap:',
+          snapshotReadError
+        )
+      } else if (!existingSnapshot || existingSnapshot.length === 0) {
+        const { error: snapshotWriteError } = await supabase
+          .from(SUPABASE_TABLES.playerStateSnapshots)
+          .insert({
             player_key: playerKey,
             player_name: playerName,
             player_name_key: normalizeNameKey(playerName),
             grade: Number(normalizedGrade) || 0,
-            source,
-            registered_at_client: registeredAtClient,
+            state: {},
+            device: navigator.userAgent || '',
+            app_version: 'v2',
             updated_at: registeredAtClient,
-          },
-          { onConflict: 'player_key' }
-        )
+          })
 
-      if (profileError) {
-        console.error('Failed to upsert player profile in Supabase:', profileError)
+        if (snapshotWriteError) {
+          console.error(
+            'Failed to bootstrap player snapshot in Supabase:',
+            snapshotWriteError
+          )
+        }
       }
 
       const { error: signupError } = await supabase
@@ -181,8 +194,12 @@ export const submitSignupEvent = async (
           screen_height: window.innerHeight || 0,
         })
 
-      if (!signupError && !profileError) return
-      if (signupError) {
+      if (!signupError) return
+      const isRlsError =
+        signupError.code === '42501' ||
+        /row-level security/i.test(signupError.message || '')
+
+      if (!isRlsError) {
         console.error('Failed to insert signup event into Supabase:', signupError)
       }
     } catch (error) {

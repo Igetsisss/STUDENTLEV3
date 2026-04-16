@@ -30,15 +30,18 @@ keystroke logs, and cloud state snapshots.
 3. Copy [.env.example](.env.example) to `.env.local` and fill in:
 
 ```bash
-REACT_APP_USE_SUPABASE=true
 REACT_APP_SUPABASE_URL=...
 REACT_APP_SUPABASE_ANON_KEY=...
 ```
 
-Google Sheets remains the default backend. The app only switches to Supabase
-when `REACT_APP_USE_SUPABASE=true` is set alongside the Supabase URL and anon
-key. This lets you keep the migration code in place without routing live users
-to Supabase until you explicitly enable it.
+The app uses Supabase automatically whenever the URL and anon key are present.
+If those variables are missing, the legacy Google Sheets fallback remains
+available for leaderboard reads.
+
+If your Supabase project was created before these policies were applied, run
+[supabase/fix-rls.sql](supabase/fix-rls.sql) in the Supabase SQL editor. This
+repairs the anon grants and row-level security policies used by signup,
+leaderboard, keystroke logging, and cloud state sync.
 
 ### Migrate legacy Google Sheets data
 
