@@ -530,19 +530,21 @@ function App() {
   const isTeacherPlayer = grade === '"0"'
 
   useEffect(() => {
-    if (grade == null) {
-      setTimeout(() => {
-        setIsGradeModalOpen(true)
-      }, WELCOME_GRADE_MODAL_MS)
+    const hasValidGrade =
+      grade != null && grade !== 'undefined' && grade !== 'null'
+
+    if (hasValidGrade) {
+      return
     }
-  })
-  useEffect(() => {
-    if (grade == 'undefined') {
-      setTimeout(() => {
-        setIsGradeModalOpen(true)
-      }, WELCOME_GRADE_MODAL_MS)
+
+    const timer = window.setTimeout(() => {
+      setIsGradeModalOpen(true)
+    }, WELCOME_GRADE_MODAL_MS)
+
+    return () => {
+      window.clearTimeout(timer)
     }
-  })
+  }, [grade])
 
   // Prompt existing users (have grade but no name) to enter name
   useEffect(() => {

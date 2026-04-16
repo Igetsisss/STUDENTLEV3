@@ -545,7 +545,8 @@ export const GradeModal = ({
           : 'Is this you?'
       }
       isOpen={isOpen || forceOpen}
-      handleClose={() => {}}
+      handleClose={handleClose}
+      isDismissible={!isSaving && !forceOpen}
     >
       <br />
 
