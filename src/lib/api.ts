@@ -305,9 +305,12 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
     return !expectedWord || !rowWord || rowWord === expectedWord
   }
 
-  // Legacy compatibility: some old daily rows were stored as grade{grade}.
+  // New daily entries are stored as grade{N} (e.g. grade11 for juniors).
+  // The grade cross-check above already prevents cross-grade contamination,
+  // so use the same permissive rule as 'daily' — don't require a word match
+  // because getExpectedDailyWord uses the viewer's word list, not the entry's.
   if (type === `grade${String(entry.grade)}`) {
-    return !!expectedWord && !!rowWord && rowWord === expectedWord
+    return !expectedWord || !rowWord || rowWord === expectedWord
   }
 
   // Older Google Sheets rows sometimes stored own-grade daily plays as plain "grade".
