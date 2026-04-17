@@ -254,6 +254,45 @@ const getExpectedDailyWord = (entry: LeaderboardEntry): string | null => {
   return getSolution(day).solution
 }
 
+const isHistoricalPlaceholderEntry = (entry: LeaderboardEntry): boolean =>
+  String(entry.date || '').startsWith('1970')
+
+const isDailyLikeGameType = (entry: LeaderboardEntry): boolean => {
+  const type = String(entry.gameType || '').toLowerCase().trim()
+  return (
+    type === 'daily' ||
+    type === 'teachers' ||
+    type === 'grade' ||
+    type === `grade${String(entry.grade)}`
+  )
+}
+
+const getAllTimeDayBucket = (entry: LeaderboardEntry, index: number): string => {
+  if (isHistoricalPlaceholderEntry(entry)) {
+    return `historical-${index}`
+  }
+  return String(entry.date || '').slice(0, 10)
+}
+
+const getActiveDayCount = (entries: LeaderboardEntry[]): number => {
+  let historicalCount = 0
+  const datedDays = new Set<string>()
+
+  for (const entry of entries) {
+    if (isHistoricalPlaceholderEntry(entry)) {
+      historicalCount += 1
+      continue
+    }
+
+    const day = String(entry.date || '').slice(0, 10)
+    if (day) {
+      datedDays.add(day)
+    }
+  }
+
+  return historicalCount + datedDays.size
+}
+
 export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
   const type = String(entry.gameType || '').toLowerCase().trim()
   const rowWord = String(entry.word || '').toUpperCase().trim()
@@ -271,11 +310,24 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
     return !!expectedWord && !!rowWord && rowWord === expectedWord
   }
 
+  // Older Google Sheets rows sometimes stored own-grade daily plays as plain "grade".
+  if (type === 'grade') {
+    return !!expectedWord && !!rowWord && rowWord === expectedWord
+  }
+
   return false
 }
 
+const isAllTimeCountableDailyEntry = (entry: LeaderboardEntry): boolean => {
+  if (isHistoricalPlaceholderEntry(entry)) {
+    return isDailyLikeGameType(entry)
+  }
+
+  return isTrueDailyEntry(entry)
+}
+
 export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
-  const valid = entries.filter((e) => !String(e.date).startsWith('1970'))
+  const valid = entries.filter((e) => e.name && String(e.name).trim())
   if (valid.length === 0) return null
 
   const map = new Map<string, LeaderboardEntry[]>()
@@ -291,7 +343,7 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
     if (games.length > maxGames) maxGames = games.length
     const wins = games.filter((g) => g.won).length
     if (wins > maxWins) maxWins = wins
-    const activeDays = new Set(games.map((g) => String(g.date || '').slice(0, 10))).size
+    const activeDays = getActiveDayCount(games)
     if (activeDays > maxActiveDays) maxActiveDays = activeDays
   })
 
@@ -305,7 +357,7 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
       wins.length > 0
         ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
         : 7
-    const activeDays = new Set(games.map((g) => String(g.date || '').slice(0, 10))).size
+    const activeDays = getActiveDayCount(games)
 
     const volumeScore = (games.length / maxGames) * 40
     const winVolumeScore = (wins.length / maxWins) * 25
@@ -579,7 +631,7 @@ export type AllTimeEntry = {
 }
 
 const isOwnGradeDailyEntry = (e: LeaderboardEntry): boolean => {
-  return isTrueDailyEntry(e)
+  return isAllTimeCountableDailyEntry(e)
 }
 
 const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
@@ -589,9 +641,7 @@ const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
 }
 
 export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeEntry[] => {
-  const daily = entries.filter(
-    (e) => isOwnGradeDailyEntry(e) && !String(e.date).startsWith('1970')
-  )
+  const daily = entries.filter((e) => isOwnGradeDailyEntry(e))
   const map = new Map<string, LeaderboardEntry[]>()
   for (const e of daily) {
     const key = e.name.toLowerCase().trim()
@@ -599,16 +649,15 @@ export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeE
   }
   const result: AllTimeEntry[] = []
   map.forEach((games) => {
-    // Count one daily outcome per date: keep each player's best result that day.
     const byDate = new Map<string, LeaderboardEntry>()
-    for (const g of games) {
-      const dateKey = String(g.date || '').slice(0, 10)
-      if (!dateKey) continue
+    games.forEach((g, index) => {
+      const dateKey = getAllTimeDayBucket(g, index)
+      if (!dateKey) return
       const existing = byDate.get(dateKey)
       if (!existing || isBetterResult(g, existing)) {
         byDate.set(dateKey, g)
       }
-    }
+    })
 
     const dayResults = Array.from(byDate.values())
     const wins = dayResults.filter((g) => g.won)
@@ -648,10 +697,22 @@ export const fetchLeaderboard = async (
   // Key: normalized lowercase name, irrespective of stored grade.
   const legacyNameAliases: Record<string, { name: string; grade: number }> = {
     'harvey m': { name: 'Mrs. Harvey', grade: 0 },
+    'mrs harvey': { name: 'Mrs. Harvey', grade: 0 },
+    'mrs. harvey': { name: 'Mrs. Harvey', grade: 0 },
     'evan bassett': { name: 'Dr. Bassett', grade: 0 },
     'bassett evan': { name: 'Dr. Bassett', grade: 0 },
+    'dr bassett': { name: 'Dr. Bassett', grade: 0 },
+    'dr. bassett': { name: 'Dr. Bassett', grade: 0 },
+    'evan basset': { name: 'Dr. Bassett', grade: 0 },
+    'dr basset': { name: 'Dr. Bassett', grade: 0 },
+    'dr. basset': { name: 'Dr. Bassett', grade: 0 },
     'katie cruce': { name: 'Mrs. Cruce', grade: 0 },
+    'katie c': { name: 'Mrs. Cruce', grade: 0 },
+    'mrs cruce': { name: 'Mrs. Cruce', grade: 0 },
+    'mrs. cruce': { name: 'Mrs. Cruce', grade: 0 },
     'amanda adams': { name: 'Mrs. Adams', grade: 0 },
+    'mrs adams': { name: 'Mrs. Adams', grade: 0 },
+    'mrs. adams': { name: 'Mrs. Adams', grade: 0 },
   }
   try {
     let query = supabase
