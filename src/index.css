@@ -163,25 +163,93 @@
 }
 
 .navbar-mvp {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fffbeb 100%) !important;
+  background:
+    radial-gradient(circle at top, rgba(255, 234, 166, 0.95), transparent 52%),
+    linear-gradient(135deg, #fffbeb 0%, #fde68a 45%, #fff7d6 100%) !important;
   border-bottom: 2px solid #f59e0b !important;
+  box-shadow: 0 10px 32px rgba(245, 158, 11, 0.15);
 }
 
 .mvp-title {
-  color: #d97706;
-  text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+  background: linear-gradient(90deg, #b45309 0%, #f59e0b 30%, #fde68a 52%, #f59e0b 72%, #b45309 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: goldShimmer 3.8s linear infinite;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
 }
 
 .dark .mvp-title {
-  color: #fbbf24;
-  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+  text-shadow: 0 0 14px rgba(251, 191, 36, 0.35);
 }
 
 .mvp-crown {
-  font-size: 1rem;
+  font-size: 1.05rem;
   line-height: 1;
   display: inline-block;
   animation: crownPulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.45));
+}
+
+.today-leader-row {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.12), rgba(255, 255, 255, 0));
+}
+
+.today-leader-rank {
+  color: #b45309;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.today-leader-name,
+.all-time-mvp-name {
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: goldShimmer 4.2s linear infinite;
+}
+
+.today-leader-name {
+  background-image: linear-gradient(90deg, #b45309 0%, #f59e0b 28%, #fef08a 50%, #f59e0b 72%, #92400e 100%);
+}
+
+.all-time-mvp-row {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(250, 204, 21, 0.04));
+}
+
+.all-time-mvp-name {
+  background-image: linear-gradient(90deg, #d97706 0%, #facc15 26%, #fff8c5 50%, #facc15 74%, #b45309 100%);
+  text-shadow: 0 0 14px rgba(250, 204, 21, 0.35);
+}
+
+.all-time-mvp-crown {
+  display: inline-block;
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.55));
+}
+
+.all-time-mvp-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #92400e, #f59e0b, #facc15);
+  color: #fff7d6;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.4rem;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+@keyframes goldShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 220% 50%;
+  }
 }
 
 @keyframes crownPulse {
