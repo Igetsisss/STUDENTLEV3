@@ -721,6 +721,7 @@ export const fetchLeaderboard = async (
     'amanda adams': { name: 'Mrs. Adams', grade: 0 },
     'mrs adams': { name: 'Mrs. Adams', grade: 0 },
     'mrs. adams': { name: 'Mrs. Adams', grade: 0 },
+    'mr wimberly': { name: 'Sam Wimberly', grade: 10 },
   }
   const processRows = (rows: any[]): LeaderboardEntry[] => {
     const results: LeaderboardEntry[] = []
