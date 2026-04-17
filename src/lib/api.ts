@@ -552,13 +552,14 @@ const buildPlayerStateKey = (playerName: string, grade: string): string =>
   `${normalizeNameKey(playerName)}|${normalizeLegacyGrade(grade)}`
 
 // Strips characters that have no place in a school player name.
-// Allows letters (including accented), spaces, apostrophes, and hyphens.
-const SAFE_NAME_RE = /^[\p{L}\p{M}'\- ]{1,60}$/u
+// Allows letters (including accented), spaces, apostrophes, hyphens, and periods
+// (periods are needed for teacher prefixes like "Mr.", "Mrs.", "Dr.", "Prof.").
+const SAFE_NAME_RE = /^[\p{L}\p{M}'\-. ]{1,60}$/u
 const sanitizePlayerName = (name: string): string => {
   const trimmed = String(name || '').trim()
   if (!SAFE_NAME_RE.test(trimmed)) {
-    // Remove any character that is not a letter, accent, space, apostrophe, or hyphen.
-    return trimmed.replace(/[^\p{L}\p{M}'\- ]/gu, '').slice(0, 60).trim()
+    // Remove any character that is not a letter, accent, space, apostrophe, hyphen, or period.
+    return trimmed.replace(/[^\p{L}\p{M}'\-. ]/gu, '').slice(0, 60).trim()
   }
   return trimmed
 }
