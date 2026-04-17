@@ -306,11 +306,14 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
   }
 
   // New daily entries are stored as grade{N} (e.g. grade11 for juniors).
-  // The grade cross-check above already prevents cross-grade contamination,
-  // so use the same permissive rule as 'daily' — don't require a word match
-  // because getExpectedDailyWord uses the viewer's word list, not the entry's.
+  // type === `grade${entry.grade}` already guarantees this is the player's own
+  // grade daily — a cross-grade play (e.g. junior doing grade10 round) stores
+  // game_type='grade10' with grade=11, so the types won't match.
+  // Do NOT use getExpectedDailyWord here: getSolution() uses WORDS which is the
+  // *viewer's* grade word list, not the entry's grade, so the comparison would
+  // wrongly filter out entries from grades other than the current viewer's grade.
   if (type === `grade${String(entry.grade)}`) {
-    return !expectedWord || !rowWord || rowWord === expectedWord
+    return true
   }
 
   // Older Google Sheets rows sometimes stored own-grade daily plays as plain "grade".
