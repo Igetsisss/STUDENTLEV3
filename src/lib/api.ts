@@ -714,7 +714,79 @@ export const fetchLeaderboard = async (
     'mrs adams': { name: 'Mrs. Adams', grade: 0 },
     'mrs. adams': { name: 'Mrs. Adams', grade: 0 },
   }
+  const processRows = (rows: any[]): LeaderboardEntry[] => {
+    const results: LeaderboardEntry[] = []
+    for (const row of rows) {
+      const rawName = row.player_name ? String(row.player_name) : ''
+      const rowType = String(row.game_type || 'daily').toLowerCase().trim()
+      const rowGrade = row.grade != null ? normalizeLegacyGrade(String(row.grade)) : ''
+      const alias = legacyNameAliases[normalizeNameKey(rawName)]
+      const finalName = alias ? alias.name : rawName
+      const finalGrade = alias ? String(alias.grade) : rowGrade
+
+      if (rowType === 'signup') continue
+      if (selectedGrade && finalGrade !== selectedGrade) continue
+      if (!finalName || !String(finalName).trim()) continue
+
+      results.push({
+        name: finalName,
+        grade: Number(finalGrade) || 0,
+        date: row.game_date ? String(row.game_date) : '',
+        word: row.word ? String(row.word) : '',
+        won: Boolean(row.won),
+        guessCount: Number(row.guess_count) || 0,
+        gameType: rowType,
+        totalDurationSec: Number(row.total_duration_sec) || 0,
+        gameStartTime: row.game_start_time ? String(row.game_start_time) : '',
+      })
+    }
+    return results
+  }
+
   try {
+    // For all-time queries, paginate in batches of 1000 to bypass Supabase's
+    // server-side max_rows cap (default 1000). Without pagination, players added
+    // after the first 1000 historical migration rows are silently cut off.
+    if (allTime) {
+      const PAGE_SIZE = 1000
+      const allResults: LeaderboardEntry[] = []
+      let from = 0
+
+      while (true) {
+        let pageQuery = supabase
+          .from(SUPABASE_TABLES.gameSubmissions)
+          .select(
+            'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
+          )
+          .range(from, from + PAGE_SIZE - 1)
+
+        if (selectedGrade) {
+          pageQuery = pageQuery.eq('grade', Number(selectedGrade) || 0)
+        }
+
+        const { data: pageData, error: pageError } = await pageQuery
+
+        if (pageError) {
+          console.error('Failed to fetch leaderboard from Supabase:', pageError)
+          break
+        }
+
+        allResults.push(...processRows(pageData ?? []))
+
+        if (!pageData || pageData.length < PAGE_SIZE) break
+        from += PAGE_SIZE
+      }
+
+      allResults.sort((a, b) => {
+        if (a.won !== b.won) return a.won ? -1 : 1
+        if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
+        return a.totalDurationSec - b.totalDurationSec
+      })
+
+      return allResults
+    }
+
+    // Today-only query — always well under the row limit.
     let query = supabase
       .from(SUPABASE_TABLES.gameSubmissions)
       .select(
@@ -729,36 +801,12 @@ export const fetchLeaderboard = async (
       query = query.eq('grade', Number(selectedGrade) || 0)
     }
 
-    const { data, error } = await query.limit(50000)
+    const { data, error } = await query
+
     if (error) {
       console.error('Failed to fetch leaderboard from Supabase:', error)
     } else {
-      const results: LeaderboardEntry[] = []
-
-      for (const row of data ?? []) {
-        const rawName = row.player_name ? String(row.player_name) : ''
-        const rowType = String(row.game_type || 'daily').toLowerCase().trim()
-        const rowGrade = row.grade != null ? normalizeLegacyGrade(String(row.grade)) : ''
-        const alias = legacyNameAliases[normalizeNameKey(rawName)]
-        const finalName = alias ? alias.name : rawName
-        const finalGrade = alias ? String(alias.grade) : rowGrade
-
-        if (rowType === 'signup') continue
-        if (selectedGrade && finalGrade !== selectedGrade) continue
-        if (!finalName || !String(finalName).trim()) continue
-
-        results.push({
-          name: finalName,
-          grade: Number(finalGrade) || 0,
-          date: row.game_date ? String(row.game_date) : '',
-          word: row.word ? String(row.word) : '',
-          won: Boolean(row.won),
-          guessCount: Number(row.guess_count) || 0,
-          gameType: rowType,
-          totalDurationSec: Number(row.total_duration_sec) || 0,
-          gameStartTime: row.game_start_time ? String(row.game_start_time) : '',
-        })
-      }
+      const results = processRows(data ?? [])
 
       results.sort((a, b) => {
         if (a.won !== b.won) return a.won ? -1 : 1
