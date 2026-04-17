@@ -317,8 +317,9 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
   }
 
   // Older Google Sheets rows sometimes stored own-grade daily plays as plain "grade".
+  // Same viewer word-list issue applies here — don't use getExpectedDailyWord.
   if (type === 'grade') {
-    return !!expectedWord && !!rowWord && rowWord === expectedWord
+    return true
   }
 
   return false
@@ -764,6 +765,7 @@ export const fetchLeaderboard = async (
           .select(
             'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
           )
+          .order('id', { ascending: true })
           .range(from, from + PAGE_SIZE - 1)
 
         if (selectedGrade) {
