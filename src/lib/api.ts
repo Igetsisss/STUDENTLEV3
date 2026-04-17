@@ -226,6 +226,7 @@ export type MvpEntry = {
   name: string
   grade: number
   totalGames: number
+  activeDays: number
   wins: number
   winRate: number
   avgGuesses: number
@@ -274,49 +275,55 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
 }
 
 export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
-  // Include ALL game types (daily, bonus, teachers, grade rounds)
   const valid = entries.filter((e) => !String(e.date).startsWith('1970'))
+  if (valid.length === 0) return null
 
-  // Group by player name (case-insensitive)
   const map = new Map<string, LeaderboardEntry[]>()
   for (const e of valid) {
     const key = e.name.toLowerCase().trim()
     map.set(key, [...(map.get(key) || []), e])
   }
 
-  // Max total games any player has played (used to normalize volume score)
   let maxGames = 1
+  let maxWins = 1
+  let maxActiveDays = 1
   map.forEach((games) => {
     if (games.length > maxGames) maxGames = games.length
+    const wins = games.filter((g) => g.won).length
+    if (wins > maxWins) maxWins = wins
+    const activeDays = new Set(games.map((g) => String(g.date || '').slice(0, 10))).size
+    if (activeDays > maxActiveDays) maxActiveDays = activeDays
   })
 
   const stats: MvpEntry[] = []
   map.forEach((games) => {
-    // Require at least 3 total games to qualify (not just daily)
     if (games.length < 3) return
+
     const wins = games.filter((g) => g.won)
     const winRate = wins.length / games.length
     const avgGuesses =
       wins.length > 0
         ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
         : 7
+    const activeDays = new Set(games.map((g) => String(g.date || '').slice(0, 10))).size
 
-    // Scoring:
-    // 40 pts — Win rate across all game types
-    // 25 pts — Guess efficiency (fewer guesses per win = higher score)
-    // 35 pts — Volume: total games played relative to the most-active player
-    //           Playing bonus, teachers, and grade rounds all count.
-    //           Someone who plays every available option will score highest here.
-    const volumeScore = (games.length / maxGames) * 35
+    const volumeScore = (games.length / maxGames) * 40
+    const winVolumeScore = (wins.length / maxWins) * 25
+    const winRateScore = winRate * 20
+    const efficiencyScore = (Math.max(0, 6 - avgGuesses) / 6) * 10
+    const activeDaysScore = (activeDays / maxActiveDays) * 5
     const score =
-      winRate * 40 +
-      (Math.max(0, 6 - avgGuesses) / 6) * 25 +
-      volumeScore
+      volumeScore +
+      winVolumeScore +
+      winRateScore +
+      efficiencyScore +
+      activeDaysScore
 
     stats.push({
       name: games[0].name,
       grade: games[0].grade,
       totalGames: games.length,
+      activeDays,
       wins: wins.length,
       winRate,
       avgGuesses: wins.length > 0 ? avgGuesses : 0,
@@ -325,7 +332,13 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
   })
 
   if (stats.length === 0) return null
-  return stats.sort((a, b) => b.score - a.score)[0]
+  return stats.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    if (b.totalGames !== a.totalGames) return b.totalGames - a.totalGames
+    if (b.wins !== a.wins) return b.wins - a.wins
+    if (b.activeDays !== a.activeDays) return b.activeDays - a.activeDays
+    return a.avgGuesses - b.avgGuesses
+  })[0]
 }
 
 // Per-player current win streak (consecutive daily wins ending today or yesterday)

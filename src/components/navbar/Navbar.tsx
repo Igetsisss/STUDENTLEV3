@@ -51,7 +51,7 @@ export const Navbar = ({
           >
             {GAME_TITLE}
           </p>
-          {isMvp && <span className="mvp-crown">👑</span>}
+          {isMvp && <span className="mvp-crown" title="All-Time MVP">👑</span>}
         </div>
         <div className="right-icons">
           <StarIcon

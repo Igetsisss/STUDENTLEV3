@@ -38,6 +38,16 @@ const formatTime = (sec: number): string => {
 const toTitleCase = (name: string): string =>
   name.replace(/\b\w/g, (c) => c.toUpperCase())
 
+const samePlayer = (left?: string | null, right?: string | null) =>
+  String(left || '').toLowerCase().trim() === String(right || '').toLowerCase().trim()
+
+const getTodayLeaderLabel = (filterType: 'daily' | 'bonus' | 'teachers' | 'graderound') => {
+  if (filterType === 'bonus') return "Today's Bonus Leader"
+  if (filterType === 'teachers') return "Today's Teacher Leader"
+  if (filterType === 'graderound') return "Today's Grade Round Leader"
+  return "Today's Leader"
+}
+
 const MvpExplainerModal = ({
   isOpen,
   onClose,
@@ -87,7 +97,7 @@ const MvpExplainerModal = ({
           <strong style={{ color: '#f5c518' }}> one MVP</strong> at a time. To qualify,
           you need at least <strong style={{ color: '#f5c518' }}>3 games</strong> played.
           MVP uses total games across all modes (daily, bonus, teachers, and grade rounds).
-          The All-Time table above is separate and counts <strong style={{ color: '#f5c518' }}>days</strong>.
+          The Today tab has its own leader. The all-time MVP is the school-wide crown.
         </p>
         <div className="mb-4 rounded-xl px-4 py-3" style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid #7b5800' }}>
           <p className="mb-2 text-xs font-bold uppercase" style={{ color: '#f5c518', letterSpacing: '0.1em' }}>
@@ -95,13 +105,19 @@ const MvpExplainerModal = ({
           </p>
           <ul className="space-y-1 text-sm" style={{ color: '#e8d5a0' }}>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>35 pts</span> — Volume (total games played across all modes)
+              <span className="font-bold" style={{ color: '#f5c518' }}>40 pts</span> — Total games across all modes
             </li>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>40 pts</span> — Win rate (% of all games solved)
+              <span className="font-bold" style={{ color: '#f5c518' }}>25 pts</span> — Total wins
             </li>
             <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>25 pts</span> — Guess efficiency (fewer guesses = higher score)
+              <span className="font-bold" style={{ color: '#f5c518' }}>20 pts</span> — Win rate
+            </li>
+            <li>
+              <span className="font-bold" style={{ color: '#f5c518' }}>10 pts</span> — Guess efficiency
+            </li>
+            <li>
+              <span className="font-bold" style={{ color: '#f5c518' }}>5 pts</span> — Active days
             </li>
           </ul>
         </div>
@@ -209,6 +225,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
     })
     return out
   })()
+  const todayLeader = filtered[0] ?? null
   const myName = (() => {
     const fn = localStorage.getItem('playerName') || ''
     const li = localStorage.getItem('playerLastInitial') || ''
@@ -217,6 +234,15 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   })()
 
   const myRank = filtered.findIndex((e) => e.name.toLowerCase() === myName.toLowerCase()) + 1
+  const rankedAllTimeEntries = (() => {
+    if (!mvp) return allTimeEntries
+    return [...allTimeEntries].sort((a, b) => {
+      const aIsMvp = samePlayer(a.name, mvp.name)
+      const bIsMvp = samePlayer(b.name, mvp.name)
+      if (aIsMvp === bIsMvp) return 0
+      return aIsMvp ? -1 : 1
+    })
+  })()
 
   return (
     <BaseModal title="Leaderboard" isOpen={isOpen} handleClose={handleClose}>
@@ -315,12 +341,12 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
           <span className="text-sm text-gray-500 dark:text-gray-400">Loading…</span>
         </div>
       ) : viewMode === 'alltime' ? (
-        allTimeEntries.length === 0 ? (
+        rankedAllTimeEntries.length === 0 ? (
           <p className="py-8 text-center text-gray-500 dark:text-gray-400">No data yet</p>
         ) : (
           <>
             <p className="mb-1 text-right text-xs text-gray-400 dark:text-gray-500">
-              {allTimeEntries.length} player{allTimeEntries.length !== 1 ? 's' : ''}
+              {rankedAllTimeEntries.length} player{rankedAllTimeEntries.length !== 1 ? 's' : ''}
             </p>
             <div className="max-h-72 overflow-y-auto">
             <table className="w-full text-sm text-gray-800 dark:text-gray-200">
@@ -335,9 +361,8 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                 </tr>
               </thead>
               <tbody>
-                {allTimeEntries.map((entry, i) => {
-                  const isMvpRow =
-                    mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
+                {rankedAllTimeEntries.map((entry, i) => {
+                  const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                   const isMe = entry.name.toLowerCase() === myName.toLowerCase()
                   return (
                     <tr
@@ -346,17 +371,16 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                         isMe
                           ? 'font-bold text-blue-600 dark:text-blue-400'
                           : isMvpRow
-                          ? 'font-bold'
+                          ? 'all-time-mvp-row font-bold'
                           : 'text-gray-800 dark:text-gray-200'
                       }`}
                     >
-                      <td className="py-1 pr-1">{i + 1}</td>
+                      <td className="py-1 pr-1">
+                        {isMvpRow ? <span className="all-time-mvp-crown">👑</span> : i + 1}
+                      </td>
                       <td className="truncate py-1 pr-1">
-                        {isMvpRow && <span className="mr-0.5">👑</span>}
                         <span
-                          style={
-                            isMvpRow && !isMe ? { color: '#d4a017' } : undefined
-                          }
+                          className={isMvpRow && !isMe ? 'all-time-mvp-name' : undefined}
                         >
                           {toTitleCase(entry.name)}
                         </span>
@@ -408,51 +432,42 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
               </thead>
               <tbody>
                 {filtered.map((entry, i) => {
-                  const isMvpRow =
-                    mvp && entry.name.toLowerCase() === mvp.name.toLowerCase()
+                  const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
+                  const isTodayLeader = i === 0
                   const isMe = entry.name.toLowerCase() === myName.toLowerCase()
-                  const podium =
-                    i === 0
-                      ? { bg: 'rgba(255,215,0,0.12)', medal: '🥇', color: '#b8860b' }
-                      : i === 1
-                      ? { bg: 'rgba(192,192,192,0.12)', medal: '🥈', color: '#888' }
-                      : i === 2
-                      ? { bg: 'rgba(205,127,50,0.12)', medal: '🥉', color: '#a06030' }
-                      : null
                   return (
                     <tr
                       key={i}
                       className={`border-b border-gray-100 dark:border-gray-700 ${
                         isMe
                           ? 'font-bold text-blue-600 dark:text-blue-400'
+                          : isTodayLeader
+                          ? 'today-leader-row font-bold'
                           : isMvpRow
                           ? 'font-bold'
                           : 'text-gray-800 dark:text-gray-200'
                       }`}
-                      style={podium && !isMe ? { background: podium.bg } : undefined}
                     >
                       <td className="py-1.5 pr-1 text-center">
-                        {podium ? (
-                          <span className="text-base leading-none">{podium.medal}</span>
-                        ) : (
-                          <span className="text-xs text-gray-400">{i + 1}</span>
-                        )}
+                        <span className={isTodayLeader ? 'today-leader-rank' : 'text-xs text-gray-400'}>
+                          {i + 1}
+                        </span>
                       </td>
                       <td className="max-w-[110px] truncate py-1.5 pr-1">
-                        {isMvpRow && <span className="mr-0.5">👑</span>}
                         <span
-                          style={
+                          className={
                             isMe
                               ? undefined
-                              : podium
-                              ? { color: podium.color, fontWeight: 700 }
+                              : isTodayLeader
+                              ? 'today-leader-name'
                               : isMvpRow
-                              ? { color: '#d4a017' }
+                              ? 'all-time-mvp-name'
                               : undefined
                           }
                         >
                           {toTitleCase(entry.name)}
                         </span>
+                        {isMvpRow && <span className="all-time-mvp-pill ml-1">MVP</span>}
                         {(streaks.get(entry.name.toLowerCase().trim()) ?? 0) >= 2 && (
                           <span className="ml-1 text-xs text-orange-500">
                             🔥{streaks.get(entry.name.toLowerCase().trim())}
@@ -484,12 +499,41 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
         </>
       )}
 
-      {mvp && (
+      {viewMode === 'today' && todayLeader && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-900/10">
+          <p className="text-center text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">
+            {getTodayLeaderLabel(filterType)}
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-extrabold text-amber-700 dark:text-amber-300">
+                <span className="today-leader-name">{toTitleCase(todayLeader.name)}</span>
+              </p>
+              <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
+                {gradeLabels[String(todayLeader.grade)] || `Grade ${todayLeader.grade}`}
+                {mvp && samePlayer(todayLeader.name, mvp.name) ? ' • All-Time MVP' : ''}
+              </p>
+            </div>
+            <div className="flex gap-4 text-center text-xs text-amber-800 dark:text-amber-200">
+              <div>
+                <p className="font-bold">{todayLeader.won ? todayLeader.guessCount : 'X'}</p>
+                <p>Guesses</p>
+              </div>
+              <div>
+                <p className="font-bold">{formatTime(todayLeader.totalDurationSec)}</p>
+                <p>Time</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewMode === 'alltime' && mvp && (
         <div
           className="mt-4 rounded-xl px-4 py-3 relative overflow-hidden"
           style={{
             background: 'linear-gradient(145deg, #1a1200 0%, #2e1f00 50%, #1a1200 100%)',
-            boxShadow: '0 0 0 2px #b8860b, 0 0 16px 2px #f5c51866',
+            boxShadow: '0 0 0 2px #b8860b, 0 0 22px 3px #f5c51888',
           }}
         >
           {/* shimmer top */}
@@ -509,7 +553,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-extrabold text-lg" style={{ color: '#f5c518', textShadow: '0 0 8px #f5c51888' }}>
+              <p className="font-extrabold text-lg all-time-mvp-name" style={{ textShadow: '0 0 10px #f5c51888' }}>
                 {toTitleCase(mvp.name)}
               </p>
               <p className="text-xs" style={{ color: '#a07820' }}>
@@ -533,12 +577,16 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                 <p className="font-bold" style={{ color: '#f5c518' }}>{mvp.totalGames}</p>
                 <p style={{ color: '#c9a227' }}>Games</p>
               </div>
+              <div>
+                <p className="font-bold" style={{ color: '#f5c518' }}>{mvp.wins}</p>
+                <p style={{ color: '#c9a227' }}>Wins</p>
+              </div>
             </div>
           </div>
 
           <p className="mt-2 text-center text-xs italic" style={{ color: '#7b5800' }}>
             One school-wide MVP is calculated from all-time games across all modes.
-            The table above tracks all-time daily days.{' '}
+            The crown row stays pinned to the top so the MVP is always unmistakable.{' '}
             <button
               onClick={() => setIsMvpExplainerOpen(true)}
               className="underline decoration-dotted underline-offset-2"

@@ -83,6 +83,7 @@ import {
   GRADE_LABELS,
 } from './utils/gradeRound'
 import {
+  computeMvp,
   submitGameData,
   fetchLeaderboard,
   fetchPlayerStateFromCloud,
@@ -326,6 +327,7 @@ function App() {
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false)
+  const [isAllTimeMvp, setIsAllTimeMvp] = useState(false)
   const [isPersonalBest, setIsPersonalBest] = useState(false)
   const [currentRowClass, setCurrentRowClass] = useState('')
   const [isGameWon, setIsGameWon] = useState(initialRoundState.outcome === 'won')
@@ -522,8 +524,43 @@ function App() {
 
   const gradeStatKey = 'gradeNumber'
   const grade = localStorage.getItem(gradeStatKey)
+  const currentPlayerDisplayName = (() => {
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
+    return prefix ? `${prefix} ${firstName}` : lastInitial ? `${firstName} ${lastInitial}` : firstName
+  })()
   // grade is stored as JSON string e.g. '"0"' for teachers, '"9"' for Freshman, etc.
   const isTeacherPlayer = grade === '"0"'
+
+  useEffect(() => {
+    let isCancelled = false
+
+    if (!currentPlayerDisplayName || !grade) {
+      setIsAllTimeMvp(false)
+      return () => {
+        isCancelled = true
+      }
+    }
+
+    fetchLeaderboard(undefined, undefined, true)
+      .then((data) => {
+        if (isCancelled) return
+        const mvp = computeMvp(data)
+        const isCurrentPlayerMvp =
+          !!mvp && mvp.name.toLowerCase().trim() === currentPlayerDisplayName.toLowerCase().trim()
+        setIsAllTimeMvp(isCurrentPlayerMvp)
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setIsAllTimeMvp(false)
+        }
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [currentPlayerDisplayName, grade, isGameWon, isGameLost, bothComplete])
 
   useEffect(() => {
     const hasValidGrade =
@@ -1247,6 +1284,7 @@ function App() {
           setIsSettingsModalOpen={setIsSettingsModalOpen}
           setIsLeaderboardModalOpen={setIsLeaderboardModalOpen}
           onTitleTap={handleTitleTap}
+          isMvp={isAllTimeMvp}
         />
 
         {!isLatestGame && (
