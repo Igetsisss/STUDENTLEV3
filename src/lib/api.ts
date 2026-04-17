@@ -655,7 +655,7 @@ export const fetchLeaderboard = async (
       query = query.eq('grade', Number(selectedGrade) || 0)
     }
 
-    const { data, error } = await query
+    const { data, error } = await query.limit(50000)
     if (error) {
       console.error('Failed to fetch leaderboard from Supabase:', error)
     } else {
