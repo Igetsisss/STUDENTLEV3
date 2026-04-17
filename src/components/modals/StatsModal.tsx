@@ -127,6 +127,12 @@ export const StatsModal = ({
     setDisplayStats(gameStats)
   }, [gameStats])
 
+  // Clear the lock message whenever the modal closes so it doesn't bleed into
+  // the next open (e.g. user clicks a locked button, closes, reopens → no stale msg)
+  useEffect(() => {
+    if (!isOpen) setLockMessage('')
+  }, [isOpen])
+
   useEffect(() => {
     if (!isOpen) return
     const myName = getMyDisplayName()

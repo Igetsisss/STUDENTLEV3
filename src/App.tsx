@@ -27,6 +27,7 @@ import {
   WELCOME_GRADE_MODAL_MS,
 } from './constants/settings'
 import {
+  CORRECT_TEACHER_MESSAGE,
   CORRECT_WORD_MESSAGE,
   DISCOURAGE_INAPP_BROWSER_TEXT,
   GAME_COPIED_MESSAGE,
@@ -894,13 +895,21 @@ function App() {
     }
   }, [isGameWon, isGameLost, showSuccessAlert]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isAnyModalOpen =
+    isGradeModalOpen ||
+    isStatsModalOpen ||
+    isInfoModalOpen ||
+    isLeaderboardModalOpen ||
+    isSettingsModalOpen ||
+    isDatePickerModalOpen
+
   const onChar = (value: string) => {
     const canAdd =
       unicodeLength(`${currentGuess}${value}`) <= activeSolution.length &&
       guesses.length < currentMaxChallenges &&
       !isGameWon &&
       !isClearing &&
-      !isGradeModalOpen
+      !isAnyModalOpen
 
     if (canAdd) {
       const newGuess = `${currentGuess}${value}`
@@ -910,7 +919,7 @@ function App() {
   }
 
   const onDelete = () => {
-    if (isClearing || isGradeModalOpen) {
+    if (isClearing || isAnyModalOpen) {
       return
     }
     if (currentGuess.length === 0) {
@@ -1009,7 +1018,7 @@ function App() {
   }
 
   const onEnter = () => {
-    if (isGameWon || isGameLost || isClearing || isGradeModalOpen) {
+    if (isGameWon || isGameLost || isClearing || isAnyModalOpen) {
       return
     }
 
@@ -1125,10 +1134,15 @@ function App() {
         submitGame(false, newGuesses.length)
         setIsGameLost(true)
         if (!isBonusRound && !isTeachersRound && !isGradeRound) {
-          showErrorAlert(CORRECT_WORD_MESSAGE(activeSolution), {
-            persist: true,
-            delayMs: REVEAL_TIME_MS * activeSolution.length + 1,
-          })
+          showErrorAlert(
+            isTeacherPlayer
+              ? CORRECT_TEACHER_MESSAGE(activeSolution)
+              : CORRECT_WORD_MESSAGE(activeSolution),
+            {
+              persist: true,
+              delayMs: REVEAL_TIME_MS * activeSolution.length + 1,
+            }
+          )
         }
       }
     }
@@ -1150,7 +1164,12 @@ function App() {
     toastMessage: string
   }) => {
     setIsStatsModalOpen(false)
-    setDailyGuesses([...guesses])
+    // Only snapshot guesses as daily when actually transitioning FROM the daily round.
+    // If we're already in bonus/teachers/grade and starting another extra round,
+    // guesses belongs to that extra round — don't overwrite the saved daily board.
+    if (!isBonusRound && !isTeachersRound && !isGradeRound) {
+      setDailyGuesses([...guesses])
+    }
     setIsClearing(true)
     const totalClearTime = MAX_CHALLENGES * 110 + 700 + 150
 
@@ -1309,8 +1328,8 @@ function App() {
           <StatsModal
             isOpen={isStatsModalOpen}
             handleClose={() => setIsStatsModalOpen(false)}
-            solution={activeSolution}
-            guesses={guesses}
+            solution={effectiveDailySolution}
+            guesses={dailyGuesses.length > 0 ? dailyGuesses : guesses}
             gameStats={stats}
             isLatestGame={isLatestGame}
             isGameLost={isGameLost}
@@ -1323,7 +1342,11 @@ function App() {
             }
             isDarkMode={isDarkMode}
             isHighContrastMode={isHighContrastMode}
-            numberOfGuessesMade={guesses.length}
+            numberOfGuessesMade={
+              isBonusRound || isTeachersRound || isGradeRound
+                ? dailyGuesses.length
+                : guesses.length
+            }
             handleBonusRound={handleBonusRound}
             isBonusRoundAvailable={
               !isBonusRound &&

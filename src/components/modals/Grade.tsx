@@ -128,6 +128,18 @@ export const GradeModal = ({
 }: Props) => {
   const hasExistingGrade = !!localStorage.getItem(gradeStatKey)
 
+  // Registration is only complete when grade + name + the required identifier
+  // (last initial for students, title prefix for teachers) are all stored.
+  // Until then the modal is locked — there is no way to bypass registration.
+  const hasCompletedRegistration = (() => {
+    const grd = (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')
+    if (!grd) return false
+    if (!localStorage.getItem('playerName')) return false
+    return grd === '0'
+      ? !!localStorage.getItem('playerPrefix')
+      : !!localStorage.getItem('playerLastInitial')
+  })()
+
   // If they already have a grade + name, go straight to nothing (shouldn't open)
   // If they have grade but no name, skip the grade step
   const initialStep: Step = hasExistingGrade ? 'name' : 'grade'
@@ -539,7 +551,7 @@ export const GradeModal = ({
       }
       isOpen={isOpen || forceOpen}
       handleClose={handleClose}
-      isDismissible={!isSaving && !forceOpen}
+      isDismissible={hasCompletedRegistration && !isSaving && !forceOpen}
     >
       <br />
 
@@ -585,6 +597,14 @@ export const GradeModal = ({
 
       {!isSaving && step === 'name' && (
         <>
+          {!hasExistingGrade && (
+            <button
+              onClick={() => setStep('grade')}
+              className="mb-3 flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            >
+              ← Back
+            </button>
+          )}
           <div className="mb-4">
             <input
               type="text"
@@ -594,6 +614,7 @@ export const GradeModal = ({
                 setPlayerName(e.target.value)
                 if (nameError) setNameError('')
               }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleNameNext() }}
               maxLength={20}
               autoFocus
               className={`w-full rounded-md border px-3 py-2 text-center text-lg focus:outline-none focus:ring-1 dark:bg-slate-800 dark:text-white ${
@@ -623,6 +644,7 @@ export const GradeModal = ({
               onChange={(e) =>
                 setLastInitial(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 1))
               }
+              onKeyDown={(e) => { if (e.key === 'Enter') handleInitialDone() }}
               maxLength={1}
               autoFocus
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-center text-2xl font-bold uppercase tracking-widest focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
