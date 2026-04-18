@@ -199,7 +199,7 @@ export const StatsModal = ({
       return
     }
 
-    fetchLeaderboard()
+    fetchLeaderboard(undefined, undefined, true)
       .then((entries) => {
         const todayDaily = entries.filter(
           (e) => String(e.date).startsWith(today) && isTrueDailyEntry(e)
