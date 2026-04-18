@@ -1,4 +1,4 @@
-import { MailIcon, ShareIcon, StarIcon } from '@heroicons/react/outline'
+import { MailIcon, StarIcon } from '@heroicons/react/outline'
 import { useEffect, useState } from 'react'
 import Countdown from 'react-countdown'
 
@@ -14,7 +14,6 @@ import { tomorrow } from '../../lib/words'
 import {
   GUESS_DISTRIBUTION_TEXT,
   NEW_WORD_TEXT,
-  SHARE_TEXT,
   STATISTICS_TITLE,
 } from '../../constants/strings'
 import { Histogram } from '../stats/Histogram'

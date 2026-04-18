@@ -1535,6 +1535,12 @@ function App() {
             isFirstToday={isFirstToday}
             isPersonalBest={isPersonalBest}
             onPersonalBestSeen={() => setIsPersonalBest(false)}
+            teachersSolution={teachersSolution}
+            teachersGuesses={teachersGuesses}
+            gradeRoundGuessesMap={gradeRoundGuessesMap}
+            gradeRoundSolutions={Object.fromEntries(
+              ['9', '10', '11', '12'].map((g) => [g, getGradeRoundSolution(g)])
+            )}
           />
           <LeaderboardModal
             isOpen={isLeaderboardModalOpen}
