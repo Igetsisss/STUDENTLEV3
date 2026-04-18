@@ -18,6 +18,7 @@ import {
   isTrueDailyEntry,
   submitHistoricalStats,
   submitSignupEvent,
+  submitNameStepRegistration,
 } from '../../lib/api'
 import { getGameDate, getSolution } from '../../lib/words'
 import {
@@ -180,8 +181,13 @@ export const GradeModal = ({
     setNameError('')
     // Check grade directly — handle both '"0"' (JSON.stringify) and '0' (plain) storage
     const rawGrade = localStorage.getItem(gradeStatKey) || ''
+    const gradeRawValEarly = (rawGrade || '').replace(/"/g, '')
     const isTeacher =
       rawGrade === '"0"' || rawGrade === '0' || selectedGrade === '0'
+    // Early capture: write to signup_events immediately so registrations are
+    // recorded even if the player closes the tab before picking a last initial
+    // or title prefix. Does NOT touch game_submissions — no leaderboard impact.
+    submitNameStepRegistration(capitalized, gradeRawValEarly || selectedGrade)
     setStep(isTeacher ? 'prefix' : 'initial')
   }
 

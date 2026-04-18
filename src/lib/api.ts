@@ -193,6 +193,38 @@ export const submitSignupEvent = async (
   }
 }
 
+// Lightweight early-capture: writes ONLY to signup_events the moment a player
+// confirms their first name (before they pick a last initial or title prefix).
+// This ensures every registration attempt is recorded even if the player closes
+// the tab before completing the final step.
+// Does NOT touch game_submissions — leaderboard is completely unaffected.
+export const submitNameStepRegistration = async (
+  firstName: string,
+  grade: string
+): Promise<void> => {
+  if (!firstName || !grade) return
+  if (!hasSupabaseConfig || !supabase) return
+
+  const safeName = sanitizePlayerName(firstName)
+  const normalizedGrade = normalizeLegacyGrade(grade)
+
+  try {
+    await supabase.from(SUPABASE_TABLES.signupEvents).insert({
+      player_key: `${normalizeNameKey(safeName)}|${normalizedGrade}|partial`,
+      player_name: safeName,
+      player_name_key: normalizeNameKey(safeName),
+      grade: Number(normalizedGrade) || 0,
+      registered_at_client: new Date().toISOString(),
+      source: 'name_step',
+      user_agent: navigator.userAgent || '',
+      screen_width: window.innerWidth || 0,
+      screen_height: window.innerHeight || 0,
+    })
+  } catch {
+    // Never block registration on analytics write failure.
+  }
+}
+
 export type GameSubmission = {
   name: string
   grade: string
