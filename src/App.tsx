@@ -542,9 +542,11 @@ function App() {
   useEffect(() => {
     const rawGrade = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
     if (!rawGrade) return
-    const today = new Date().toISOString().split('T')[0]
+    // Use local date to match how game_date is stored in game_submissions
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     fetchTodayLeader(rawGrade, today).then((leader) => {
-      if (leader) setTodayLeader(leader)
+      setTodayLeader(leader)
     })
   }, [])
 
@@ -1374,27 +1376,25 @@ function App() {
               isRevealing={isRevealing}
             />
           )}
-          {/* Daily info strip — puzzle number + today's grade leader */}
-          {!showCompletedLayout && (
-            <div className="flex items-center justify-between px-4 pt-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
-              <span className="font-semibold text-slate-500 dark:text-slate-400">
-                #{solutionIndex + 1}
-              </span>
-              {todayLeader ? (
-                <span>
-                  <span className="text-slate-500 dark:text-slate-400">Today&apos;s leader: </span>
-                  <span className="font-bold text-slate-700 dark:text-slate-200">
-                    {todayLeader.name}
-                  </span>
-                  <span className="text-green-600 dark:text-green-400 font-semibold">
-                    {' '}({todayLeader.guessCount}/6)
-                  </span>
+          {/* Daily info strip — puzzle number + today's grade leader — always visible */}
+          <div className="flex items-center justify-between px-4 pt-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
+            <span className="font-semibold text-slate-500 dark:text-slate-400">
+              #{solutionIndex + 1}
+            </span>
+            {todayLeader ? (
+              <span>
+                <span className="text-slate-500 dark:text-slate-400">Today&apos;s leader: </span>
+                <span className="font-bold text-slate-700 dark:text-slate-200">
+                  {todayLeader.name}
                 </span>
-              ) : (
-                <span className="italic">No winner yet — be first!</span>
-              )}
-            </div>
-          )}
+                <span className="text-green-600 dark:text-green-400 font-semibold">
+                  {' '}({todayLeader.guessCount}/6)
+                </span>
+              </span>
+            ) : (
+              <span className="italic">No winner yet — be first!</span>
+            )}
+          </div>
           <InfoModal
             isOpen={isInfoModalOpen}
             handleClose={() => setIsInfoModalOpen(false)}

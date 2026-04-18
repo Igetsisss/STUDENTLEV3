@@ -927,7 +927,11 @@ export const fetchTodayLeader = async (
     .order('total_duration_sec', { ascending: true })
     .limit(1)
 
-  if (error || !data || data.length === 0) return null
+  if (error) {
+    console.error('[fetchTodayLeader] Supabase error:', error)
+    return null
+  }
+  if (!data || data.length === 0) return null
 
   const legacyAliases: Record<string, string> = {
     'harvey m': 'Mrs. Harvey',
