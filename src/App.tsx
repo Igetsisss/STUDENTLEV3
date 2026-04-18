@@ -1377,22 +1377,21 @@ function App() {
           {/* Daily info strip — puzzle number + today's grade leader */}
           {!showCompletedLayout && (
             <div className="flex items-center justify-between px-4 pt-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
-              <span className="font-semibold text-slate-600 dark:text-slate-400 tracking-wide">
-                Studentle&nbsp;#{solutionIndex + 1}
+              <span className="font-semibold text-slate-500 dark:text-slate-400">
+                #{solutionIndex + 1}
               </span>
               {todayLeader ? (
                 <span>
-                  Today&apos;s Leader:&nbsp;
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  <span className="text-slate-500 dark:text-slate-400">Today&apos;s leader: </span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200">
                     {todayLeader.name}
                   </span>
-                  &nbsp;
                   <span className="text-green-600 dark:text-green-400 font-semibold">
-                    {todayLeader.guessCount === 1 ? '1 guess' : `${todayLeader.guessCount} guesses`}
+                    {' '}({todayLeader.guessCount}/6)
                   </span>
                 </span>
               ) : (
-                <span>Be the first to solve today!</span>
+                <span className="italic">No winner yet — be first!</span>
               )}
             </div>
           )}

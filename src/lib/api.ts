@@ -913,21 +913,22 @@ export const fetchTodayLeader = async (
   if (!hasSupabaseConfig || !supabase) return null
 
   const normalizedGrade = normalizeLegacyGrade(grade)
+  // Daily game_type is 'teachers' for grade 0, 'grade{N}' for students
+  const dailyGameType = normalizedGrade === '0' ? 'teachers' : `grade${normalizedGrade}`
 
   const { data, error } = await supabase
     .from(SUPABASE_TABLES.gameSubmissions)
     .select('player_name, guess_count, total_duration_sec')
     .eq('game_date', date)
     .eq('grade', Number(normalizedGrade) || 0)
+    .eq('game_type', dailyGameType)
     .eq('won', true)
-    .not('game_type', 'in', '("bonus","teachers")')
     .order('guess_count', { ascending: true })
     .order('total_duration_sec', { ascending: true })
     .limit(1)
 
   if (error || !data || data.length === 0) return null
 
-  // Apply legacy name aliases so the display name matches the leaderboard
   const legacyAliases: Record<string, string> = {
     'harvey m': 'Mrs. Harvey',
     'mrs harvey': 'Mrs. Harvey',
