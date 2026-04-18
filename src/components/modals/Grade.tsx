@@ -1,6 +1,6 @@
 import './gradestyle.css'
 
-import Filter from 'bad-words'
+import { Filter } from 'bad-words'
 import { useEffect, useState } from 'react'
 
 import {
