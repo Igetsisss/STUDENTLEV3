@@ -1311,27 +1311,6 @@ function App() {
           </div>
         )}
 
-        {/* Daily info strip — puzzle number + today's grade leader */}
-        <div className="flex items-center justify-between px-5 py-1 text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-800">
-          <span className="font-semibold text-slate-600 dark:text-slate-400 tracking-wide">
-            Studentle&nbsp;#{solutionIndex + 1}
-          </span>
-          {todayLeader ? (
-            <span>
-              Today&apos;s Leader:&nbsp;
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {todayLeader.name}
-              </span>
-              &nbsp;
-              <span className="text-green-600 dark:text-green-400 font-semibold">
-                {todayLeader.guessCount === 1 ? '1 guess' : `${todayLeader.guessCount} guesses`}
-              </span>
-            </span>
-          ) : (
-            <span>Be the first to solve today!</span>
-          )}
-        </div>
-
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 short:pb-2 short:pt-2 sm:px-6 md:max-w-7xl lg:px-8">
           {showCompletedLayout ? (
             <div className="flex grow flex-col overflow-y-auto pb-2 short:pb-1">
@@ -1394,6 +1373,28 @@ function App() {
               guesses={guesses}
               isRevealing={isRevealing}
             />
+          )}
+          {/* Daily info strip — puzzle number + today's grade leader */}
+          {!showCompletedLayout && (
+            <div className="flex items-center justify-between px-4 pt-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
+              <span className="font-semibold text-slate-600 dark:text-slate-400 tracking-wide">
+                Studentle&nbsp;#{solutionIndex + 1}
+              </span>
+              {todayLeader ? (
+                <span>
+                  Today&apos;s Leader:&nbsp;
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {todayLeader.name}
+                  </span>
+                  &nbsp;
+                  <span className="text-green-600 dark:text-green-400 font-semibold">
+                    {todayLeader.guessCount === 1 ? '1 guess' : `${todayLeader.guessCount} guesses`}
+                  </span>
+                </span>
+              ) : (
+                <span>Be the first to solve today!</span>
+              )}
+            </div>
           )}
           <InfoModal
             isOpen={isInfoModalOpen}
