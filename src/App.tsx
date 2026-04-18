@@ -1546,6 +1546,7 @@ function App() {
             isOpen={isLeaderboardModalOpen}
             handleClose={() => setIsLeaderboardModalOpen(false)}
             solutionLength={activeSolution.length}
+            isGameComplete={isGameWon || isGameLost}
           />
           <SettingsModal
             isOpen={isSettingsModalOpen}

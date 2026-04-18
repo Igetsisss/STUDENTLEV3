@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useEffect, useState } from 'react'
+import { VALID_GUESSES } from '../../constants/validGuesses'
 
 import {
   AllTimeEntry,
@@ -28,6 +29,7 @@ type Props = {
   isOpen: boolean
   handleClose: () => void
   solutionLength: number
+  isGameComplete: boolean
 }
 
 const gradeLabels: Record<string, string> = {
@@ -76,14 +78,16 @@ const samePlayer = (left?: string | null, right?: string | null) =>
 const NAME_PREFIXES = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'coach', 'prof'])
 
 // Returns true when any "real" word in the name (not a prefix or single-letter
-// initial) has exactly solutionLength letters — meaning the player may have
-// set their name to the answer word and it should be hidden on the leaderboard.
-const shouldRedactName = (name: string, solutionLength: number): boolean => {
+// initial) exactly matches one of the valid solution words — meaning the player
+// may have set their name to the current answer and it should be hidden.
+// Only called while the game is still in progress; once complete, names are shown.
+const shouldRedactName = (name: string, validWords: Set<string>): boolean => {
+  if (validWords.size === 0) return false
   const tokens = String(name || '').trim().split(/\s+/)
   for (const token of tokens) {
     const letters = token.replace(/[^a-zA-Z]/g, '').toLowerCase()
     if (letters.length <= 1 || NAME_PREFIXES.has(letters)) continue
-    if (letters.length === solutionLength) return true
+    if (validWords.has(letters)) return true
   }
   return false
 }
@@ -238,7 +242,7 @@ const MvpExplainerModal = ({
   )
 }
 
-export const LeaderboardModal = ({ isOpen, handleClose, solutionLength }: Props) => {
+export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameComplete }: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [allTimeEntries, setAllTimeEntries] = useState<AllTimeEntry[]>([])
   const [mvp, setMvp] = useState<MvpEntry | null>(null)
@@ -251,6 +255,18 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength }: Props)
   const [gradeRoundFilter, setGradeRoundFilter] = useState<string>('9')
   const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
+
+  // Build a set of valid guesses whose letter count matches the active puzzle.
+  // Used to redact leaderboard names that are valid guesses — spoiler prevention.
+  // When the game is already complete the set is empty so nothing gets hidden.
+  const validWordsForLength = useMemo(() => {
+    if (isGameComplete) return new Set<string>()
+    return new Set(
+      VALID_GUESSES.filter((w) => w.length === solutionLength).map((w) =>
+        w.toLowerCase()
+      )
+    )
+  }, [solutionLength, isGameComplete])
 
   const _ld = new Date()
   const today = `${_ld.getFullYear()}-${String(_ld.getMonth() + 1).padStart(
@@ -547,7 +563,7 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength }: Props)
                     const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                     const isMe =
                       entry.name.toLowerCase() === myName.toLowerCase()
-                    const redact = !isMe && shouldRedactName(entry.name, solutionLength)
+                    const redact = !isMe && shouldRedactName(entry.name, validWordsForLength)
                     return (
                       <tr
                         key={i}
@@ -642,7 +658,7 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength }: Props)
                   const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                   const isTodayLeader = i === 0
                   const isMe = entry.name.toLowerCase() === myName.toLowerCase()
-                  const redact = !isMe && shouldRedactName(entry.name, solutionLength)
+                  const redact = !isMe && shouldRedactName(entry.name, validWordsForLength)
                   return (
                     <tr
                       key={i}
