@@ -154,6 +154,31 @@ export const getSolution = (gameDate: Date) => {
   }
 }
 
+// Grade-aware solution lookup for leaderboard validation.
+// Returns the expected daily word for a specific grade on a given date,
+// using that grade's actual word list — not the current user's list.
+export const getSolutionForGrade = (
+  gameDate: Date,
+  gradeNum: number
+): string => {
+  const idx = getIndex(gameDate)
+  if (gradeNum === 0) {
+    // Teachers use the same offset formula as the runtime teacher round
+    const offset = Math.floor(TEACHER_WORDS.length / 2)
+    return localeAwareUpperCase(
+      TEACHER_WORDS[(idx + offset) % TEACHER_WORDS.length]
+    )
+  }
+  const gradeLists: Record<number, string[]> = {
+    9: FRESHMAN,
+    10: SOPHOMORE,
+    11: JUNIOR,
+    12: SENIOR,
+  }
+  const list = gradeLists[gradeNum] ?? JUNIOR
+  return localeAwareUpperCase(list[idx % list.length])
+}
+
 export default getSolution
 
 export const getGameDate = () => {

@@ -1,6 +1,5 @@
-import { TEACHER_WORDS } from '../teacherWords'
 import { hasSupabaseConfig, supabase } from './supabase'
-import { getIndex, getSolution, localeAwareUpperCase } from './words'
+import { getSolutionForGrade } from './words'
 
 const SUPABASE_TABLES = {
   gameSubmissions: 'game_submissions',
@@ -274,14 +273,9 @@ const getDateFromYmd = (dateLike: string): Date | null => {
 const getExpectedDailyWord = (entry: LeaderboardEntry): string | null => {
   const day = getDateFromYmd(entry.date)
   if (!day) return null
-  if (String(entry.grade) === '0') {
-    const idx = getIndex(day)
-    const offset = Math.floor(TEACHER_WORDS.length / 2)
-    return localeAwareUpperCase(
-      TEACHER_WORDS[(idx + offset) % TEACHER_WORDS.length]
-    )
-  }
-  return getSolution(day).solution
+  // Use the grade-specific word list for this entry's grade so the check
+  // works correctly regardless of which grade the current viewer is logged in as.
+  return getSolutionForGrade(day, Number(entry.grade) || 0)
 }
 
 const isHistoricalPlaceholderEntry = (entry: LeaderboardEntry): boolean =>
@@ -344,14 +338,18 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
     return !expectedWord || !rowWord || rowWord === expectedWord
   }
 
-  // Legacy compatibility: some old daily rows were stored as grade{grade}.
+  // Own-grade daily: gameType is grade{playerGrade} (e.g. "grade9" for a freshman).
+  // We trust the game_type column; strict word-matching is intentionally removed
+  // because grade word lists change as students enroll/graduate, causing idx%length
+  // to map to different names for historical dates, silently dropping all entries
+  // for any grade whose list length changed since they played.
   if (type === `grade${String(entry.grade)}`) {
-    return !!expectedWord && !!rowWord && rowWord === expectedWord
+    return true
   }
 
-  // Older Google Sheets rows sometimes stored own-grade daily plays as plain "grade".
+  // Older Google Sheets rows stored own-grade daily plays as plain "grade".
   if (type === 'grade') {
-    return !!expectedWord && !!rowWord && rowWord === expectedWord
+    return true
   }
 
   return false
