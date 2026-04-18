@@ -45,13 +45,19 @@ export const Navbar = ({
         </div>
         <div className="navbar-title-group flex items-center gap-1">
           <p
-            className={`cursor-pointer select-none text-xl font-bold${isMvp ? ' mvp-title' : ' dark:text-white'}`}
+            className={`cursor-pointer select-none text-xl font-bold${
+              isMvp ? ' mvp-title' : ' dark:text-white'
+            }`}
             onClick={onTitleTap}
             title="Studentle"
           >
             {GAME_TITLE}
           </p>
-          {isMvp && <span className="mvp-crown" title="All-Time MVP">👑</span>}
+          {isMvp && (
+            <span className="mvp-crown" title="All-Time MVP">
+              👑
+            </span>
+          )}
         </div>
         <div className="right-icons">
           <StarIcon

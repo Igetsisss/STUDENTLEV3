@@ -31,9 +31,7 @@ export const CompletedRow = ({
           isRevealing={isRevealing}
           isCompleted
           isClearing={isClearing}
-          clearingDelay={
-            isClearing ? clearingBaseDelay : 0
-          }
+          clearingDelay={isClearing ? clearingBaseDelay : 0}
         />
       ))}
     </div>

@@ -1,6 +1,4 @@
-import {
-  HIGH_CONTRAST_MODE_DESCRIPTION,
-} from '../../constants/strings'
+import { HIGH_CONTRAST_MODE_DESCRIPTION } from '../../constants/strings'
 import { BaseModal } from './BaseModal'
 import { SettingsToggle } from './SettingsToggle'
 

@@ -1,4 +1,5 @@
 import { hasSupabaseConfig, supabase } from './supabase'
+
 // Cloud-first save: writes to Supabase player_state_snapshots and localStorage
 export const saveGameState = async (
   isLatestGame: boolean,
@@ -14,21 +15,24 @@ export const saveGameState = async (
   if (hasSupabaseConfig && supabase && playerName && grade) {
     try {
       const now = new Date().toISOString()
-      await supabase
-        .from('player_state_snapshots')
-        .upsert(
-          {
-            player_key: `${playerName.toLowerCase().trim()}|${grade}`,
-            player_name: playerName,
-            player_name_key: playerName.toLowerCase().trim(),
-            grade: Number(grade) || 0,
-            state: { ...gameState, isLatestGame, version: ROUND_STATE_SCHEMA_VERSION, updatedAt: now },
-            device: navigator.userAgent || '',
-            app_version: 'v2',
-            updated_at: now,
+      await supabase.from('player_state_snapshots').upsert(
+        {
+          player_key: `${playerName.toLowerCase().trim()}|${grade}`,
+          player_name: playerName,
+          player_name_key: playerName.toLowerCase().trim(),
+          grade: Number(grade) || 0,
+          state: {
+            ...gameState,
+            isLatestGame,
+            version: ROUND_STATE_SCHEMA_VERSION,
+            updatedAt: now,
           },
-          { onConflict: 'player_key' }
-        )
+          device: navigator.userAgent || '',
+          app_version: 'v2',
+          updated_at: now,
+        },
+        { onConflict: 'player_key' }
+      )
     } catch (e) {
       // fallback: already saved to localStorage
     }
@@ -51,8 +55,16 @@ export const loadGameState = async (
         .order('updated_at', { ascending: false })
         .limit(1)
       if (!error && data && data.length > 0 && data[0].state) {
-        const state = data[0].state as StoredGameState & { isLatestGame?: boolean, version?: number, updatedAt?: string }
-        if (state && (state.isLatestGame === isLatestGame || state.isLatestGame === undefined)) {
+        const state = data[0].state as StoredGameState & {
+          isLatestGame?: boolean
+          version?: number
+          updatedAt?: string
+        }
+        if (
+          state &&
+          (state.isLatestGame === isLatestGame ||
+            state.isLatestGame === undefined)
+        ) {
           // Accept both versioned and unversioned
           return { guesses: state.guesses, solution: state.solution }
         }
@@ -134,7 +146,9 @@ const buildVersionedActiveRoundState = (
 const isStoredGameState = (value: unknown): value is StoredGameState => {
   if (!value || typeof value !== 'object') return false
   const maybeState = value as StoredGameState
-  return Array.isArray(maybeState.guesses) && typeof maybeState.solution === 'string'
+  return (
+    Array.isArray(maybeState.guesses) && typeof maybeState.solution === 'string'
+  )
 }
 
 const isVersionedStoredGameState = (
@@ -270,8 +284,6 @@ export const loadGradeRoundGameStateMetadata = (grade: string) =>
 
 export const loadActiveRoundStateMetadata = () =>
   loadVersionedActiveRoundState(activeRoundStateKey)
-
-
 
 export const saveBonusGameStateToLocalStorage = (
   gameState: StoredGameState

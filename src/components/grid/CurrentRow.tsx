@@ -11,7 +11,15 @@ type Props = {
   clearingBaseDelay?: number
 }
 
-export const CurrentRow = ({ guess, className, solution, bonusEnter, bonusEnterBaseDelay = 0, isClearing, clearingBaseDelay = 0 }: Props) => {
+export const CurrentRow = ({
+  guess,
+  className,
+  solution,
+  bonusEnter,
+  bonusEnterBaseDelay = 0,
+  isClearing,
+  clearingBaseDelay = 0,
+}: Props) => {
   const splitGuess = unicodeSplit(guess)
   const numCols = solution.length
   const emptyCells = Array.from(Array(numCols - splitGuess.length))

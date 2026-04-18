@@ -38,7 +38,9 @@ export const useKeystrokeLogger = () => {
   useEffect(() => {
     timerRef.current = setInterval(flush, FLUSH_INTERVAL_MS)
     const onBeforeUnload = () => flush()
-    const onVisibility = () => { if (document.visibilityState === 'hidden') flush() }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
     window.addEventListener('beforeunload', onBeforeUnload)
     document.addEventListener('visibilitychange', onVisibility)
     return () => {

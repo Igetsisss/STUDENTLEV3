@@ -11,7 +11,13 @@ import queryString from 'query-string'
 import { ENABLE_ARCHIVED_GAMES } from '../constants/settings'
 import { NOT_CONTAINED_MESSAGE, WRONG_SPOT_MESSAGE } from '../constants/strings'
 import { VALID_GUESSES } from '../constants/validGuesses'
-import { WORDS, SENIOR, JUNIOR, SOPHOMORE, FRESHMAN } from '../constants/wordlist'
+import {
+  FRESHMAN,
+  JUNIOR,
+  SENIOR,
+  SOPHOMORE,
+  WORDS,
+} from '../constants/wordlist'
 import { TEACHER_WORDS, TEACHER_WORDS_FULL } from '../teacherWords'
 import { getToday } from './dateutils'
 import { getGuessStatuses } from './statuses'
@@ -187,5 +193,3 @@ export const getIsLatestGame = () => {
 
 export const { solution, solutionGameDate, solutionIndex, tomorrow } =
   getSolution(getGameDate())
-
-

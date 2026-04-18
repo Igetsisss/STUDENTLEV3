@@ -1,23 +1,23 @@
-import { SENIOR, JUNIOR, SOPHOMORE, FRESHMAN } from '../constants/wordlist'
-import { TEACHER_WORDS } from '../teacherWords'
+import { FRESHMAN, JUNIOR, SENIOR, SOPHOMORE } from '../constants/wordlist'
 import { getGameDate, getIndex, localeAwareUpperCase } from '../lib/words'
+import { TEACHER_WORDS } from '../teacherWords'
 
 const GRADE_ROUND_PLAYED_KEY_PREFIX = 'gradeRoundPlayedDate_'
 
 export const GRADE_WORD_LISTS: Record<string, string[]> = {
-  '9':  FRESHMAN,
+  '9': FRESHMAN,
   '10': SOPHOMORE,
   '11': JUNIOR,
   '12': SENIOR,
-  '0':  TEACHER_WORDS,
+  '0': TEACHER_WORDS,
 }
 
 export const GRADE_LABELS: Record<string, string> = {
-  '9':  'Freshman',
+  '9': 'Freshman',
   '10': 'Sophomore',
   '11': 'Junior',
   '12': 'Senior',
-  '0':  'Teachers',
+  '0': 'Teachers',
 }
 
 export const getGradeRoundSolution = (grade: string): string => {

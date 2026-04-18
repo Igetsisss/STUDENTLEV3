@@ -1,7 +1,5 @@
-
-
-import { hasSupabaseConfig, supabase } from './supabase'
 import { TEACHER_WORDS } from '../teacherWords'
+import { hasSupabaseConfig, supabase } from './supabase'
 import { getIndex, getSolution, localeAwareUpperCase } from './words'
 
 const SUPABASE_TABLES = {
@@ -24,19 +22,19 @@ export type GuessData = {
 export type KeystrokeEvent = {
   timestamp: string
   keyType:
-    | 'char'           // letter successfully added to current guess
-    | 'char_blocked'   // letter pressed but couldn't be added
-    | 'delete'         // backspace, removed a character
-    | 'delete_empty'   // backspace pressed when input was already empty
+    | 'char' // letter successfully added to current guess
+    | 'char_blocked' // letter pressed but couldn't be added
+    | 'delete' // backspace, removed a character
+    | 'delete_empty' // backspace pressed when input was already empty
     | 'delete_blocked' // backspace blocked by modal/animation
-    | 'enter_submit'   // valid guess submitted
-    | 'enter_blocked'  // enter pressed but rejected
-  keyValue: string     // the actual letter, 'BACKSPACE', or 'ENTER'
-  reason?: string      // why blocked: 'word_full'|'game_over'|'clearing'|'modal_open'|'too_short'|'invalid_word'|'hard_mode'
-  guessNum: number     // which guess row (0-based)
-  inputBefore: string  // current guess before the keypress
-  inputAfter: string   // current guess after the keypress
-};
+    | 'enter_submit' // valid guess submitted
+    | 'enter_blocked' // enter pressed but rejected
+  keyValue: string // the actual letter, 'BACKSPACE', or 'ENTER'
+  reason?: string // why blocked: 'word_full'|'game_over'|'clearing'|'modal_open'|'too_short'|'invalid_word'|'hard_mode'
+  guessNum: number // which guess row (0-based)
+  inputBefore: string // current guess before the keypress
+  inputAfter: string // current guess after the keypress
+}
 
 export type KeystrokeBatchPayload = {
   action: 'keystrokes'
@@ -136,7 +134,10 @@ export const submitSignupEvent = async (
       .upsert(profile, { onConflict: 'player_key' })
 
     if (profileError) {
-      console.error('Failed to upsert player profile in Supabase:', profileError)
+      console.error(
+        'Failed to upsert player profile in Supabase:',
+        profileError
+      )
     }
 
     const { data: existingSnapshot, error: snapshotReadError } = await supabase
@@ -276,7 +277,9 @@ const getExpectedDailyWord = (entry: LeaderboardEntry): string | null => {
   if (String(entry.grade) === '0') {
     const idx = getIndex(day)
     const offset = Math.floor(TEACHER_WORDS.length / 2)
-    return localeAwareUpperCase(TEACHER_WORDS[(idx + offset) % TEACHER_WORDS.length])
+    return localeAwareUpperCase(
+      TEACHER_WORDS[(idx + offset) % TEACHER_WORDS.length]
+    )
   }
   return getSolution(day).solution
 }
@@ -285,7 +288,9 @@ const isHistoricalPlaceholderEntry = (entry: LeaderboardEntry): boolean =>
   String(entry.date || '').startsWith('1970')
 
 const isDailyLikeGameType = (entry: LeaderboardEntry): boolean => {
-  const type = String(entry.gameType || '').toLowerCase().trim()
+  const type = String(entry.gameType || '')
+    .toLowerCase()
+    .trim()
   return (
     type === 'daily' ||
     type === 'teachers' ||
@@ -294,7 +299,10 @@ const isDailyLikeGameType = (entry: LeaderboardEntry): boolean => {
   )
 }
 
-const getAllTimeDayBucket = (entry: LeaderboardEntry, index: number): string => {
+const getAllTimeDayBucket = (
+  entry: LeaderboardEntry,
+  index: number
+): string => {
   if (isHistoricalPlaceholderEntry(entry)) {
     return `historical-${index}`
   }
@@ -321,8 +329,12 @@ const getActiveDayCount = (entries: LeaderboardEntry[]): number => {
 }
 
 export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
-  const type = String(entry.gameType || '').toLowerCase().trim()
-  const rowWord = String(entry.word || '').toUpperCase().trim()
+  const type = String(entry.gameType || '')
+    .toLowerCase()
+    .trim()
+  const rowWord = String(entry.word || '')
+    .toUpperCase()
+    .trim()
   const expectedWord = getExpectedDailyWord(entry)
 
   if (type === 'daily') {
@@ -421,9 +433,15 @@ export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
 }
 
 // Per-player current win streak (consecutive daily wins ending today or yesterday)
-export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number> => {
+export const computeStreaks = (
+  entries: LeaderboardEntry[]
+): Map<string, number> => {
   const dailyWins = entries.filter(
-    (e) => isTrueDailyEntry(e) && e.won && e.name && !String(e.date).startsWith('1970')
+    (e) =>
+      isTrueDailyEntry(e) &&
+      e.won &&
+      e.name &&
+      !String(e.date).startsWith('1970')
   )
 
   const byPlayer = new Map<string, Set<string>>()
@@ -436,7 +454,9 @@ export const computeStreaks = (entries: LeaderboardEntry[]): Map<string, number>
 
   const streaks = new Map<string, number>()
   const todayStr = new Date().toISOString().split('T')[0]
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const yesterdayStr = new Date(Date.now() - 86400000)
+    .toISOString()
+    .split('T')[0]
 
   byPlayer.forEach((winDates, key) => {
     let startStr: string
@@ -499,7 +519,13 @@ export const submitHistoricalStats = async (
 
   winDistribution.forEach((count, index) => {
     for (let submitCount = 0; submitCount < count; submitCount++) {
-      submissions.push({ ...base, name, grade, won: true, guessCount: index + 1 })
+      submissions.push({
+        ...base,
+        name,
+        grade,
+        won: true,
+        guessCount: index + 1,
+      })
     }
   })
 
@@ -552,10 +578,10 @@ export const submitGameData = async (data: GameSubmission): Promise<void> => {
   }
 }
 
-
-
 const normalizeLegacyGrade = (rawGrade: string): string => {
-  const clean = String(rawGrade || '').replace(/"/g, '').trim()
+  const clean = String(rawGrade || '')
+    .replace(/"/g, '')
+    .trim()
   const legacyMap: Record<string, string> = {
     '8': '11',
     '27': '11',
@@ -566,7 +592,10 @@ const normalizeLegacyGrade = (rawGrade: string): string => {
 }
 
 const normalizeNameKey = (name: string): string =>
-  String(name || '').toLowerCase().replace(/\s+/g, ' ').trim()
+  String(name || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
 
 const buildPlayerStateKey = (playerName: string, grade: string): string =>
   `${normalizeNameKey(playerName)}|${normalizeLegacyGrade(grade)}`
@@ -578,7 +607,10 @@ const sanitizePlayerName = (name: string): string => {
   const trimmed = String(name || '').trim()
   if (!SAFE_NAME_RE.test(trimmed)) {
     // Remove any character that is not a letter, accent, space, apostrophe, or hyphen.
-    return trimmed.replace(/[^\p{L}\p{M}'\- ]/gu, '').slice(0, 60).trim()
+    return trimmed
+      .replace(/[^\p{L}\p{M}'\- ]/gu, '')
+      .slice(0, 60)
+      .trim()
   }
   return trimmed
 }
@@ -637,7 +669,10 @@ export const fetchPlayerStateFromCloud = async (
     if (error) {
       console.error('Failed to fetch cloud state from Supabase:', error)
     } else if (data && data.length > 0) {
-      const latest = data[0] as { updated_at: string; state: Record<string, string> }
+      const latest = data[0] as {
+        updated_at: string
+        state: Record<string, string>
+      }
       return { updatedAt: latest.updated_at, state: latest.state || {} }
     }
   } catch (error) {
@@ -645,8 +680,6 @@ export const fetchPlayerStateFromCloud = async (
   }
   return null
 }
-
-
 
 export type AllTimeEntry = {
   name: string
@@ -667,7 +700,9 @@ const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
   return a.totalDurationSec < b.totalDurationSec
 }
 
-export const computeAllTimeLeaderboard = (entries: LeaderboardEntry[]): AllTimeEntry[] => {
+export const computeAllTimeLeaderboard = (
+  entries: LeaderboardEntry[]
+): AllTimeEntry[] => {
   const daily = entries.filter((e) => isOwnGradeDailyEntry(e))
   const map = new Map<string, LeaderboardEntry[]>()
   for (const e of daily) {
@@ -716,8 +751,10 @@ export const fetchLeaderboard = async (
   if (!hasSupabaseConfig || !supabase) return []
 
   const _fd = new Date()
-  const localToday = `${_fd.getFullYear()}-${String(_fd.getMonth() + 1).padStart(2, '0')}-${String(_fd.getDate()).padStart(2, '0')}`
-  const today = allTime ? '' : (date || localToday)
+  const localToday = `${_fd.getFullYear()}-${String(
+    _fd.getMonth() + 1
+  ).padStart(2, '0')}-${String(_fd.getDate()).padStart(2, '0')}`
+  const today = allTime ? '' : date || localToday
   const selectedGrade = grade ? normalizeLegacyGrade(grade) : ''
 
   // Legacy display-name / grade corrections
@@ -745,8 +782,11 @@ export const fetchLeaderboard = async (
     const results: LeaderboardEntry[] = []
     for (const row of rows) {
       const rawName = row.player_name ? String(row.player_name) : ''
-      const rowType = String(row.game_type || 'daily').toLowerCase().trim()
-      const rowGrade = row.grade != null ? normalizeLegacyGrade(String(row.grade)) : ''
+      const rowType = String(row.game_type || 'daily')
+        .toLowerCase()
+        .trim()
+      const rowGrade =
+        row.grade != null ? normalizeLegacyGrade(String(row.grade)) : ''
       const alias = legacyNameAliases[normalizeNameKey(rawName)]
       const finalName = alias ? alias.name : rawName
       const finalGrade = alias ? String(alias.grade) : rowGrade
@@ -785,6 +825,7 @@ export const fetchLeaderboard = async (
           .select(
             'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
           )
+          .order('id', { ascending: true })
           .range(from, from + PAGE_SIZE - 1)
 
         if (selectedGrade) {
@@ -861,19 +902,27 @@ export const fetchTodayInProgress = async (
     const today = new Date().toISOString().split('T')[0]
     const { data, error } = await supabase
       .from(SUPABASE_TABLES.keystrokeLogs)
-      .select('session_id, received_at, key_type, sequence_number, input_before')
+      .select(
+        'session_id, received_at, key_type, sequence_number, input_before'
+      )
       .eq('player_name_key', normalizeNameKey(displayName))
       .eq('game_date', today)
       .eq('game_type', 'daily')
       .order('received_at', { ascending: false })
 
     if (error) {
-      console.error('Failed to fetch in-progress keystrokes from Supabase:', error)
+      console.error(
+        'Failed to fetch in-progress keystrokes from Supabase:',
+        error
+      )
     } else if (data && data.length > 0) {
-      const bySession: Record<string, { rows: typeof data; latestTs: number }> = {}
+      const bySession: Record<string, { rows: typeof data; latestTs: number }> =
+        {}
       for (const row of data) {
         const sid = String(row.session_id || 'default')
-        const ts = row.received_at ? new Date(String(row.received_at)).getTime() : 0
+        const ts = row.received_at
+          ? new Date(String(row.received_at)).getTime()
+          : 0
         if (!bySession[sid]) bySession[sid] = { rows: [], latestTs: 0 }
         bySession[sid].rows.push(row)
         if (ts > bySession[sid].latestTs) bySession[sid].latestTs = ts
@@ -913,19 +962,17 @@ export const fetchTodayLeader = async (
   if (!hasSupabaseConfig || !supabase) return null
 
   const normalizedGrade = normalizeLegacyGrade(grade)
-  // Daily game_type is 'teachers' for grade 0, 'grade{N}' for students
-  const dailyGameType = normalizedGrade === '0' ? 'teachers' : `grade${normalizedGrade}`
 
   const { data, error } = await supabase
     .from(SUPABASE_TABLES.gameSubmissions)
-    .select('player_name, guess_count, total_duration_sec')
+    .select('player_name, guess_count, total_duration_sec, game_type')
     .eq('game_date', date)
     .eq('grade', Number(normalizedGrade) || 0)
-    .eq('game_type', dailyGameType)
     .eq('won', true)
+    .neq('game_type', 'bonus')
     .order('guess_count', { ascending: true })
     .order('total_duration_sec', { ascending: true })
-    .limit(1)
+    .limit(10)
 
   if (error) {
     console.error('[fetchTodayLeader] Supabase error:', error)
@@ -948,9 +995,17 @@ export const fetchTodayLeader = async (
     'mrs adams': 'Mrs. Adams',
     'mr wimberly': 'Sam W',
   }
-  const rawName = String(data[0].player_name || '')
+
+  // Prefer a daily-type win; fall back to any won row if there's no daily yet
+  const dailyGameType =
+    normalizedGrade === '0' ? 'teachers' : `grade${normalizedGrade}`
+  const best =
+    data.find((r: any) => String(r.game_type || '') === dailyGameType) ??
+    data[0]
+
+  const rawName = String(best.player_name || '')
   const nameKey = normalizeNameKey(rawName)
   const displayName = legacyAliases[nameKey] ?? rawName
 
-  return { name: displayName, guessCount: Number(data[0].guess_count) }
+  return { name: displayName, guessCount: Number(best.guess_count) }
 }

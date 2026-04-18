@@ -163,15 +163,25 @@
 }
 
 .navbar-mvp {
-  background:
-    radial-gradient(circle at top, rgba(255, 234, 166, 0.95), transparent 52%),
+  background: radial-gradient(
+      circle at top,
+      rgba(255, 234, 166, 0.95),
+      transparent 52%
+    ),
     linear-gradient(135deg, #fffbeb 0%, #fde68a 45%, #fff7d6 100%) !important;
   border-bottom: 2px solid #f59e0b !important;
   box-shadow: 0 10px 32px rgba(245, 158, 11, 0.15);
 }
 
 .mvp-title {
-  background: linear-gradient(90deg, #b45309 0%, #f59e0b 30%, #fde68a 52%, #f59e0b 72%, #b45309 100%);
+  background: linear-gradient(
+    90deg,
+    #b45309 0%,
+    #f59e0b 30%,
+    #fde68a 52%,
+    #f59e0b 72%,
+    #b45309 100%
+  );
   background-size: 220% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -193,7 +203,11 @@
 }
 
 .today-leader-row {
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.12), rgba(255, 255, 255, 0));
+  background: linear-gradient(
+    90deg,
+    rgba(251, 191, 36, 0.12),
+    rgba(255, 255, 255, 0)
+  );
 }
 
 .today-leader-rank {
@@ -212,15 +226,33 @@
 }
 
 .today-leader-name {
-  background-image: linear-gradient(90deg, #b45309 0%, #f59e0b 28%, #fef08a 50%, #f59e0b 72%, #92400e 100%);
+  background-image: linear-gradient(
+    90deg,
+    #b45309 0%,
+    #f59e0b 28%,
+    #fef08a 50%,
+    #f59e0b 72%,
+    #92400e 100%
+  );
 }
 
 .all-time-mvp-row {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(250, 204, 21, 0.04));
+  background: linear-gradient(
+    90deg,
+    rgba(245, 158, 11, 0.16),
+    rgba(250, 204, 21, 0.04)
+  );
 }
 
 .all-time-mvp-name {
-  background-image: linear-gradient(90deg, #d97706 0%, #facc15 26%, #fff8c5 50%, #facc15 74%, #b45309 100%);
+  background-image: linear-gradient(
+    90deg,
+    #d97706 0%,
+    #facc15 26%,
+    #fff8c5 50%,
+    #facc15 74%,
+    #b45309 100%
+  );
   text-shadow: 0 0 14px rgba(250, 204, 21, 0.35);
 }
 
@@ -253,10 +285,14 @@
 }
 
 @keyframes crownPulse {
-  0%, 100% { transform: scale(1) rotate(-5deg); }
-  50%       { transform: scale(1.15) rotate(5deg); }
+  0%,
+  100% {
+    transform: scale(1) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(5deg);
+  }
 }
-
 
 @keyframes cellPopOut {
   0% {

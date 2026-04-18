@@ -1,4 +1,5 @@
 import { memo } from 'react'
+
 import { MAX_CHALLENGES } from '../../constants/settings'
 import { CompletedRow } from './CompletedRow'
 import { CurrentRow } from './CurrentRow'
@@ -45,7 +46,7 @@ export const GridInner = ({
   return (
     <>
       {guesses.map((guess, i) => {
-      // Fall: all cells in the same row fall at once, rows stagger top-to-bottom
+        // Fall: all cells in the same row fall at once, rows stagger top-to-bottom
         const clearingBaseDelay = isClearing
           ? i * FALL_ROW_STAGGER_MS
           : undefined
@@ -77,12 +78,8 @@ export const GridInner = ({
       {empties.map((_, i) => {
         // CurrentRow is row 0, EmptyRow[0] is row 1, etc.
         const rowIndex = totalGuessRows + 1 + i
-        const enterBase = bonusEnter
-          ? (i + 1) * numCols * CELL_STAGGER_MS
-          : 0
-        const clearBase = isClearing
-          ? rowIndex * FALL_ROW_STAGGER_MS
-          : 0
+        const enterBase = bonusEnter ? (i + 1) * numCols * CELL_STAGGER_MS : 0
+        const clearBase = isClearing ? rowIndex * FALL_ROW_STAGGER_MS : 0
         return (
           <EmptyRow
             key={i}

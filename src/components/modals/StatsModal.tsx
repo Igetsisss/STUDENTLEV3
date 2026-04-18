@@ -1,12 +1,9 @@
 import { ClockIcon, ShareIcon, StarIcon } from '@heroicons/react/outline'
 import { format } from 'date-fns'
-import Countdown from 'react-countdown'
 import { useEffect, useState } from 'react'
+import Countdown from 'react-countdown'
 
-import {
-  DATE_LOCALE,
-  ENABLE_ARCHIVED_GAMES,
-} from '../../constants/settings'
+import { DATE_LOCALE, ENABLE_ARCHIVED_GAMES } from '../../constants/settings'
 import {
   ARCHIVE_GAMEDATE_TEXT,
   GUESS_DISTRIBUTION_TEXT,
@@ -14,8 +11,8 @@ import {
   SHARE_TEXT,
   STATISTICS_TITLE,
 } from '../../constants/strings'
-import { GameStats, saveStatsToLocalStorage } from '../../lib/localStorage'
 import { fetchLeaderboard, isTrueDailyEntry } from '../../lib/api'
+import { GameStats, saveStatsToLocalStorage } from '../../lib/localStorage'
 import { shareStatus } from '../../lib/share'
 import { solutionGameDate, tomorrow } from '../../lib/words'
 import { Histogram } from '../stats/Histogram'
@@ -37,7 +34,10 @@ type CachedPlayerStats = {
 }
 
 const normalizeName = (name: string) =>
-  String(name || '').toLowerCase().replace(/\s+/g, ' ').trim()
+  String(name || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
 
 const getMyDisplayName = () => {
   const fn = localStorage.getItem('playerName') || ''
@@ -46,7 +46,10 @@ const getMyDisplayName = () => {
   return prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
 }
 
-const isBetterEntry = (a: { won: boolean; guessCount: number; totalDurationSec: number }, b: { won: boolean; guessCount: number; totalDurationSec: number }) => {
+const isBetterEntry = (
+  a: { won: boolean; guessCount: number; totalDurationSec: number },
+  b: { won: boolean; guessCount: number; totalDurationSec: number }
+) => {
   if (a.won !== b.won) return a.won && !b.won
   if (a.guessCount !== b.guessCount) return a.guessCount < b.guessCount
   return a.totalDurationSec < b.totalDurationSec
@@ -179,123 +182,127 @@ export const StatsModal = ({
       return
     }
 
-    fetchLeaderboard().then((entries) => {
-      const todayDaily = entries.filter(
-        (e) => String(e.date).startsWith(today) && isTrueDailyEntry(e)
-      )
+    fetchLeaderboard()
+      .then((entries) => {
+        const todayDaily = entries.filter(
+          (e) => String(e.date).startsWith(today) && isTrueDailyEntry(e)
+        )
 
-      // Deduplicate per player for ranking consistency with leaderboard modal
-      const byPlayer = new Map<string, (typeof todayDaily)[number]>()
-      for (const e of todayDaily) {
-        const key = normalizeName(e.name)
-        const existing = byPlayer.get(key)
-        if (!existing || isBetterEntry(e, existing)) {
-          byPlayer.set(key, e)
+        // Deduplicate per player for ranking consistency with leaderboard modal
+        const byPlayer = new Map<string, typeof todayDaily[number]>()
+        for (const e of todayDaily) {
+          const key = normalizeName(e.name)
+          const existing = byPlayer.get(key)
+          if (!existing || isBetterEntry(e, existing)) {
+            byPlayer.set(key, e)
+          }
         }
-      }
-      const rankedDaily = Array.from(byPlayer.values()).sort((a, b) => {
-        if (a.won !== b.won) return a.won ? -1 : 1
-        if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
-        return a.totalDurationSec - b.totalDurationSec
+        const rankedDaily = Array.from(byPlayer.values()).sort((a, b) => {
+          if (a.won !== b.won) return a.won ? -1 : 1
+          if (a.guessCount !== b.guessCount) return a.guessCount - b.guessCount
+          return a.totalDurationSec - b.totalDurationSec
+        })
+
+        const myIdx = rankedDaily.findIndex(
+          (e) => normalizeName(e.name) === myKey
+        )
+        let nextRank: number | null = null
+        let nextTotal: number | null = null
+        let nextSolveRate: number | null = null
+
+        if (myIdx !== -1) {
+          nextRank = myIdx + 1
+          nextTotal = rankedDaily.length
+          setLeaderboardRank(nextRank)
+          setLeaderboardTotal(nextTotal)
+        }
+        if (rankedDaily.length >= 3) {
+          const wins = rankedDaily.filter((e) => e.won).length
+          nextSolveRate = Math.round((wins / rankedDaily.length) * 100)
+          setSolveRate(nextSolveRate)
+        }
+
+        // Sync all-time per-player stats from API and cache to avoid repeated pulls
+        const mine = entries.filter((e) => normalizeName(e.name) === myKey)
+        if (mine.length > 0) {
+          const mineDaily = mine.filter(
+            (e) => isTrueDailyEntry(e) && !String(e.date).startsWith('1970')
+          )
+          const bestDailyByDate = new Map<string, typeof mineDaily[number]>()
+          for (const entry of mineDaily) {
+            const dateKey = String(entry.date || '').slice(0, 10)
+            if (!dateKey) continue
+            const existing = bestDailyByDate.get(dateKey)
+            if (!existing || isBetterEntry(entry, existing)) {
+              bestDailyByDate.set(dateKey, entry)
+            }
+          }
+          const dailyOutcomes = Array.from(bestDailyByDate.values())
+          const daysPlayed = dailyOutcomes.length
+
+          const winDistribution = [0, 0, 0, 0, 0, 0]
+          let gamesFailed = 0
+          let totalGames = 0
+
+          for (const e of dailyOutcomes) {
+            totalGames += 1
+            if (e.won && e.guessCount >= 1 && e.guessCount <= 6) {
+              winDistribution[e.guessCount - 1] += 1
+            } else if (!e.won) {
+              gamesFailed += 1
+            }
+          }
+
+          const syncedStats: GameStats = {
+            winDistribution,
+            gamesFailed,
+            totalGames,
+            successRate: Math.round(
+              (100 * (totalGames - gamesFailed)) / Math.max(totalGames, 1)
+            ),
+            // In this UI, currentStreak is displayed as Days Played.
+            currentStreak: daysPlayed,
+            bestStreak: gameStats.bestStreak,
+          }
+
+          setDisplayStats(syncedStats)
+          saveStatsToLocalStorage(syncedStats)
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              fetchedAt: new Date().toISOString(),
+              stats: syncedStats,
+              leaderboard: {
+                date: today,
+                rank: nextRank,
+                total: nextTotal,
+                solveRate: nextSolveRate,
+              },
+            })
+          )
+        } else {
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              fetchedAt: new Date().toISOString(),
+              stats: {
+                ...gameStats,
+                currentStreak: gameStats.currentStreak,
+                bestStreak: gameStats.bestStreak,
+              },
+              leaderboard: {
+                date: today,
+                rank: nextRank,
+                total: nextTotal,
+                solveRate: nextSolveRate,
+              },
+            })
+          )
+        }
       })
-
-      const myIdx = rankedDaily.findIndex((e) => normalizeName(e.name) === myKey)
-      let nextRank: number | null = null
-      let nextTotal: number | null = null
-      let nextSolveRate: number | null = null
-
-      if (myIdx !== -1) {
-        nextRank = myIdx + 1
-        nextTotal = rankedDaily.length
-        setLeaderboardRank(nextRank)
-        setLeaderboardTotal(nextTotal)
-      }
-      if (rankedDaily.length >= 3) {
-        const wins = rankedDaily.filter((e) => e.won).length
-        nextSolveRate = Math.round((wins / rankedDaily.length) * 100)
-        setSolveRate(nextSolveRate)
-      }
-
-      // Sync all-time per-player stats from API and cache to avoid repeated pulls
-      const mine = entries.filter((e) => normalizeName(e.name) === myKey)
-      if (mine.length > 0) {
-        const mineDaily = mine.filter(
-          (e) =>
-            isTrueDailyEntry(e) &&
-            !String(e.date).startsWith('1970')
-        )
-        const bestDailyByDate = new Map<string, (typeof mineDaily)[number]>()
-        for (const entry of mineDaily) {
-          const dateKey = String(entry.date || '').slice(0, 10)
-          if (!dateKey) continue
-          const existing = bestDailyByDate.get(dateKey)
-          if (!existing || isBetterEntry(entry, existing)) {
-            bestDailyByDate.set(dateKey, entry)
-          }
-        }
-        const dailyOutcomes = Array.from(bestDailyByDate.values())
-        const daysPlayed = dailyOutcomes.length
-
-        const winDistribution = [0, 0, 0, 0, 0, 0]
-        let gamesFailed = 0
-        let totalGames = 0
-
-        for (const e of dailyOutcomes) {
-          totalGames += 1
-          if (e.won && e.guessCount >= 1 && e.guessCount <= 6) {
-            winDistribution[e.guessCount - 1] += 1
-          } else if (!e.won) {
-            gamesFailed += 1
-          }
-        }
-
-        const syncedStats: GameStats = {
-          winDistribution,
-          gamesFailed,
-          totalGames,
-          successRate: Math.round((100 * (totalGames - gamesFailed)) / Math.max(totalGames, 1)),
-          // In this UI, currentStreak is displayed as Days Played.
-          currentStreak: daysPlayed,
-          bestStreak: gameStats.bestStreak,
-        }
-
-        setDisplayStats(syncedStats)
-        saveStatsToLocalStorage(syncedStats)
-        localStorage.setItem(
-          cacheKey,
-          JSON.stringify({
-            fetchedAt: new Date().toISOString(),
-            stats: syncedStats,
-            leaderboard: {
-              date: today,
-              rank: nextRank,
-              total: nextTotal,
-              solveRate: nextSolveRate,
-            },
-          })
-        )
-      } else {
-        localStorage.setItem(
-          cacheKey,
-          JSON.stringify({
-            fetchedAt: new Date().toISOString(),
-            stats: {
-              ...gameStats,
-              currentStreak: gameStats.currentStreak,
-              bestStreak: gameStats.bestStreak,
-            },
-            leaderboard: {
-              date: today,
-              rank: nextRank,
-              total: nextTotal,
-              solveRate: nextSolveRate,
-            },
-          })
-        )
-      }
-    }).catch(() => {
-      // Keep cached/local stats if network fails.
-    })
+      .catch(() => {
+        // Keep cached/local stats if network fails.
+      })
   }, [isOpen, gameStats])
   return (
     <BaseModal
@@ -305,13 +312,13 @@ export const StatsModal = ({
     >
       {isPersonalBest && (
         <div
-          className="mb-3 rounded-xl px-4 py-2 text-center animate-bounce"
+          className="mb-3 animate-bounce rounded-xl px-4 py-2 text-center"
           style={{
             background: 'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
             boxShadow: '0 0 16px 2px #f107a388',
           }}
         >
-          <span className="text-sm font-extrabold text-white tracking-wide">
+          <span className="text-sm font-extrabold tracking-wide text-white">
             ⭐ New Personal Best! ⭐
           </span>
           {onPersonalBestSeen && (
@@ -448,7 +455,11 @@ export const StatsModal = ({
             (() => {
               const beatPct =
                 leaderboardTotal > 1
-                  ? Math.round(((leaderboardTotal - leaderboardRank) / (leaderboardTotal - 1)) * 100)
+                  ? Math.round(
+                      ((leaderboardTotal - leaderboardRank) /
+                        (leaderboardTotal - 1)) *
+                        100
+                    )
                   : 0
               const message =
                 leaderboardRank === 1
@@ -461,7 +472,8 @@ export const StatsModal = ({
 
               return (
                 <span>
-                  <strong>#{leaderboardRank}</strong> of {leaderboardTotal} today. {message}{' '}
+                  <strong>#{leaderboardRank}</strong> of {leaderboardTotal}{' '}
+                  today. {message}{' '}
                   <span className="underline">See full leaderboard</span>
                 </span>
               )
@@ -495,58 +507,64 @@ export const StatsModal = ({
         </div>
       )}
       {/* Teacher grade picker — available right after daily */}
-      {(isGameLost || isGameWon) && isLatestGame && isTeacherPlayer && handleGradeRound && (
-        <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
-          {gradeRoundsPlayed.length >= 4 ? (
-            <div
-              className="rounded-lg px-4 py-3 text-center"
-              style={{
-                background: 'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
-                boxShadow: '0 0 12px 1px #f107a366',
-              }}
-            >
-              <p className="text-sm font-extrabold text-white">
-                🏆 You played every grade today! 🏆
-              </p>
-              <p className="mt-1 text-xs text-white/80">Come back tomorrow for more!</p>
-            </div>
-          ) : (
-            <>
-              <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
-                🎓 Try a Grade!
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {(['9', '10', '11', '12'] as string[]).map((g) => {
-                  const labels: Record<string, string> = {
-                    '9': 'Freshman',
-                    '10': 'Sophomore',
-                    '11': 'Junior',
-                    '12': 'Senior',
-                  }
-                  const done = gradeRoundsPlayed.includes(g)
-                  return done ? (
-                    <div
-                      key={g}
-                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                    >
-                      {labels[g]} ✓
-                    </div>
-                  ) : (
-                    <button
-                      key={g}
-                      type="button"
-                      className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                      onClick={() => handleGradeRound(g)}
-                    >
-                      {labels[g]}
-                    </button>
-                  )
-                })}
+      {(isGameLost || isGameWon) &&
+        isLatestGame &&
+        isTeacherPlayer &&
+        handleGradeRound && (
+          <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
+            {gradeRoundsPlayed.length >= 4 ? (
+              <div
+                className="rounded-lg px-4 py-3 text-center"
+                style={{
+                  background:
+                    'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
+                  boxShadow: '0 0 12px 1px #f107a366',
+                }}
+              >
+                <p className="text-sm font-extrabold text-white">
+                  🏆 You played every grade today! 🏆
+                </p>
+                <p className="mt-1 text-xs text-white/80">
+                  Come back tomorrow for more!
+                </p>
               </div>
-            </>
-          )}
-        </div>
-      )}
+            ) : (
+              <>
+                <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
+                  🎓 Try a Grade!
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {(['9', '10', '11', '12'] as string[]).map((g) => {
+                    const labels: Record<string, string> = {
+                      '9': 'Freshman',
+                      '10': 'Sophomore',
+                      '11': 'Junior',
+                      '12': 'Senior',
+                    }
+                    const done = gradeRoundsPlayed.includes(g)
+                    return done ? (
+                      <div
+                        key={g}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                      >
+                        {labels[g]} ✓
+                      </div>
+                    ) : (
+                      <button
+                        key={g}
+                        type="button"
+                        className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        onClick={() => handleGradeRound(g)}
+                      >
+                        {labels[g]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
       {/* ── STUDENT FLOW ─────────────────────────────────────────────── */}
       {(isGameLost || isGameWon) && isLatestGame && !isTeacherPlayer && (
@@ -582,74 +600,88 @@ export const StatsModal = ({
         </div>
       )}
       {/* Student grade picker — visible when daily is done; grades lock until all rounds complete */}
-      {(isGameLost || isGameWon) && isLatestGame && !isTeacherPlayer && handleGradeRound && (
-        <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
-          {gradeRoundsPlayed.filter((g) => g !== playerGrade).length >= 3 && gradeRoundsPlayed.includes(playerGrade || '') ? (
-            <div
-              className="rounded-lg px-4 py-3 text-center"
-              style={{
-                background: 'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
-                boxShadow: '0 0 12px 1px #f107a366',
-              }}
-            >
-              <p className="text-sm font-extrabold text-white">
-                🏆 You played every grade today! 🏆
-              </p>
-              <p className="mt-1 text-xs text-white/80">Full house — come back tomorrow!</p>
-            </div>
-          ) : (
-            <>
-              <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
-                ⭐ Pick Any Grade to Play!
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {(['9', '10', '11', '12'] as string[]).map((g) => {
-                  const labels: Record<string, string> = {
-                    '9': 'Freshman',
-                    '10': 'Sophomore',
-                    '11': 'Junior',
-                    '12': 'Senior',
-                  }
-                  const isOwnGrade = g === playerGrade
-                  const done = gradeRoundsPlayed.includes(g) || isOwnGrade
-                  const locked = !done && !allRoundsComplete
-                  return done ? (
-                    <div
-                      key={g}
-                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                    >
-                      {labels[g]} ✓
-                    </div>
-                  ) : locked ? (
-                    <button
-                      key={g}
-                      type="button"
-                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
-                      onClick={() => setLockMessage('Complete Bonus + Teachers rounds first to unlock other grades!')}
-                    >
-                      🔒 {labels[g]}
-                    </button>
-                  ) : (
-                    <button
-                      key={g}
-                      type="button"
-                      className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                      onClick={() => { setLockMessage(''); handleGradeRound(g) }}
-                    >
-                      {labels[g]}
-                    </button>
-                  )
-                })}
-              </div>
-              {lockMessage && (
-                <p className="mt-2 text-center text-xs font-medium text-amber-600 dark:text-amber-400">
-                  🔒 {lockMessage}
+      {(isGameLost || isGameWon) &&
+        isLatestGame &&
+        !isTeacherPlayer &&
+        handleGradeRound && (
+          <div className="mt-4 rounded-lg border border-purple-300 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-900/20">
+            {gradeRoundsPlayed.filter((g) => g !== playerGrade).length >= 3 &&
+            gradeRoundsPlayed.includes(playerGrade || '') ? (
+              <div
+                className="rounded-lg px-4 py-3 text-center"
+                style={{
+                  background:
+                    'linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%)',
+                  boxShadow: '0 0 12px 1px #f107a366',
+                }}
+              >
+                <p className="text-sm font-extrabold text-white">
+                  🏆 You played every grade today! 🏆
                 </p>
-              )}
-            </>
-          )}
-        </div>
-      )}
+                <p className="mt-1 text-xs text-white/80">
+                  Full house — come back tomorrow!
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="mb-2 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
+                  ⭐ Pick Any Grade to Play!
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {(['9', '10', '11', '12'] as string[]).map((g) => {
+                    const labels: Record<string, string> = {
+                      '9': 'Freshman',
+                      '10': 'Sophomore',
+                      '11': 'Junior',
+                      '12': 'Senior',
+                    }
+                    const isOwnGrade = g === playerGrade
+                    const done = gradeRoundsPlayed.includes(g) || isOwnGrade
+                    const locked = !done && !allRoundsComplete
+                    return done ? (
+                      <div
+                        key={g}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                      >
+                        {labels[g]} ✓
+                      </div>
+                    ) : locked ? (
+                      <button
+                        key={g}
+                        type="button"
+                        className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
+                        onClick={() =>
+                          setLockMessage(
+                            'Complete Bonus + Teachers rounds first to unlock other grades!'
+                          )
+                        }
+                      >
+                        🔒 {labels[g]}
+                      </button>
+                    ) : (
+                      <button
+                        key={g}
+                        type="button"
+                        className="rounded-md border border-transparent bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        onClick={() => {
+                          setLockMessage('')
+                          handleGradeRound(g)
+                        }}
+                      >
+                        {labels[g]}
+                      </button>
+                    )
+                  })}
+                </div>
+                {lockMessage && (
+                  <p className="mt-2 text-center text-xs font-medium text-amber-600 dark:text-amber-400">
+                    🔒 {lockMessage}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
     </BaseModal>
   )
 }

@@ -36,7 +36,10 @@ export const useGameTracker = (): GameTracker => {
     if (activityHandlerRef.current) {
       window.removeEventListener('focus', activityHandlerRef.current)
       window.removeEventListener('blur', activityHandlerRef.current)
-      document.removeEventListener('visibilitychange', activityHandlerRef.current)
+      document.removeEventListener(
+        'visibilitychange',
+        activityHandlerRef.current
+      )
       activityHandlerRef.current = null
     }
   }, [])
@@ -53,7 +56,10 @@ export const useGameTracker = (): GameTracker => {
     }
 
     if (activeSegmentStartMsRef.current !== null) {
-      activeElapsedMsRef.current += Math.max(0, nowMs - activeSegmentStartMsRef.current)
+      activeElapsedMsRef.current += Math.max(
+        0,
+        nowMs - activeSegmentStartMsRef.current
+      )
       activeSegmentStartMsRef.current = null
     }
   }, [])
@@ -95,27 +101,30 @@ export const useGameTracker = (): GameTracker => {
     currentKeystrokesRef.current += 1
   }, [])
 
-  const recordGuess = useCallback((word: string) => {
-    const activeElapsedMs = getCurrentActiveElapsedMs()
-    const timeSec = Math.round(
-      Math.max(0, activeElapsedMs - lastGuessElapsedMsRef.current) / 1000
-    )
+  const recordGuess = useCallback(
+    (word: string) => {
+      const activeElapsedMs = getCurrentActiveElapsedMs()
+      const timeSec = Math.round(
+        Math.max(0, activeElapsedMs - lastGuessElapsedMsRef.current) / 1000
+      )
 
-    if (firstGuessTimeRef.current === null) {
-      firstGuessTimeRef.current = Math.round(activeElapsedMs / 1000)
-    }
+      if (firstGuessTimeRef.current === null) {
+        firstGuessTimeRef.current = Math.round(activeElapsedMs / 1000)
+      }
 
-    guessesRef.current.push({
-      word,
-      timeSec,
-      keystrokes: currentKeystrokesRef.current,
-      deletes: currentDeletesRef.current,
-    })
+      guessesRef.current.push({
+        word,
+        timeSec,
+        keystrokes: currentKeystrokesRef.current,
+        deletes: currentDeletesRef.current,
+      })
 
-    lastGuessElapsedMsRef.current = activeElapsedMs
-    currentKeystrokesRef.current = 0
-    currentDeletesRef.current = 0
-  }, [getCurrentActiveElapsedMs])
+      lastGuessElapsedMsRef.current = activeElapsedMs
+      currentKeystrokesRef.current = 0
+      currentDeletesRef.current = 0
+    },
+    [getCurrentActiveElapsedMs]
+  )
 
   const getSubmissionData = useCallback(() => {
     const now = new Date()

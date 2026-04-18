@@ -1,6 +1,6 @@
+import { MAX_CHALLENGES } from '../../constants/settings'
 import { CompletedRow } from './CompletedRow'
 import { EmptyRow } from './EmptyRow'
-import { MAX_CHALLENGES } from '../../constants/settings'
 
 type Props = {
   solution: string
@@ -9,10 +9,13 @@ type Props = {
   maxChallenges?: number
 }
 
-export const CompletedGrid = ({ solution, guesses, label, maxChallenges = MAX_CHALLENGES }: Props) => {
-  const empties = Array.from(
-    Array(Math.max(0, maxChallenges - guesses.length))
-  )
+export const CompletedGrid = ({
+  solution,
+  guesses,
+  label,
+  maxChallenges = MAX_CHALLENGES,
+}: Props) => {
+  const empties = Array.from(Array(Math.max(0, maxChallenges - guesses.length)))
 
   return (
     <div className="flex flex-col items-center">

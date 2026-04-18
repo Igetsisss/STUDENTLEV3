@@ -8,7 +8,13 @@ type Props = {
   clearingBaseDelay?: number
 }
 
-export const EmptyRow = ({ solution, bonusEnter, bonusEnterBaseDelay = 0, isClearing, clearingBaseDelay = 0 }: Props) => {
+export const EmptyRow = ({
+  solution,
+  bonusEnter,
+  bonusEnterBaseDelay = 0,
+  isClearing,
+  clearingBaseDelay = 0,
+}: Props) => {
   const numCols = solution.length
   const emptyCells = Array.from(Array(numCols))
 
@@ -18,9 +24,7 @@ export const EmptyRow = ({ solution, bonusEnter, bonusEnterBaseDelay = 0, isClea
         <Cell
           key={i}
           bonusEnter={bonusEnter}
-          bonusEnterDelay={
-            bonusEnter ? bonusEnterBaseDelay + i * 60 : 0
-          }
+          bonusEnterDelay={bonusEnter ? bonusEnterBaseDelay + i * 60 : 0}
           isClearing={isClearing}
           clearingDelay={isClearing ? clearingBaseDelay : 0}
         />

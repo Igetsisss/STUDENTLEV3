@@ -7,8 +7,10 @@ import { AlertProvider } from './context/AlertContext'
 
 jest.mock('./lib/api', () => ({
   __esModule: true,
+  computeMvp: jest.fn().mockReturnValue(null),
   fetchLeaderboard: jest.fn().mockResolvedValue([]),
   fetchPlayerStateFromCloud: jest.fn().mockResolvedValue(null),
+  fetchTodayLeader: jest.fn().mockResolvedValue(null),
   isTrueDailyEntry: jest.fn(() => true),
   submitGameData: jest.fn(),
   syncPlayerStateToCloud: jest.fn().mockResolvedValue(undefined),

@@ -1,8 +1,16 @@
 import './gradestyle.css'
 
 import Filter from 'bad-words'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
+import {
+  LeaderboardEntry,
+  fetchLeaderboard,
+  isTrueDailyEntry,
+  submitHistoricalStats,
+  submitNameStepRegistration,
+  submitSignupEvent,
+} from '../../lib/api'
 import {
   GameStats,
   clearActiveRoundFromLocalStorage,
@@ -13,14 +21,6 @@ import {
   saveGameStateToLocalStorage,
   saveStatsToLocalStorage,
 } from '../../lib/localStorage'
-import {
-  LeaderboardEntry,
-  fetchLeaderboard,
-  isTrueDailyEntry,
-  submitHistoricalStats,
-  submitSignupEvent,
-  submitNameStepRegistration,
-} from '../../lib/api'
 import { getGameDate, getSolution } from '../../lib/words'
 import {
   clearBonusPlayedToday,
@@ -56,13 +56,33 @@ const formatDateKey = (date: Date) =>
 const _profanityFilter = new Filter()
 _profanityFilter.addWords(
   // Extra slurs not always in the base list
-  'nigg', 'nigga', 'chink', 'spic', 'spick', 'kike',
-  'wetback', 'beaner', 'gook', 'tranny', 'dyke', 'retard',
+  'nigg',
+  'nigga',
+  'chink',
+  'spic',
+  'spick',
+  'kike',
+  'wetback',
+  'beaner',
+  'gook',
+  'tranny',
+  'dyke',
+  'retard',
   // Leet-speak variants the library won't catch on its own
-  'fuk', 'fuq', 'phuck', 'fvck', 'fck',
-  'sh1t', 'shyt', 'sht',
-  'b1tch', 'biatch', 'btch',
-  'n1gg', 'n1gga', 'n1gger',
+  'fuk',
+  'fuq',
+  'phuck',
+  'fvck',
+  'fck',
+  'sh1t',
+  'shyt',
+  'sht',
+  'b1tch',
+  'biatch',
+  'btch',
+  'n1gg',
+  'n1gga',
+  'n1gger'
 )
 
 // Pre-normalizes leet-speak before passing to the filter so variants
@@ -81,7 +101,9 @@ const normalizeLeetSpeak = (text: string): string =>
 const containsProfanity = (text: string): boolean => {
   const normalized = normalizeLeetSpeak(text)
   // Check both the raw input and the leet-normalized form
-  return _profanityFilter.isProfane(text) || _profanityFilter.isProfane(normalized)
+  return (
+    _profanityFilter.isProfane(text) || _profanityFilter.isProfane(normalized)
+  )
 }
 
 const capitalizeName = (name: string): string =>
@@ -206,8 +228,7 @@ export const GradeModal = ({
       /"/g,
       ''
     )
-    const gradeRaw =
-      LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
+    const gradeRaw = LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
     localStorage.setItem('playerName', lastName)
     localStorage.setItem('playerPrefix', selectedPrefix)
     localStorage.removeItem('playerLastInitial')
@@ -243,8 +264,7 @@ export const GradeModal = ({
       /"/g,
       ''
     )
-    const gradeRaw =
-      LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
+    const gradeRaw = LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
     const parts = displayName.split(' ')
     const initial = parts.length > 1 ? parts[parts.length - 1] : ''
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
@@ -287,111 +307,116 @@ export const GradeModal = ({
     const pendingGrade =
       LEGACY_GRADE_NORMALIZATION_MAP[pendingGradeRaw] || pendingGradeRaw
 
-    fetchLeaderboard().then((data: LeaderboardEntry[]) => {
-      const pendingNameNorm = normalizeAccountName(pending)
-      const pendingGradeNorm = normalizeGradeCode(pendingGrade)
-      const matches = data.filter((e) => {
-        const rowNameNorm = normalizeAccountName(e.name)
-        const rowGradeNorm = normalizeGradeCode(e.grade)
-        return rowNameNorm === pendingNameNorm && rowGradeNorm === pendingGradeNorm
-      })
-      if (matches.length === 0) {
-        localStorage.removeItem('pendingAccountCheck')
-        return
-      }
-      // Build a quick stats summary for the confirmation screen
-      const wins = matches.filter((e) => e.won)
-      const gradeNumRaw = String(matches[0].grade)
-      const gradeNum =
-        LEGACY_GRADE_NORMALIZATION_MAP[gradeNumRaw] || gradeNumRaw
-      const gradeLabel: Record<string, string> = {
-        '0': 'Teachers',
-        '9': 'Freshman (9th)',
-        '10': 'Sophomore (10th)',
-        '11': 'Junior (11th)',
-        '12': 'Senior (12th)',
-      }
-      const isOwnDailyType = (e: LeaderboardEntry) => isTrueDailyEntry(e)
-      const avgGuesses =
-        wins.length > 0
-          ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
-          : 0
-      const gameDay = getGameDate()
-      const today = formatDateKey(gameDay)
-      const todayEntry = matches.find(
-        (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
-      )
-      const dailyMatches = matches.filter(
-        (e) => isOwnDailyType(e) && !String(e.date).startsWith('1970')
-      )
-      const bestDailyByDate = new Map<string, LeaderboardEntry>()
-      for (const entry of dailyMatches) {
-        const dateKey = String(entry.date || '').slice(0, 10)
-        if (!dateKey) continue
-        const existing = bestDailyByDate.get(dateKey)
-        if (!existing || isBetterDailyResult(entry, existing)) {
-          bestDailyByDate.set(dateKey, entry)
+    fetchLeaderboard()
+      .then((data: LeaderboardEntry[]) => {
+        const pendingNameNorm = normalizeAccountName(pending)
+        const pendingGradeNorm = normalizeGradeCode(pendingGrade)
+        const matches = data.filter((e) => {
+          const rowNameNorm = normalizeAccountName(e.name)
+          const rowGradeNorm = normalizeGradeCode(e.grade)
+          return (
+            rowNameNorm === pendingNameNorm && rowGradeNorm === pendingGradeNorm
+          )
+        })
+        if (matches.length === 0) {
+          localStorage.removeItem('pendingAccountCheck')
+          return
         }
-      }
-      const dailyOutcomes = Array.from(bestDailyByDate.values())
-      const dailyWins = dailyOutcomes.filter((e) => e.won)
-      const dailyLosses = dailyOutcomes.filter((e) => !e.won)
-      const winDist = Array(6).fill(0)
-      dailyWins.forEach((e) => {
-        const idx = Math.min(e.guessCount - 1, 5)
-        if (idx >= 0) winDist[idx]++
-      })
-      const totalDailyGames = dailyOutcomes.length
-      const successRate =
-        totalDailyGames > 0
-          ? Math.round((dailyWins.length / totalDailyGames) * 100)
-          : 0
-      const currentStreak = totalDailyGames
-      const bestStreak = totalDailyGames
-
-      const reconstructedStats: GameStats = {
-        winDistribution: winDist,
-        gamesFailed: dailyLosses.length,
-        currentStreak,
-        bestStreak,
-        totalGames: totalDailyGames,
-        successRate,
-      }
-
-      const todayBonusEntry = matches.find(
-        (e) => e.gameType === 'bonus' && String(e.date).startsWith(today)
-      )
-      const todayTeachersEntry = matches.find(
-        (e) => e.gameType === 'teachers' && String(e.date).startsWith(today)
-      )
-      const todayGradeRoundsPlayed = ['9', '10', '11', '12'].filter((g) =>
-        matches.some(
-          (e) =>
-            String(e.gameType || '').toLowerCase().trim() === `grade${g}` &&
-            String(e.date).startsWith(today)
+        // Build a quick stats summary for the confirmation screen
+        const wins = matches.filter((e) => e.won)
+        const gradeNumRaw = String(matches[0].grade)
+        const gradeNum =
+          LEGACY_GRADE_NORMALIZATION_MAP[gradeNumRaw] || gradeNumRaw
+        const gradeLabel: Record<string, string> = {
+          '0': 'Teachers',
+          '9': 'Freshman (9th)',
+          '10': 'Sophomore (10th)',
+          '11': 'Junior (11th)',
+          '12': 'Senior (12th)',
+        }
+        const isOwnDailyType = (e: LeaderboardEntry) => isTrueDailyEntry(e)
+        const avgGuesses =
+          wins.length > 0
+            ? wins.reduce((s, e) => s + e.guessCount, 0) / wins.length
+            : 0
+        const gameDay = getGameDate()
+        const today = formatDateKey(gameDay)
+        const todayEntry = matches.find(
+          (e) => isOwnDailyType(e) && String(e.date).startsWith(today)
         )
-      )
+        const dailyMatches = matches.filter(
+          (e) => isOwnDailyType(e) && !String(e.date).startsWith('1970')
+        )
+        const bestDailyByDate = new Map<string, LeaderboardEntry>()
+        for (const entry of dailyMatches) {
+          const dateKey = String(entry.date || '').slice(0, 10)
+          if (!dateKey) continue
+          const existing = bestDailyByDate.get(dateKey)
+          if (!existing || isBetterDailyResult(entry, existing)) {
+            bestDailyByDate.set(dateKey, entry)
+          }
+        }
+        const dailyOutcomes = Array.from(bestDailyByDate.values())
+        const dailyWins = dailyOutcomes.filter((e) => e.won)
+        const dailyLosses = dailyOutcomes.filter((e) => !e.won)
+        const winDist = Array(6).fill(0)
+        dailyWins.forEach((e) => {
+          const idx = Math.min(e.guessCount - 1, 5)
+          if (idx >= 0) winDist[idx]++
+        })
+        const totalDailyGames = dailyOutcomes.length
+        const successRate =
+          totalDailyGames > 0
+            ? Math.round((dailyWins.length / totalDailyGames) * 100)
+            : 0
+        const currentStreak = totalDailyGames
+        const bestStreak = totalDailyGames
 
-      // Store account silently — modal will open once game is idle
-      setPendingAccountData({
-        displayName: matches[0].name,
-        totalGames: matches.length,
-        wins: wins.length,
-        grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
-        gradeCode: String(gradeNum),
-        avgGuesses,
-        todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
-        todayGuessCount: todayEntry ? todayEntry.guessCount : null,
-        inProgressGuesses: [],
-        reconstructedStats,
-        todayBonusPlayed: !!todayBonusEntry,
-        todayTeachersPlayed: !!todayTeachersEntry,
-        todayGradeRoundsPlayed,
+        const reconstructedStats: GameStats = {
+          winDistribution: winDist,
+          gamesFailed: dailyLosses.length,
+          currentStreak,
+          bestStreak,
+          totalGames: totalDailyGames,
+          successRate,
+        }
+
+        const todayBonusEntry = matches.find(
+          (e) => e.gameType === 'bonus' && String(e.date).startsWith(today)
+        )
+        const todayTeachersEntry = matches.find(
+          (e) => e.gameType === 'teachers' && String(e.date).startsWith(today)
+        )
+        const todayGradeRoundsPlayed = ['9', '10', '11', '12'].filter((g) =>
+          matches.some(
+            (e) =>
+              String(e.gameType || '')
+                .toLowerCase()
+                .trim() === `grade${g}` && String(e.date).startsWith(today)
+          )
+        )
+
+        // Store account silently — modal will open once game is idle
+        setPendingAccountData({
+          displayName: matches[0].name,
+          totalGames: matches.length,
+          wins: wins.length,
+          grade: gradeLabel[String(gradeNum)] || `Grade ${gradeNum}`,
+          gradeCode: String(gradeNum),
+          avgGuesses,
+          todayResult: todayEntry ? (todayEntry.won ? 'won' : 'lost') : null,
+          todayGuessCount: todayEntry ? todayEntry.guessCount : null,
+          inProgressGuesses: [],
+          reconstructedStats,
+          todayBonusPlayed: !!todayBonusEntry,
+          todayTeachersPlayed: !!todayTeachersEntry,
+          todayGradeRoundsPlayed,
+        })
       })
-    }).catch(() => {
-      localStorage.removeItem('pendingAccountCheck')
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => {
+        localStorage.removeItem('pendingAccountCheck')
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Show account found popup once game is idle (done or not started) and info is closed
@@ -460,19 +485,22 @@ export const GradeModal = ({
       todayResult = todayEntry ? (todayEntry.won ? 'won' : 'lost') : null
       todayBonusPlayed = matches.some(
         (e) =>
-          String(e.gameType || '').toLowerCase().trim() === 'bonus' &&
-          String(e.date).startsWith(today)
+          String(e.gameType || '')
+            .toLowerCase()
+            .trim() === 'bonus' && String(e.date).startsWith(today)
       )
       todayTeachersPlayed = matches.some(
         (e) =>
-          String(e.gameType || '').toLowerCase().trim() === 'teachers' &&
-          String(e.date).startsWith(today)
+          String(e.gameType || '')
+            .toLowerCase()
+            .trim() === 'teachers' && String(e.date).startsWith(today)
       )
       todayGradeRoundsPlayed = ['9', '10', '11', '12'].filter((g) =>
         matches.some(
           (e) =>
-            String(e.gameType || '').toLowerCase().trim() === `grade${g}` &&
-            String(e.date).startsWith(today)
+            String(e.gameType || '')
+              .toLowerCase()
+              .trim() === `grade${g}` && String(e.date).startsWith(today)
         )
       )
     } catch {
@@ -571,12 +599,14 @@ export const GradeModal = ({
       <br />
 
       {isSaving && (
-        <div className="flex flex-col items-center justify-center py-8 gap-4">
+        <div className="flex flex-col items-center justify-center gap-4 py-8">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Restoring your account...
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">This only takes a second</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            This only takes a second
+          </p>
         </div>
       )}
 
@@ -629,7 +659,9 @@ export const GradeModal = ({
                 setPlayerName(e.target.value)
                 if (nameError) setNameError('')
               }}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleNameNext() }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleNameNext()
+              }}
               maxLength={20}
               autoFocus
               className={`w-full rounded-md border px-3 py-2 text-center text-lg focus:outline-none focus:ring-1 dark:bg-slate-800 dark:text-white ${
@@ -639,7 +671,9 @@ export const GradeModal = ({
               }`}
             />
             {nameError && (
-              <p className="mt-2 text-center text-sm text-red-500">{nameError}</p>
+              <p className="mt-2 text-center text-sm text-red-500">
+                {nameError}
+              </p>
             )}
           </div>
           <br />
@@ -657,9 +691,13 @@ export const GradeModal = ({
               placeholder="e.g. S"
               value={lastInitial}
               onChange={(e) =>
-                setLastInitial(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 1))
+                setLastInitial(
+                  e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 1)
+                )
               }
-              onKeyDown={(e) => { if (e.key === 'Enter') handleInitialDone() }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleInitialDone()
+              }}
               maxLength={1}
               autoFocus
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-center text-2xl font-bold uppercase tracking-widest focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
@@ -685,7 +723,9 @@ export const GradeModal = ({
                 onChange={(e) => setSelectedPrefix(e.target.value)}
                 defaultValue=""
               >
-                <option hidden disabled value="">Choose Your Title</option>
+                <option hidden disabled value="">
+                  Choose Your Title
+                </option>
                 <option value="Mr.">Mr.</option>
                 <option value="Mrs.">Mrs.</option>
                 <option value="Ms.">Ms.</option>
@@ -709,21 +749,27 @@ export const GradeModal = ({
             We found an account with that name. Is this you?
           </p>
 
-          {existingAccount.todayResult === null && existingAccount.inProgressGuesses.length > 0 && (
-            <div className="mb-3 rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:border-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-300">
-              🔄 You&apos;re on guess {existingAccount.inProgressGuesses.length + 1}{' '}
-              of 6 today - logging in will pick up where you left off!
-            </div>
-          )}
+          {existingAccount.todayResult === null &&
+            existingAccount.inProgressGuesses.length > 0 && (
+              <div className="mb-3 rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:border-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-300">
+                🔄 You&apos;re on guess{' '}
+                {existingAccount.inProgressGuesses.length + 1} of 6 today -
+                logging in will pick up where you left off!
+              </div>
+            )}
 
           {existingAccount.todayResult !== null && (
-            <div className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
-              existingAccount.todayResult === 'won'
-                ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-600 dark:bg-green-900/20 dark:text-green-300'
-                : 'border-red-300 bg-red-50 text-red-800 dark:border-red-600 dark:bg-red-900/20 dark:text-red-300'
-            }`}>
+            <div
+              className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
+                existingAccount.todayResult === 'won'
+                  ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-600 dark:bg-green-900/20 dark:text-green-300'
+                  : 'border-red-300 bg-red-50 text-red-800 dark:border-red-600 dark:bg-red-900/20 dark:text-red-300'
+              }`}
+            >
               {existingAccount.todayResult === 'won'
-                ? `✅ You already won today's game in ${existingAccount.todayGuessCount ?? '?'} guess${existingAccount.todayGuessCount === 1 ? '' : 'es'}!`
+                ? `✅ You already won today's game in ${
+                    existingAccount.todayGuessCount ?? '?'
+                  } guess${existingAccount.todayGuessCount === 1 ? '' : 'es'}!`
                 : '❌ You already played today - better luck tomorrow!'}
             </div>
           )}

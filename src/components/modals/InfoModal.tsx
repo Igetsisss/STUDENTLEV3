@@ -10,8 +10,8 @@ export const InfoModal = ({ isOpen, handleClose }: Props) => {
   return (
     <BaseModal title="How to play" isOpen={isOpen} handleClose={handleClose}>
       <p className="text-sm text-gray-500 dark:text-gray-300">
-        Studentle works like Wordle. Guess the student, and tile colors show
-        how close you are.
+        Studentle works like Wordle. Guess the student, and tile colors show how
+        close you are.
       </p>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">
         The key twist: answers come from your grade, so your guesses should be

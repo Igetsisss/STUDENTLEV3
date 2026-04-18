@@ -202,7 +202,6 @@ export const TEACHER_WORDS_FULL: string[] = [
   'wright',
 ]
 
-
 // Teacher bonus solution — uses the full name list with a different offset from the daily,
 // so the bonus word never repeats the same day's daily word.
 export const getTeachersBonusSolution = (): string => {
@@ -210,5 +209,7 @@ export const getTeachersBonusSolution = (): string => {
   const index = getIndex(gameDate)
   // Offset by ~60% of the list so bonus differs from daily (offset 13 from teachers daily offset of 0)
   const offset = Math.floor(TEACHER_WORDS_FULL.length * 0.6)
-  return localeAwareUpperCase(TEACHER_WORDS_FULL[(index + offset) % TEACHER_WORDS_FULL.length])
+  return localeAwareUpperCase(
+    TEACHER_WORDS_FULL[(index + offset) % TEACHER_WORDS_FULL.length]
+  )
 }
