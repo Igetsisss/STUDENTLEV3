@@ -1446,7 +1446,9 @@ function App() {
             <span className="font-semibold text-slate-500 dark:text-slate-400">
               #{solutionIndex + 1}
             </span>
-            {todayLeader ? (
+            {todayLeader &&
+            todayLeader.name.split(' ')[0].toLowerCase() !==
+              effectiveDailySolution.toLowerCase() ? (
               <span>
                 <span className="text-slate-500 dark:text-slate-400">
                   Today&apos;s leader:{' '}
