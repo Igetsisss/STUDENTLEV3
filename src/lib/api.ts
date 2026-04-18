@@ -193,6 +193,33 @@ export const submitSignupEvent = async (
   }
 }
 
+export const submitNameStepRegistration = async (
+  playerName: string,
+  grade: string
+): Promise<void> => {
+  if (!playerName || !grade) return
+  if (!hasSupabaseConfig || !supabase) return
+
+  const safeName = sanitizePlayerName(playerName)
+  const normalizedGrade = normalizeLegacyGrade(grade)
+
+  try {
+    await supabase.from(SUPABASE_TABLES.signupEvents).insert({
+      player_key: `${normalizeNameKey(safeName)}|${normalizedGrade}|partial`,
+      player_name: safeName,
+      player_name_key: normalizeNameKey(safeName),
+      grade: Number(normalizedGrade) || 0,
+      registered_at_client: new Date().toISOString(),
+      source: 'name_step',
+      user_agent: navigator.userAgent || '',
+      screen_width: window.innerWidth || 0,
+      screen_height: window.innerHeight || 0,
+    })
+  } catch {
+    // Never block registration on analytics write failure.
+  }
+}
+
 export type GameSubmission = {
   name: string
   grade: string
