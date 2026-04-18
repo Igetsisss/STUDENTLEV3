@@ -63,6 +63,7 @@ import {
   setGameDate,
   solution as dailySolution,
   solutionGameDate,
+  solutionIndex,
   unicodeLength,
 } from './lib/words'
 import {
@@ -89,6 +90,8 @@ import {
   fetchPlayerStateFromCloud,
   syncPlayerStateToCloud,
   isTrueDailyEntry,
+  fetchTodayLeader,
+  type TodayLeader,
 } from './lib/api'
 import { useGameTracker } from './hooks/useGameTracker'
 
@@ -400,6 +403,8 @@ function App() {
     return stored === new Date().toISOString().split('T')[0]
   })
 
+  const [todayLeader, setTodayLeader] = useState<TodayLeader | null>(null)
+
   // Store completed daily game for side-by-side display
   const [dailyGuesses, setDailyGuesses] = useState<string[]>(
     restoredDailyState && ['won', 'lost'].includes(restoredDailyState.outcome)
@@ -532,6 +537,16 @@ function App() {
   })()
   // grade is stored as JSON string e.g. '"0"' for teachers, '"9"' for Freshman, etc.
   const isTeacherPlayer = grade === '"0"'
+
+  // Fetch today's grade leader on mount (fire-and-forget)
+  useEffect(() => {
+    const rawGrade = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+    if (!rawGrade) return
+    const today = new Date().toISOString().split('T')[0]
+    fetchTodayLeader(rawGrade, today).then((leader) => {
+      if (leader) setTodayLeader(leader)
+    })
+  }, [])
 
   useEffect(() => {
     let isCancelled = false
@@ -1295,6 +1310,27 @@ function App() {
             </p>
           </div>
         )}
+
+        {/* Daily info strip — puzzle number + today's grade leader */}
+        <div className="flex items-center justify-between px-5 py-1 text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-800">
+          <span className="font-semibold text-slate-600 dark:text-slate-400 tracking-wide">
+            Studentle&nbsp;#{solutionIndex + 1}
+          </span>
+          {todayLeader ? (
+            <span>
+              Today&apos;s Leader:&nbsp;
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {todayLeader.name}
+              </span>
+              &nbsp;
+              <span className="text-green-600 dark:text-green-400 font-semibold">
+                {todayLeader.guessCount === 1 ? '1 guess' : `${todayLeader.guessCount} guesses`}
+              </span>
+            </span>
+          ) : (
+            <span>Be the first to solve today!</span>
+          )}
+        </div>
 
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 short:pb-2 short:pt-2 sm:px-6 md:max-w-7xl lg:px-8">
           {showCompletedLayout ? (

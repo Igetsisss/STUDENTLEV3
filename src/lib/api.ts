@@ -193,38 +193,6 @@ export const submitSignupEvent = async (
   }
 }
 
-// Lightweight early-capture: writes ONLY to signup_events the moment a player
-// confirms their first name (before they pick a last initial or title prefix).
-// This ensures every registration attempt is recorded even if the player closes
-// the tab before completing the final step.
-// Does NOT touch game_submissions — leaderboard is completely unaffected.
-export const submitNameStepRegistration = async (
-  firstName: string,
-  grade: string
-): Promise<void> => {
-  if (!firstName || !grade) return
-  if (!hasSupabaseConfig || !supabase) return
-
-  const safeName = sanitizePlayerName(firstName)
-  const normalizedGrade = normalizeLegacyGrade(grade)
-
-  try {
-    await supabase.from(SUPABASE_TABLES.signupEvents).insert({
-      player_key: `${normalizeNameKey(safeName)}|${normalizedGrade}|partial`,
-      player_name: safeName,
-      player_name_key: normalizeNameKey(safeName),
-      grade: Number(normalizedGrade) || 0,
-      registered_at_client: new Date().toISOString(),
-      source: 'name_step',
-      user_agent: navigator.userAgent || '',
-      screen_width: window.innerWidth || 0,
-      screen_height: window.innerHeight || 0,
-    })
-  } catch {
-    // Never block registration on analytics write failure.
-  }
-}
-
 export type GameSubmission = {
   name: string
   grade: string
@@ -337,21 +305,14 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
     return !expectedWord || !rowWord || rowWord === expectedWord
   }
 
-  // New daily entries are stored as grade{N} (e.g. grade11 for juniors).
-  // type === `grade${entry.grade}` already guarantees this is the player's own
-  // grade daily — a cross-grade play (e.g. junior doing grade10 round) stores
-  // game_type='grade10' with grade=11, so the types won't match.
-  // Do NOT use getExpectedDailyWord here: getSolution() uses WORDS which is the
-  // *viewer's* grade word list, not the entry's grade, so the comparison would
-  // wrongly filter out entries from grades other than the current viewer's grade.
+  // Legacy compatibility: some old daily rows were stored as grade{grade}.
   if (type === `grade${String(entry.grade)}`) {
-    return true
+    return !!expectedWord && !!rowWord && rowWord === expectedWord
   }
 
   // Older Google Sheets rows sometimes stored own-grade daily plays as plain "grade".
-  // Same viewer word-list issue applies here — don't use getExpectedDailyWord.
   if (type === 'grade') {
-    return true
+    return !!expectedWord && !!rowWord && rowWord === expectedWord
   }
 
   return false
@@ -584,14 +545,13 @@ const buildPlayerStateKey = (playerName: string, grade: string): string =>
   `${normalizeNameKey(playerName)}|${normalizeLegacyGrade(grade)}`
 
 // Strips characters that have no place in a school player name.
-// Allows letters (including accented), spaces, apostrophes, hyphens, and periods
-// (periods are needed for teacher prefixes like "Mr.", "Mrs.", "Dr.", "Prof.").
-const SAFE_NAME_RE = /^[\p{L}\p{M}'\-. ]{1,60}$/u
+// Allows letters (including accented), spaces, apostrophes, and hyphens.
+const SAFE_NAME_RE = /^[\p{L}\p{M}'\- ]{1,60}$/u
 const sanitizePlayerName = (name: string): string => {
   const trimmed = String(name || '').trim()
   if (!SAFE_NAME_RE.test(trimmed)) {
-    // Remove any character that is not a letter, accent, space, apostrophe, hyphen, or period.
-    return trimmed.replace(/[^\p{L}\p{M}'\-. ]/gu, '').slice(0, 60).trim()
+    // Remove any character that is not a letter, accent, space, apostrophe, or hyphen.
+    return trimmed.replace(/[^\p{L}\p{M}'\- ]/gu, '').slice(0, 60).trim()
   }
   return trimmed
 }
@@ -753,7 +713,6 @@ export const fetchLeaderboard = async (
     'amanda adams': { name: 'Mrs. Adams', grade: 0 },
     'mrs adams': { name: 'Mrs. Adams', grade: 0 },
     'mrs. adams': { name: 'Mrs. Adams', grade: 0 },
-    'mr wimberly': { name: 'Sam W', grade: 10 },
   }
   const processRows = (rows: any[]): LeaderboardEntry[] => {
     const results: LeaderboardEntry[] = []
@@ -799,7 +758,6 @@ export const fetchLeaderboard = async (
           .select(
             'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
           )
-          .order('id', { ascending: true })
           .range(from, from + PAGE_SIZE - 1)
 
         if (selectedGrade) {
@@ -912,4 +870,55 @@ export const fetchTodayInProgress = async (
   }
 
   return []
+}
+
+// ─── Today's Leader ─────────────────────────────────────────────────────────
+
+export type TodayLeader = {
+  name: string
+  guessCount: number
+}
+
+export const fetchTodayLeader = async (
+  grade: string,
+  date: string
+): Promise<TodayLeader | null> => {
+  if (!hasSupabaseConfig || !supabase) return null
+
+  const normalizedGrade = normalizeLegacyGrade(grade)
+
+  const { data, error } = await supabase
+    .from(SUPABASE_TABLES.gameSubmissions)
+    .select('player_name, guess_count, total_duration_sec')
+    .eq('game_date', date)
+    .eq('grade', Number(normalizedGrade) || 0)
+    .eq('won', true)
+    .not('game_type', 'in', '("bonus","teachers")')
+    .order('guess_count', { ascending: true })
+    .order('total_duration_sec', { ascending: true })
+    .limit(1)
+
+  if (error || !data || data.length === 0) return null
+
+  // Apply legacy name aliases so the display name matches the leaderboard
+  const legacyAliases: Record<string, string> = {
+    'harvey m': 'Mrs. Harvey',
+    'mrs harvey': 'Mrs. Harvey',
+    'evan bassett': 'Dr. Bassett',
+    'bassett evan': 'Dr. Bassett',
+    'dr bassett': 'Dr. Bassett',
+    'evan basset': 'Dr. Bassett',
+    'dr basset': 'Dr. Bassett',
+    'katie cruce': 'Mrs. Cruce',
+    'katie c': 'Mrs. Cruce',
+    'mrs cruce': 'Mrs. Cruce',
+    'amanda adams': 'Mrs. Adams',
+    'mrs adams': 'Mrs. Adams',
+    'mr wimberly': 'Sam W',
+  }
+  const rawName = String(data[0].player_name || '')
+  const nameKey = normalizeNameKey(rawName)
+  const displayName = legacyAliases[nameKey] ?? rawName
+
+  return { name: displayName, guessCount: Number(data[0].guess_count) }
 }
