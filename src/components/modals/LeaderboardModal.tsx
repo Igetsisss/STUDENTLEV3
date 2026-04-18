@@ -641,7 +641,8 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength }: Props)
                 {filtered.map((entry, i) => {
                   const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                   const isTodayLeader = i === 0
-                  const isMe = entry.name.toLowerCase() === myName.toLowerCase()                  const redact = !isMe && shouldRedactName(entry.name, solutionLength)                  return (
+                  const isMe = entry.name.toLowerCase() === myName.toLowerCase()
+                  const redact = !isMe && shouldRedactName(entry.name, solutionLength)                  return (
                     <tr
                       key={i}
                       className={`border-b border-gray-100 dark:border-gray-700 ${

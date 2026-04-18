@@ -10,3 +10,4 @@ Filter.prototype.isProfane = function () {
 
 module.exports = Filter
 module.exports.default = Filter
+module.exports.Filter = Filter
