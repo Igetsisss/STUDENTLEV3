@@ -37,14 +37,19 @@ const SHARE_GRADE_LABELS: Record<string, string> = {
 const buildEmailSubject = (
   guessCount: number,
   lost: boolean,
-  rank: number | null
+  rank: number | null,
+  total: number | null
 ): string => {
+  const placement =
+    rank !== null && total !== null ? `I placed #${rank}/${total} today` : null
   if (lost)
     return `Today's Studentle humbled me 💀 — bet you can't solve it either`
-  if (rank === 1)
-    return `I'm #1 on today's Studentle leaderboard 👑 — can you dethrone me?`
+  if (guessCount === 1 && placement)
+    return `${placement} in 1 GUESS on Studentle #${solutionIndex + 1}`
   if (guessCount === 1)
     return `I solved Studentle #${solutionIndex + 1} in 1 GUESS`
+  if (placement)
+    return `${placement} in ${guessCount} guesses on Studentle #${solutionIndex + 1}`
   if (guessCount === 2)
     return `Studentle #${solutionIndex + 1} in 2 guesses 🎯 — think you can beat me?`
   if (guessCount <= 4)
@@ -160,7 +165,8 @@ export const shareStatus = (
   const subject = buildEmailSubject(
     guesses.length,
     lost,
-    options.leaderboardRank ?? null
+    options.leaderboardRank ?? null,
+    options.leaderboardTotal ?? null
   )
   const body = buildEmailBody(solution, guesses, lost, tiles, options)
 

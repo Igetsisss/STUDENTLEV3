@@ -25,6 +25,7 @@ import {
   REVEAL_TIME_MS,
   WELCOME_GRADE_MODAL_MS,
 } from './constants/settings'
+import { VALID_GUESSES } from './constants/validGuesses'
 import {
   CORRECT_TEACHER_MESSAGE,
   CORRECT_WORD_MESSAGE,
@@ -1448,23 +1449,45 @@ function App() {
               #{solutionIndex + 1}
             </span>
             {todayLeader &&
-            todayLeader.name.split(' ')[0].toLowerCase() !==
-              effectiveDailySolution.toLowerCase() ? (
-              <span>
-                <span className="text-slate-500 dark:text-slate-400">
-                  Today&apos;s leader:{' '}
-                </span>
-                <span className="font-bold text-slate-700 dark:text-slate-200">
-                  {todayLeader.name}
-                </span>
-                <span className="font-semibold text-green-600 dark:text-green-400">
-                  {' '}
-                  ({todayLeader.guessCount}/6)
-                </span>
-              </span>
-            ) : (
-              <span className="italic">No winner yet — be first!</span>
-            )}
+            (() => {
+              // Redact leader name if any token is a valid guess for the active
+              // puzzle and the game isn't complete yet (spoiler prevention).
+              const gameComplete = isGameWon || isGameLost
+              const leaderNameHidden =
+                !gameComplete &&
+                String(todayLeader.name || '')
+                  .trim()
+                  .split(/\s+/)
+                  .some((token) => {
+                    const letters = token
+                      .replace(/[^a-zA-Z]/g, '')
+                      .toLowerCase()
+                    return (
+                      letters.length > 1 &&
+                      letters.length === activeSolution.length &&
+                      VALID_GUESSES.includes(letters)
+                    )
+                  })
+              return leaderNameHidden ? null : (
+                todayLeader.name.split(' ')[0].toLowerCase() !==
+                effectiveDailySolution.toLowerCase() ? (
+                  <span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Today&apos;s leader:{' '}
+                    </span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                      {todayLeader.name}
+                    </span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      {' '}
+                      ({todayLeader.guessCount}/6)
+                    </span>
+                  </span>
+                ) : (
+                  <span className="italic">No winner yet — be first!</span>
+                )
+              )
+            })()} 
           </div>
           <InfoModal
             isOpen={isInfoModalOpen}
