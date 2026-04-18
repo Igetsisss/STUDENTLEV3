@@ -404,3 +404,49 @@ export const getStoredIsHighContrastMode = () => {
   const highContrast = localStorage.getItem(highContrastKey)
   return highContrast === '1'
 }
+
+// ── Extra-round stats (bonus, teachers, grade rounds) ──────────────────────
+const extraRoundStatsKey = 'extraRoundStats'
+
+export type ExtraRoundStats = {
+  bonus: { played: number; won: number }
+  teachers: { played: number; won: number }
+  grade: { played: number; won: number }
+}
+
+const defaultExtraRoundStats: ExtraRoundStats = {
+  bonus: { played: 0, won: 0 },
+  teachers: { played: 0, won: 0 },
+  grade: { played: 0, won: 0 },
+}
+
+export const loadExtraRoundStats = (): ExtraRoundStats => {
+  const raw = localStorage.getItem(extraRoundStatsKey)
+  if (!raw) return { ...defaultExtraRoundStats }
+  try {
+    const parsed = JSON.parse(raw) as ExtraRoundStats
+    return {
+      bonus: parsed.bonus ?? { played: 0, won: 0 },
+      teachers: parsed.teachers ?? { played: 0, won: 0 },
+      grade: parsed.grade ?? { played: 0, won: 0 },
+    }
+  } catch {
+    return { ...defaultExtraRoundStats }
+  }
+}
+
+export const recordExtraRoundResult = (
+  type: 'bonus' | 'teachers' | 'grade',
+  won: boolean
+): ExtraRoundStats => {
+  const stats = loadExtraRoundStats()
+  const updated: ExtraRoundStats = {
+    ...stats,
+    [type]: {
+      played: stats[type].played + 1,
+      won: stats[type].won + (won ? 1 : 0),
+    },
+  }
+  localStorage.setItem(extraRoundStatsKey, JSON.stringify(updated))
+  return updated
+}

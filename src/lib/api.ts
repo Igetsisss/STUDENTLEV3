@@ -889,63 +889,6 @@ export const fetchLeaderboard = async (
   return []
 }
 
-// Returns the list of words submitted today for a player's daily game, in guess
-// order. Uses the most-recent session when multiple sessions exist.
-export const fetchTodayInProgress = async (
-  displayName: string
-): Promise<string[]> => {
-  if (!hasSupabaseConfig || !supabase) return []
-
-  try {
-    const today = new Date().toISOString().split('T')[0]
-    const { data, error } = await supabase
-      .from(SUPABASE_TABLES.keystrokeLogs)
-      .select(
-        'session_id, received_at, key_type, sequence_number, input_before'
-      )
-      .eq('player_name_key', normalizeNameKey(displayName))
-      .eq('game_date', today)
-      .eq('game_type', 'daily')
-      .order('received_at', { ascending: false })
-
-    if (error) {
-      console.error(
-        'Failed to fetch in-progress keystrokes from Supabase:',
-        error
-      )
-    } else if (data && data.length > 0) {
-      const bySession: Record<string, { rows: typeof data; latestTs: number }> =
-        {}
-      for (const row of data) {
-        const sid = String(row.session_id || 'default')
-        const ts = row.received_at
-          ? new Date(String(row.received_at)).getTime()
-          : 0
-        if (!bySession[sid]) bySession[sid] = { rows: [], latestTs: 0 }
-        bySession[sid].rows.push(row)
-        if (ts > bySession[sid].latestTs) bySession[sid].latestTs = ts
-      }
-
-      const latestSession = Object.values(bySession).sort(
-        (a, b) => b.latestTs - a.latestTs
-      )[0]
-
-      return latestSession.rows
-        .filter((row: any) => row.key_type === 'enter_submit')
-        .sort(
-          (a: any, b: any) =>
-            (Number(a.sequence_number) || 0) - (Number(b.sequence_number) || 0)
-        )
-        .map((row: any) => String(row.input_before || '').toUpperCase())
-        .filter((word: any) => word.length === 5)
-    }
-  } catch (error) {
-    console.error('Failed to read in-progress keystrokes from Supabase:', error)
-  }
-
-  return []
-}
-
 // ─── Today's Leader ─────────────────────────────────────────────────────────
 
 export type TodayLeader = {

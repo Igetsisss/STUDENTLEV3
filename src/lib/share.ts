@@ -1,5 +1,4 @@
 import { MAX_BONUS_CHALLENGES, MAX_CHALLENGES } from '../constants/settings'
-import { GAME_TITLE } from '../constants/strings'
 import { getGuessStatuses } from './statuses'
 import { solutionIndex, unicodeSplit } from './words'
 
@@ -14,6 +13,143 @@ const isShareCapableDevice = () =>
   /SmartTV|Tizen|webOS|Android TV/i.test(navigator.userAgent) ||
   /WearOS|Wear OS|Galaxy Watch/i.test(navigator.userAgent)
 
+export type ShareOptions = {
+  bonusSolution?: string
+  bonusGuesses?: string[]
+  teachersSolution?: string
+  teachersGuesses?: string[]
+  gradeRoundGuessesMap?: Record<string, string[]>
+  gradeRoundSolutions?: Record<string, string>
+  solveRate?: number | null
+  leaderboardRank?: number | null
+  leaderboardTotal?: number | null
+  totalGames?: number
+  winRate?: number
+}
+
+const SHARE_GRADE_LABELS: Record<string, string> = {
+  '9': 'Freshman',
+  '10': 'Sophomore',
+  '11': 'Junior',
+  '12': 'Senior',
+}
+
+const buildEmailSubject = (
+  guessCount: number,
+  lost: boolean,
+  rank: number | null
+): string => {
+  if (lost)
+    return `Today's Studentle humbled me 💀 — bet you can't solve it either`
+  if (rank === 1)
+    return `I'm #1 on today's Studentle leaderboard 👑 — can you dethrone me?`
+  if (guessCount === 1)
+    return `I solved Studentle #${solutionIndex + 1} in 1 GUESS 🤯 — try that`
+  if (guessCount === 2)
+    return `Studentle #${solutionIndex + 1} in 2 guesses 🎯 — think you can beat me?`
+  if (guessCount <= 4)
+    return `Studentle #${solutionIndex + 1} solved in ${guessCount}/6 🔥 — can you top that?`
+  return `I finally cracked today's Studentle 😅 — now it's your turn`
+}
+
+const buildEmailBody = (
+  solution: string,
+  guesses: string[],
+  lost: boolean,
+  tiles: string[],
+  options: ShareOptions
+): string => {
+  const {
+    bonusSolution,
+    bonusGuesses,
+    teachersSolution,
+    teachersGuesses,
+    gradeRoundGuessesMap,
+    gradeRoundSolutions,
+    solveRate,
+    leaderboardRank,
+    leaderboardTotal,
+    totalGames,
+    winRate,
+  } = options
+
+  const dailyResult = lost
+    ? `X/${MAX_CHALLENGES}`
+    : `${guesses.length}/${MAX_CHALLENGES}`
+
+  let body =
+    `Studentle is a daily word puzzle made BY and FOR Bear Creek students — ` +
+    `think Wordle, but with grade rounds, teacher rounds, a bonus round, and ` +
+    `a live school leaderboard. A new puzzle drops every single day.\n\n` +
+    `Here are my results:\n\n`
+
+  body += `━━━━━━━━━━━━━━━━━━━━━━\n`
+  body += `🏆 STUDENTLE #${solutionIndex + 1}\n`
+  body += `━━━━━━━━━━━━━━━━━━━━━━\n\n`
+
+  // Daily
+  body += `📅 Daily — ${dailyResult}\n`
+  body += generateEmojiGrid(solution, guesses, tiles)
+
+  // Bonus
+  if (bonusSolution && bonusGuesses && bonusGuesses.length > 0) {
+    const bonusWon = bonusGuesses[bonusGuesses.length - 1] === bonusSolution
+    body += `\n\n🎉 Bonus Round — ${
+      bonusWon
+        ? `${bonusGuesses.length}/${MAX_BONUS_CHALLENGES}`
+        : `X/${MAX_BONUS_CHALLENGES}`
+    }\n`
+    body += generateEmojiGrid(bonusSolution, bonusGuesses, tiles)
+  }
+
+  // Teachers
+  if (teachersSolution && teachersGuesses && teachersGuesses.length > 0) {
+    const teachersWon =
+      teachersGuesses[teachersGuesses.length - 1] === teachersSolution
+    body += `\n\n🍎 Teachers Round — ${
+      teachersWon ? `${teachersGuesses.length}/${MAX_CHALLENGES}` : `X/${MAX_CHALLENGES}`
+    }\n`
+    body += generateEmojiGrid(teachersSolution, teachersGuesses, tiles)
+  }
+
+  // Grade rounds
+  if (gradeRoundGuessesMap && gradeRoundSolutions) {
+    for (const grade of ['9', '10', '11', '12']) {
+      const gGuesses = gradeRoundGuessesMap[grade]
+      const gSolution = gradeRoundSolutions[grade]
+      if (gGuesses && gGuesses.length > 0 && gSolution) {
+        const gWon = gGuesses[gGuesses.length - 1] === gSolution
+        body += `\n\n🎓 ${SHARE_GRADE_LABELS[grade] ?? 'Grade'} Round — ${
+          gWon ? `${gGuesses.length}/${MAX_CHALLENGES}` : `X/${MAX_CHALLENGES}`
+        }\n`
+        body += generateEmojiGrid(gSolution, gGuesses, tiles)
+      }
+    }
+  }
+
+  body += `\n\n━━━━━━━━━━━━━━━━━━━━━━\n`
+
+  // Stats callout
+  const statParts: string[] = []
+  if (totalGames != null && totalGames > 0)
+    statParts.push(`${totalGames} games played`)
+  if (winRate != null) statParts.push(`${winRate}% win rate`)
+  if (leaderboardRank != null && leaderboardTotal != null)
+    statParts.push(`#${leaderboardRank} of ${leaderboardTotal} today`)
+  if (solveRate != null)
+    statParts.push(`only ${solveRate}% solved today's puzzle`)
+  if (statParts.length > 0) {
+    body += `\n📊 My stats: ${statParts.join(' · ')}\n`
+  }
+
+  body +=
+    `\nPlay free at studentle.org — there's a live leaderboard so you can ` +
+    `see exactly where you rank vs the whole school. ` +
+    `New puzzle every day. See you on the board! 🏅`
+
+  return body
+}
+
 export const shareStatus = (
   solution: string,
   guesses: string[],
@@ -22,54 +158,19 @@ export const shareStatus = (
   isHighContrastMode: boolean,
   handleShareToClipboard: () => void,
   handleShareFailure: () => void,
-  bonusSolution?: string,
-  bonusGuesses?: string[]
+  options: ShareOptions = {}
 ) => {
   const tiles = getEmojiTiles(isDarkMode, isHighContrastMode)
+  const subject = buildEmailSubject(
+    guesses.length,
+    lost,
+    options.leaderboardRank ?? null
+  )
+  const body = buildEmailBody(solution, guesses, lost, tiles, options)
 
-  let textToShare =
-    `${GAME_TITLE} ${solutionIndex} ${
-      lost ? 'X' : guesses.length
-    }/${MAX_CHALLENGES}\n\n` + generateEmojiGrid(solution, guesses, tiles)
-
-  if (bonusSolution && bonusGuesses && bonusGuesses.length > 0) {
-    const bonusWon = bonusGuesses[bonusGuesses.length - 1] === bonusSolution
-    textToShare +=
-      `\n\nBonus Round ${
-        bonusWon ? bonusGuesses.length : 'X'
-      }/${MAX_BONUS_CHALLENGES}\n` +
-      generateEmojiGrid(bonusSolution, bonusGuesses, tiles)
-  }
-
-  textToShare += '\n\nstudentle.org'
-
-  const shareData = { text: textToShare }
-
-  let shareSuccess = false
-
-  try {
-    if (attemptShare(shareData)) {
-      navigator.share(shareData)
-      shareSuccess = true
-    }
-  } catch (error) {
-    shareSuccess = false
-  }
-
-  try {
-    if (!shareSuccess) {
-      if (navigator.clipboard) {
-        navigator.clipboard
-          .writeText(textToShare)
-          .then(handleShareToClipboard)
-          .catch(handleShareFailure)
-      } else {
-        handleShareFailure()
-      }
-    }
-  } catch (error) {
-    handleShareFailure()
-  }
+  // Open the device's default email client
+  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  window.location.href = mailtoUrl
 }
 
 export const generateEmojiGrid = (

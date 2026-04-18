@@ -10,7 +10,6 @@ import { AlertContainer } from './components/alerts/AlertContainer'
 import { CompletedGrid } from './components/grid/CompletedGrid'
 import { Grid } from './components/grid/Grid'
 import { Keyboard } from './components/keyboard/Keyboard'
-import { DatePickerModal } from './components/modals/DatePickerModal'
 import { GradeModal } from './components/modals/Grade'
 import { InfoModal } from './components/modals/InfoModal'
 import { LeaderboardModal } from './components/modals/LeaderboardModal'
@@ -59,6 +58,7 @@ import {
   loadGameStateFromLocalStorage,
   loadGradeRoundGameStateFromLocalStorage,
   loadTeachersGameStateFromLocalStorage,
+  recordExtraRoundResult,
   saveActiveRoundToLocalStorage,
   saveBonusGameStateToLocalStorage,
   saveGameStateToLocalStorage,
@@ -335,7 +335,6 @@ function App() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
-  const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false)
   const [isAllTimeMvp, setIsAllTimeMvp] = useState(false)
@@ -723,13 +722,14 @@ function App() {
 
         if (changed) {
           localStorage.setItem('cloudStateAppliedAt', snapshot.updatedAt)
-          window.location.reload()
+          showSuccessAlert('Syncing your progress…')
+          setTimeout(() => window.location.reload(), 800)
         }
       })
       .catch(() => {
         // Keep local state if cloud read fails.
       })
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // On page load: restore all completed round guesses and bothComplete state
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1005,8 +1005,7 @@ function App() {
     isStatsModalOpen ||
     isInfoModalOpen ||
     isLeaderboardModalOpen ||
-    isSettingsModalOpen ||
-    isDatePickerModalOpen
+    isSettingsModalOpen
 
   const onChar = (value: string) => {
     const canAdd =
@@ -1089,11 +1088,8 @@ function App() {
       'evan bassett': { name: 'Dr. Bassett', grade: '0' },
       'bassett evan': { name: 'Dr. Bassett', grade: '0' },
       'katie cruce': { name: 'Mrs. Cruce', grade: '0' },
+      'katie c': { name: 'Mrs. Cruce', grade: '0' },
       'amanda adams': { name: 'Mrs. Adams', grade: '0' },
-      'Katie C': { name: 'Mrs. Cruce', grade: '0' },
-      'katie C': { name: 'Mrs. Cruce', grade: '0' },
-      'harvey M': { name: 'Mrs. Harvey', grade: '0' },
-      'Harvey M': { name: 'Mrs. Harvey', grade: '0' },
     }
     const legacyFix = legacyNameFixes[normalizePlayerKey(playerName)]
     if (legacyFix) {
@@ -1191,16 +1187,19 @@ function App() {
           }
         }
         if (isBonusRound) {
+          recordExtraRoundResult('bonus', true)
           setBonusPlayedToday()
           setBonusGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
         if (isTeachersRound) {
+          recordExtraRoundResult('teachers', true)
           setTeachersPlayedToday()
           setTeachersGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
         if (isGradeRound && gradeRoundGrade) {
+          recordExtraRoundResult('grade', true)
           setGradeRoundPlayedToday(gradeRoundGrade)
           setGradeRoundsPlayed((prev: string[]) => [...prev, gradeRoundGrade])
           setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({
@@ -1232,16 +1231,19 @@ function App() {
           }
         }
         if (isBonusRound) {
+          recordExtraRoundResult('bonus', false)
           setBonusPlayedToday()
           setBonusGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
         if (isTeachersRound) {
+          recordExtraRoundResult('teachers', false)
           setTeachersPlayedToday()
           setTeachersGuesses(newGuesses)
           if (dailyGuesses.length > 0) setBothComplete(true)
         }
         if (isGradeRound && gradeRoundGrade) {
+          recordExtraRoundResult('grade', false)
           setGradeRoundPlayedToday(gradeRoundGrade)
           setGradeRoundsPlayed((prev: string[]) => [...prev, gradeRoundGrade])
           setGradeRoundGuessesMap((prev: Record<string, string[]>) => ({
@@ -1363,7 +1365,6 @@ function App() {
         <Navbar
           setIsInfoModalOpen={setIsInfoModalOpen}
           setIsStatsModalOpen={setIsStatsModalOpen}
-          setIsDatePickerModalOpen={setIsDatePickerModalOpen}
           setIsSettingsModalOpen={setIsSettingsModalOpen}
           setIsLeaderboardModalOpen={setIsLeaderboardModalOpen}
           onTitleTap={handleTitleTap}
@@ -1535,18 +1536,10 @@ function App() {
             isPersonalBest={isPersonalBest}
             onPersonalBestSeen={() => setIsPersonalBest(false)}
           />
-          <DatePickerModal
-            isOpen={isDatePickerModalOpen}
-            initialDate={solutionGameDate}
-            handleSelectDate={(d) => {
-              setIsDatePickerModalOpen(false)
-              setGameDate(d)
-            }}
-            handleClose={() => setIsDatePickerModalOpen(false)}
-          />
           <LeaderboardModal
             isOpen={isLeaderboardModalOpen}
             handleClose={() => setIsLeaderboardModalOpen(false)}
+            solutionLength={activeSolution.length}
           />
           <SettingsModal
             isOpen={isSettingsModalOpen}

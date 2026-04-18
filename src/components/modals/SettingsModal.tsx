@@ -48,7 +48,7 @@ export const SettingsModal = ({
             <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
               <p className="font-semibold">Tell Jack Underwood!</p>
               <p className="mt-1">
-                Find him in person, or shoot him an email at{' '}
+                Find me in person, or shoot me an email at{' '}
                 <a
                   href="mailto:underwoodja@bearsmail.org"
                   className="font-medium underline"

@@ -11,9 +11,23 @@ import {
 } from '../../lib/api'
 import { BaseModal } from './BaseModal'
 
+// ── In-memory leaderboard cache ──────────────────────────────────────────────
+// Keyed by "<viewMode>:<filterGrade>" (e.g. "today:", "alltime:11").
+// Today data is kept for 2 min (scores change as players submit throughout the
+// day). All-time data is kept for 5 min (rarely changes mid-session).
+const TODAY_TTL_MS = 2 * 60 * 1000
+const ALLTIME_TTL_MS = 5 * 60 * 1000
+
+type LeaderboardCacheEntry = {
+  fetchedAt: number
+  raw: LeaderboardEntry[]
+}
+const leaderboardCache = new Map<string, LeaderboardCacheEntry>()
+
 type Props = {
   isOpen: boolean
   handleClose: () => void
+  solutionLength: number
 }
 
 const gradeLabels: Record<string, string> = {
@@ -57,6 +71,32 @@ const samePlayer = (left?: string | null, right?: string | null) =>
   String(right || '')
     .toLowerCase()
     .trim()
+
+// Tokens that are title prefixes — not real name words.
+const NAME_PREFIXES = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'coach', 'prof'])
+
+// Returns true when any "real" word in the name (not a prefix or single-letter
+// initial) has exactly solutionLength letters — meaning the player may have
+// set their name to the answer word and it should be hidden on the leaderboard.
+const shouldRedactName = (name: string, solutionLength: number): boolean => {
+  const tokens = String(name || '').trim().split(/\s+/)
+  for (const token of tokens) {
+    const letters = token.replace(/[^a-zA-Z]/g, '').toLowerCase()
+    if (letters.length <= 1 || NAME_PREFIXES.has(letters)) continue
+    if (letters.length === solutionLength) return true
+  }
+  return false
+}
+
+const RedactedName = ({ length }: { length: number }) => (
+  <span
+    title="Name hidden — could be today's answer"
+    className="select-none rounded px-0.5 font-mono text-gray-400 dark:text-gray-600"
+    aria-label="hidden"
+  >
+    {'█'.repeat(length)}
+  </span>
+)
 
 const getTodayLeaderLabel = (
   filterType: 'daily' | 'bonus' | 'teachers' | 'graderound'
@@ -198,7 +238,7 @@ const MvpExplainerModal = ({
   )
 }
 
-export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
+export const LeaderboardModal = ({ isOpen, handleClose, solutionLength }: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [allTimeEntries, setAllTimeEntries] = useState<AllTimeEntry[]>([])
   const [mvp, setMvp] = useState<MvpEntry | null>(null)
@@ -226,10 +266,25 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
   // For "all-time" we pass the grade filter so the paginated query stays lean.
   useEffect(() => {
     if (!isOpen) return
+    const cacheKey = `${viewMode}:${filterGrade}`
+    const ttl = viewMode === 'today' ? TODAY_TTL_MS : ALLTIME_TTL_MS
+    const cached = leaderboardCache.get(cacheKey)
+    if (cached && Date.now() - cached.fetchedAt < ttl) {
+      const data = cached.raw
+      if (viewMode === 'today') {
+        setEntries(data)
+      } else {
+        setAllTimeEntries(computeAllTimeLeaderboard(data))
+      }
+      setMvp(computeMvp(data))
+      setStreaks(computeStreaks(data))
+      return
+    }
     setLoading(true)
     if (viewMode === 'today') {
       fetchLeaderboard(today, filterGrade)
         .then((data) => {
+          leaderboardCache.set(cacheKey, { fetchedAt: Date.now(), raw: data })
           setEntries(data)
           setMvp(computeMvp(data))
           setStreaks(computeStreaks(data))
@@ -238,6 +293,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
     } else {
       fetchLeaderboard(undefined, filterGrade, true)
         .then((data) => {
+          leaderboardCache.set(cacheKey, { fetchedAt: Date.now(), raw: data })
           setAllTimeEntries(computeAllTimeLeaderboard(data))
           setMvp(computeMvp(data))
           setStreaks(computeStreaks(data))
@@ -327,7 +383,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1.5">
           <button
-            onClick={() => setViewMode('today')}
+            onClick={() => { setViewMode('today'); setFilterType('daily') }}
             className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
               viewMode === 'today'
                 ? 'bg-blue-600 text-white shadow-sm'
@@ -491,6 +547,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                     const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                     const isMe =
                       entry.name.toLowerCase() === myName.toLowerCase()
+                    const redact = !isMe && shouldRedactName(entry.name, solutionLength)
                     return (
                       <tr
                         key={i}
@@ -517,9 +574,13 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                                 : undefined
                             }
                           >
-                            {toTitleCase(entry.name)}
+                            {redact ? (
+                              <RedactedName length={solutionLength} />
+                            ) : (
+                              toTitleCase(entry.name)
+                            )}
                           </span>
-                          {(streaks.get(entry.name.toLowerCase().trim()) ??
+                          {!redact && (streaks.get(entry.name.toLowerCase().trim()) ??
                             0) >= 2 && (
                             <span className="ml-1 text-xs text-orange-500">
                               🔥{streaks.get(entry.name.toLowerCase().trim())}
@@ -580,8 +641,7 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                 {filtered.map((entry, i) => {
                   const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                   const isTodayLeader = i === 0
-                  const isMe = entry.name.toLowerCase() === myName.toLowerCase()
-                  return (
+                  const isMe = entry.name.toLowerCase() === myName.toLowerCase()                  const redact = !isMe && shouldRedactName(entry.name, solutionLength)                  return (
                     <tr
                       key={i}
                       className={`border-b border-gray-100 dark:border-gray-700 ${
@@ -617,12 +677,16 @@ export const LeaderboardModal = ({ isOpen, handleClose }: Props) => {
                               : undefined
                           }
                         >
-                          {toTitleCase(entry.name)}
+                          {redact ? (
+                            <RedactedName length={solutionLength} />
+                          ) : (
+                            toTitleCase(entry.name)
+                          )}
                         </span>
-                        {isMvpRow && (
+                        {!redact && isMvpRow && (
                           <span className="all-time-mvp-pill ml-1">MVP</span>
                         )}
-                        {(streaks.get(entry.name.toLowerCase().trim()) ?? 0) >=
+                        {!redact && (streaks.get(entry.name.toLowerCase().trim()) ?? 0) >=
                           2 && (
                           <span className="ml-1 text-xs text-orange-500">
                             🔥{streaks.get(entry.name.toLowerCase().trim())}

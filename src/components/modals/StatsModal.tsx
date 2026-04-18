@@ -1,20 +1,22 @@
-import { ClockIcon, ShareIcon, StarIcon } from '@heroicons/react/outline'
-import { format } from 'date-fns'
+import { MailIcon, ShareIcon, StarIcon } from '@heroicons/react/outline'
 import { useEffect, useState } from 'react'
 import Countdown from 'react-countdown'
 
-import { DATE_LOCALE, ENABLE_ARCHIVED_GAMES } from '../../constants/settings'
+import { fetchLeaderboard, isTrueDailyEntry } from '../../lib/api'
 import {
-  ARCHIVE_GAMEDATE_TEXT,
+  ExtraRoundStats,
+  GameStats,
+  loadExtraRoundStats,
+  saveStatsToLocalStorage,
+} from '../../lib/localStorage'
+import { shareStatus } from '../../lib/share'
+import { tomorrow } from '../../lib/words'
+import {
   GUESS_DISTRIBUTION_TEXT,
   NEW_WORD_TEXT,
   SHARE_TEXT,
   STATISTICS_TITLE,
 } from '../../constants/strings'
-import { fetchLeaderboard, isTrueDailyEntry } from '../../lib/api'
-import { GameStats, saveStatsToLocalStorage } from '../../lib/localStorage'
-import { shareStatus } from '../../lib/share'
-import { solutionGameDate, tomorrow } from '../../lib/words'
 import { Histogram } from '../stats/Histogram'
 import { StatBar } from '../stats/StatBar'
 import { BaseModal } from './BaseModal'
@@ -83,6 +85,10 @@ type Props = {
   onOpenLeaderboard?: () => void
   bonusSolution?: string
   bonusGuesses?: string[]
+  teachersSolution?: string
+  teachersGuesses?: string[]
+  gradeRoundGuessesMap?: Record<string, string[]>
+  gradeRoundSolutions?: Record<string, string>
   isFirstToday?: boolean
   isPersonalBest?: boolean
   onPersonalBestSeen?: () => void
@@ -116,6 +122,10 @@ export const StatsModal = ({
   onOpenLeaderboard,
   bonusSolution,
   bonusGuesses,
+  teachersSolution,
+  teachersGuesses,
+  gradeRoundGuessesMap,
+  gradeRoundSolutions,
   isFirstToday,
   isPersonalBest,
   onPersonalBestSeen,
@@ -125,6 +135,9 @@ export const StatsModal = ({
   const [solveRate, setSolveRate] = useState<number | null>(null)
   const [lockMessage, setLockMessage] = useState('')
   const [displayStats, setDisplayStats] = useState<GameStats>(gameStats)
+  const [extraRoundStats, setExtraRoundStats] = useState<ExtraRoundStats>(
+    loadExtraRoundStats
+  )
 
   useEffect(() => {
     setDisplayStats(gameStats)
@@ -134,6 +147,11 @@ export const StatsModal = ({
   // the next open (e.g. user clicks a locked button, closes, reopens → no stale msg)
   useEffect(() => {
     if (!isOpen) setLockMessage('')
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    setExtraRoundStats(loadExtraRoundStats())
   }, [isOpen])
 
   useEffect(() => {
@@ -373,8 +391,42 @@ export const StatsModal = ({
             )}
           </div>
         )
-      })()}
-      {/* Hard word difficulty */}
+      })()}      {/* Extra rounds summary */}
+      {(extraRoundStats.bonus.played > 0 ||
+        extraRoundStats.teachers.played > 0 ||
+        extraRoundStats.grade.played > 0) && (
+        <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-800">
+          <p className="mb-1.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
+            Extra Rounds
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {extraRoundStats.bonus.played > 0 && (
+              <div className="text-center">
+                <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  {extraRoundStats.bonus.won}/{extraRoundStats.bonus.played}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Bonus</div>
+              </div>
+            )}
+            {extraRoundStats.teachers.played > 0 && (
+              <div className="text-center">
+                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  {extraRoundStats.teachers.won}/{extraRoundStats.teachers.played}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Teachers</div>
+              </div>
+            )}
+            {extraRoundStats.grade.played > 0 && (
+              <div className="text-center">
+                <div className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                  {extraRoundStats.grade.won}/{extraRoundStats.grade.played}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Grade Rounds</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}      {/* Hard word difficulty */}
       {solveRate !== null && (isGameWon || isGameLost) && (
         <div
           className={`mt-3 rounded-lg border px-3 py-2 text-center text-sm ${
@@ -398,28 +450,14 @@ export const StatsModal = ({
       {(isGameLost || isGameWon) && (
         <div className="mt-5 columns-2 items-center items-stretch justify-center text-center dark:text-white sm:mt-6">
           <div className="inline-block w-full text-left">
-            {(!ENABLE_ARCHIVED_GAMES || isLatestGame) && (
-              <div>
-                <h5>{NEW_WORD_TEXT}</h5>
-                <Countdown
-                  className="text-lg font-medium text-gray-900 dark:text-gray-100"
-                  date={tomorrow}
-                  daysInHours={true}
-                />
-              </div>
-            )}
-            {ENABLE_ARCHIVED_GAMES && !isLatestGame && (
-              <div className="mt-2 inline-flex">
-                <ClockIcon className="mr-1 mt-2 mt-1 h-5 w-5 stroke-black dark:stroke-white" />
-                <div className="mt-1 ml-1 text-center text-sm sm:text-base">
-                  <strong>{ARCHIVE_GAMEDATE_TEXT}:</strong>
-                  <br />
-                  {format(solutionGameDate, 'd MMMM yyyy', {
-                    locale: DATE_LOCALE,
-                  })}
-                </div>
-              </div>
-            )}
+            <div>
+              <h5>{NEW_WORD_TEXT}</h5>
+              <Countdown
+                className="text-lg font-medium text-gray-900 dark:text-gray-100"
+                date={tomorrow}
+                daysInHours={true}
+              />
+            </div>
           </div>
           <div>
             <button
@@ -434,13 +472,24 @@ export const StatsModal = ({
                   isHighContrastMode,
                   handleShareToClipboard,
                   handleShareFailure,
-                  bonusSolution,
-                  bonusGuesses
+                  {
+                    bonusSolution,
+                    bonusGuesses,
+                    teachersSolution,
+                    teachersGuesses,
+                    gradeRoundGuessesMap,
+                    gradeRoundSolutions,
+                    solveRate,
+                    leaderboardRank,
+                    leaderboardTotal,
+                    totalGames: displayStats.totalGames,
+                    winRate: displayStats.successRate,
+                  }
                 )
               }}
             >
-              <ShareIcon className="mr-2 h-6 w-6 cursor-pointer dark:stroke-white" />
-              {SHARE_TEXT}
+              <MailIcon className="mr-2 h-6 w-6 cursor-pointer dark:stroke-white" />
+              Email to a Friend
             </button>
           </div>
         </div>
