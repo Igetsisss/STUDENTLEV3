@@ -44,7 +44,7 @@ const buildEmailSubject = (
   if (rank === 1)
     return `I'm #1 on today's Studentle leaderboard 👑 — can you dethrone me?`
   if (guessCount === 1)
-    return `I solved Studentle #${solutionIndex + 1} in 1 GUESS 🤯 — try that`
+    return `I solved Studentle #${solutionIndex + 1} in 1 GUESS`
   if (guessCount === 2)
     return `Studentle #${solutionIndex + 1} in 2 guesses 🎯 — think you can beat me?`
   if (guessCount <= 4)
@@ -78,9 +78,8 @@ const buildEmailBody = (
     : `${guesses.length}/${MAX_CHALLENGES}`
 
   let body =
-    `Studentle is a daily word puzzle made BY and FOR Bear Creek students — ` +
-    `think Wordle, but with grade rounds, teacher rounds, a bonus round, and ` +
-    `a live school leaderboard. A new puzzle drops every single day.\n\n` +
+    `Studentle is a daily word puzzle made by HIES students — ` +
+    `Wordle but instead of words it's people in your grade!\n\n` +
     `Here are my results:\n\n`
 
   body += `━━━━━━━━━━━━━━━━━━━━━━\n`
@@ -142,10 +141,7 @@ const buildEmailBody = (
     body += `\n📊 My stats: ${statParts.join(' · ')}\n`
   }
 
-  body +=
-    `\nPlay free at studentle.org — there's a live leaderboard so you can ` +
-    `see exactly where you rank vs the whole school. ` +
-    `New puzzle every day. See you on the board! 🏅`
+  body += `\nPlay free at studentle.org`
 
   return body
 }
