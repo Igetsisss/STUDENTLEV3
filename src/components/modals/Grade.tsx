@@ -1,5 +1,6 @@
 import './gradestyle.css'
 
+import Filter from 'bad-words'
 import { useState, useEffect } from 'react'
 
 import {
@@ -50,61 +51,37 @@ const formatDateKey = (date: Date) =>
     '0'
   )}-${String(date.getDate()).padStart(2, '0')}`
 
-// Normalizes text for profanity detection:
-// substitutes common leet-speak digits/symbols, then strips non-letter characters.
-const normalizeProfanityCheck = (text: string): string =>
+// bad-words ships a large curated profanity list (~400+ terms).
+// We extend it with extra slurs and common leet-speak bypasses.
+const _profanityFilter = new Filter()
+_profanityFilter.addWords(
+  // Extra slurs not always in the base list
+  'nigg', 'nigga', 'chink', 'spic', 'spick', 'kike',
+  'wetback', 'beaner', 'gook', 'tranny', 'dyke', 'retard',
+  // Leet-speak variants the library won't catch on its own
+  'fuk', 'fuq', 'phuck', 'fvck', 'fck',
+  'sh1t', 'shyt', 'sht',
+  'b1tch', 'biatch', 'btch',
+  'n1gg', 'n1gga', 'n1gger',
+)
+
+// Pre-normalizes leet-speak before passing to the filter so variants
+// like "sh1thead" or "f4ggot" are caught.
+const normalizeLeetSpeak = (text: string): string =>
   text
-    .toLowerCase()
-    .replace(/4|@/g, 'a')
+    .replace(/4|@/gi, 'a')
     .replace(/3/g, 'e')
-    .replace(/1|!/g, 'i')
+    .replace(/1|!/gi, 'i')
     .replace(/0/g, 'o')
-    .replace(/5|\$/g, 's')
+    .replace(/5|\$/gi, 's')
     .replace(/7/g, 't')
     .replace(/9/g, 'g')
     .replace(/8/g, 'b')
-    .replace(/[^a-z]/g, '')
-
-// Patterns checked as substrings against the normalized name.
-// Compound forms (e.g. "asshole" not "ass") are used where the short root
-// could appear in legitimate names, to reduce false positives.
-const BLOCKED_PATTERNS: string[] = [
-  // Common profanity
-  'fuck', 'fuk', 'fck', 'fuq', 'phuck', 'fvck',
-  'shit', 'sht', 'shyt',
-  'bitch', 'biatch', 'btch',
-  'cunt',
-  'pussy',
-  'piss',
-  'bastard',
-  'whore',
-  'slut',
-  'twat',
-  'wanker',
-  'jizz',
-  'prick',
-  'dildo',
-  // Compounds to reduce false positives for names sharing short roots
-  'asshole', 'asshat', 'asswipe', 'dumbass', 'jackass', 'fatass', 'assface',
-  'dickhead', 'dickface', 'dickwad',
-  'cocksucker', 'cockface', 'cockhead',
-  // Racial / ethnic slurs
-  'nigger', 'nigga', 'nigg',
-  'faggot', 'fagot',
-  'chink',
-  'spick', 'spic',
-  'kike',
-  'wetback',
-  'beaner',
-  'gook',
-  'retard',
-  'tranny',
-  'dyke',
-]
 
 const containsProfanity = (text: string): boolean => {
-  const normalized = normalizeProfanityCheck(text)
-  return BLOCKED_PATTERNS.some((pattern) => normalized.includes(pattern))
+  const normalized = normalizeLeetSpeak(text)
+  // Check both the raw input and the leet-normalized form
+  return _profanityFilter.isProfane(text) || _profanityFilter.isProfane(normalized)
 }
 
 const capitalizeName = (name: string): string =>
