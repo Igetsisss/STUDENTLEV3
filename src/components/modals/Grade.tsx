@@ -184,10 +184,6 @@ export const GradeModal = ({
     const gradeRawValEarly = (rawGrade || '').replace(/"/g, '')
     const isTeacher =
       rawGrade === '"0"' || rawGrade === '0' || selectedGrade === '0'
-    // Early capture: write to signup_events immediately so registrations are
-    // recorded even if the player closes the tab before picking a last initial
-    // or title prefix. Does NOT touch game_submissions — no leaderboard impact.
-    submitNameStepRegistration(capitalized, gradeRawValEarly || selectedGrade)
     setStep(isTeacher ? 'prefix' : 'initial')
   }
 
@@ -204,6 +200,7 @@ export const GradeModal = ({
     localStorage.setItem('playerName', lastName)
     localStorage.setItem('playerPrefix', selectedPrefix)
     localStorage.removeItem('playerLastInitial')
+    submitNameStepRegistration(displayName, gradeRaw)
     submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
@@ -242,6 +239,7 @@ export const GradeModal = ({
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
     localStorage.setItem('playerName', name)
     if (initial) localStorage.setItem('playerLastInitial', initial)
+    submitNameStepRegistration(displayName, gradeRaw)
     submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
       localStorage.setItem('showInfoAfterReload', 'true')
