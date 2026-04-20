@@ -27,8 +27,13 @@ import { getGuessStatuses } from './statuses'
 export const firstGameDate = new Date(2023, 2, 1)
 export const periodInDays = 1
 
-export const isWordInWordList = (word: string) => {
+export const isWordInWordList = (word: string, allowedWords?: string[]) => {
   const lower = localeAwareLowerCase(word)
+
+  if (allowedWords) {
+    return allowedWords.includes(lower)
+  }
+
   return (
     WORDS.includes(lower) ||
     VALID_GUESSES.includes(lower) ||

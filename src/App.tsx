@@ -78,7 +78,11 @@ import {
   solutionIndex,
   unicodeLength,
 } from './lib/words'
-import { getTeachersBonusSolution } from './teacherWords'
+import {
+  getTeachersBonusSolution,
+  TEACHER_WORDS,
+  TEACHER_WORDS_FULL,
+} from './teacherWords'
 import {
   getBonusSolution,
   hasBonusBeenPlayedToday,
@@ -86,6 +90,7 @@ import {
 } from './utils/bonusRound'
 import {
   GRADE_LABELS,
+  GRADE_WORD_LISTS,
   getGradeRoundSolution,
   hasGradeRoundBeenPlayedToday,
   setGradeRoundPlayedToday,
@@ -1133,7 +1138,23 @@ function App() {
       })
     }
 
-    if (!isWordInWordList(currentGuess)) {
+    const allowedGuessWords = (() => {
+      if (isBonusRound && isTeacherPlayer) {
+        return TEACHER_WORDS_FULL
+      }
+
+      if (isGradeRound && gradeRoundGrade) {
+        return GRADE_WORD_LISTS[gradeRoundGrade]
+      }
+
+      if (isTeachersRound || isTeacherPlayer) {
+        return TEACHER_WORDS
+      }
+
+      return undefined
+    })()
+
+    if (!isWordInWordList(currentGuess, allowedGuessWords)) {
       setCurrentRowClass('jiggle')
       return showErrorAlert(
         isTeacherPlayer ? TEACHER_NOT_FOUND_MESSAGE : WORD_NOT_FOUND_MESSAGE,

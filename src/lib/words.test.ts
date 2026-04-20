@@ -2,8 +2,10 @@ import {
   getIndex,
   getLastGameDate,
   getNextGameDate,
+  isWordInWordList,
   getWordOfDay,
 } from './words'
+import { TEACHER_WORDS, TEACHER_WORDS_FULL } from '../teacherWords'
 
 describe('solutionIndex', () => {
   test('last game date', () => {
@@ -75,5 +77,12 @@ describe('solutionIndex', () => {
     expect(getWordOfDay(0)).toEqual('EMERSON')
     expect(getWordOfDay(1)).toEqual('WILLIAM')
     expect(getWordOfDay(131)).toEqual(getWordOfDay(131))
+  })
+
+  test('teacher rounds can restrict guesses to teacher names only', () => {
+    expect(isWordInWordList('george', TEACHER_WORDS)).toBe(false)
+    expect(isWordInWordList('graham', TEACHER_WORDS)).toBe(true)
+    expect(isWordInWordList('baum', TEACHER_WORDS_FULL)).toBe(true)
+    expect(isWordInWordList('baum', TEACHER_WORDS)).toBe(false)
   })
 })
