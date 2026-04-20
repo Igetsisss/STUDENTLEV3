@@ -83,6 +83,7 @@ import {
   TEACHER_WORDS,
   TEACHER_WORDS_FULL,
 } from './teacherWords'
+import { BONUS_WORDS } from './bonusRoundWords'
 import {
   getBonusSolution,
   hasBonusBeenPlayedToday,
@@ -1143,6 +1144,10 @@ function App() {
         return TEACHER_WORDS_FULL
       }
 
+      if (isBonusRound) {
+        return BONUS_WORDS
+      }
+
       if (isGradeRound && gradeRoundGrade) {
         return GRADE_WORD_LISTS[gradeRoundGrade]
       }
@@ -1151,7 +1156,8 @@ function App() {
         return TEACHER_WORDS
       }
 
-      return undefined
+      // Daily: restrict to the player's own grade list
+      return VALID_GUESSES
     })()
 
     if (!isWordInWordList(currentGuess, allowedGuessWords)) {
