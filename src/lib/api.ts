@@ -247,6 +247,7 @@ export type LeaderboardEntry = {
   gameType: string
   totalDurationSec: number
   gameStartTime: string
+  playerKey?: string
 }
 
 export type MvpEntry = {
@@ -701,10 +702,12 @@ const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
 export const computeAllTimeLeaderboard = (
   entries: LeaderboardEntry[]
 ): AllTimeEntry[] => {
-  const daily = entries.filter((e) => isOwnGradeDailyEntry(e))
   const map = new Map<string, LeaderboardEntry[]>()
-  for (const e of daily) {
-    const key = e.name.toLowerCase().trim()
+  for (const e of entries) {
+    // Prefer the stored player_key (name|grade) so two different players
+    // who happen to share a display name get separate rows. Fall back to
+    // name|grade derived locally for legacy rows that pre-date player_key.
+    const key = e.playerKey || `${e.name.toLowerCase().trim()}|${e.grade}`
     map.set(key, [...(map.get(key) || []), e])
   }
   const result: AllTimeEntry[] = []
@@ -803,6 +806,7 @@ export const fetchLeaderboard = async (
         gameType: rowType,
         totalDurationSec: Number(row.total_duration_sec) || 0,
         gameStartTime: row.game_start_time ? String(row.game_start_time) : '',
+        playerKey: row.player_key ? String(row.player_key) : '',
       })
     }
     return results
@@ -821,7 +825,7 @@ export const fetchLeaderboard = async (
         let pageQuery = supabase
           .from(SUPABASE_TABLES.gameSubmissions)
           .select(
-            'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
+            'player_key, player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
           )
           .order('id', { ascending: true })
           .range(from, from + PAGE_SIZE - 1)
