@@ -496,8 +496,6 @@ if (grade === '"0"') {
   GRADEWORDS = TEACHER_WORDS
 } else if (grade === null) {
   GRADEWORDS = JUNIOR // Updated to match previous default behavior
-} else if (grade === '"69"') {
-  console.log('nah thats crazy ')
 } else if (grade === '"12"' || grade === '"26"') {
   GRADEWORDS = SENIOR
 } else if (grade === '"11"' || grade === '"27"' || grade === '"8"') {
