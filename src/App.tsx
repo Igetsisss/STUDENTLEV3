@@ -296,25 +296,19 @@ function App() {
       : restoredGradeStates.find((state) => state.outcome === 'in-progress') ??
         null
   const initialRoundState = (() => {
-    if (
-      activeRoundPreference?.type === 'teachers' &&
-      restoredTeachersState?.outcome === 'in-progress'
-    ) {
+    // Restore the last active round regardless of whether it was in-progress or
+    // already completed — so refreshing after winning still shows your result.
+    if (activeRoundPreference?.type === 'teachers' && restoredTeachersState) {
       return restoredTeachersState
     }
 
-    if (
-      activeRoundPreference?.type === 'bonus' &&
-      restoredBonusState?.outcome === 'in-progress'
-    ) {
+    if (activeRoundPreference?.type === 'bonus' && restoredBonusState) {
       return restoredBonusState
     }
 
     if (activeRoundPreference?.type === 'grade') {
       const matchingGradeState = restoredGradeStates.find(
-        (state) =>
-          state.outcome === 'in-progress' &&
-          state.grade === activeRoundPreference.grade
+        (state) => state.grade === activeRoundPreference.grade
       )
       if (matchingGradeState) {
         return matchingGradeState
