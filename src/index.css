@@ -500,7 +500,9 @@ svg.cursor-pointer:hover {
 }
 
 .login-board-wallpaper-layer-a {
+  transform: rotate(45deg) translate3d(0, 0, 0);
   animation: loginWallpaperDrift 110s linear infinite;
+  animation-delay: -55s;
   opacity: 0.2;
 }
 
