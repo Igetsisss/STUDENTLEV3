@@ -483,29 +483,29 @@ svg.cursor-pointer:hover {
 
 @keyframes loginWallpaperDrift {
   from {
-    transform: rotate(45deg) translate3d(-260px, -180px, 0);
+    transform: rotate(45deg) translate3d(-140px, -140px, 0);
   }
   to {
-    transform: rotate(45deg) translate3d(260px, 180px, 0);
+    transform: rotate(45deg) translate3d(140px, 140px, 0);
   }
 }
 
 .login-board-wallpaper-layer {
   position: absolute;
-  width: 190%;
-  height: 190%;
-  top: -45%;
-  left: -45%;
+  width: 240%;
+  height: 240%;
+  top: -70%;
+  left: -70%;
   will-change: transform;
 }
 
 .login-board-wallpaper-layer-a {
   animation: loginWallpaperDrift 110s linear infinite;
-  opacity: 0.13;
+  opacity: 0.2;
 }
 
 .dark .login-board-wallpaper-layer-a {
-  opacity: 0.12;
+  opacity: 0.18;
 }
 
 .login-board-wallpaper-grid {
