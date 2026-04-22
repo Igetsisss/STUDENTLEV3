@@ -65,7 +65,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
               flexDirection: 'column',
               gap: 5,
               animation: 'diagScroll 22s linear infinite',
-              opacity: 0.25,
+              opacity: 0.22,
             }}
           >
             {Array.from({ length: BG_ROWS }, (_, r) => (
@@ -90,28 +90,28 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
           </div>
         </div>
 
-        {/* Scrim — slightly lighter in light mode so the card pops */}
-        <div className="pointer-events-none absolute inset-0 bg-slate-900/40 dark:bg-slate-900/60" />
+        {/* Scrim */}
+        <div className="pointer-events-none absolute inset-0 bg-slate-900/50" />
 
         {/* Card */}
         <div className="relative z-10 w-full max-w-xs px-4">
+          <div className="rounded-xl bg-white px-8 py-10 shadow-2xl dark:bg-slate-800">
 
-          {/* Wordmark — always white since bg is always dark */}
-          <div className="mb-6 text-center">
-            <h1 className="text-4xl font-black tracking-tight text-white">
-              Studentle
-            </h1>
-            <div className="mx-auto mt-2 h-0.5 w-10 rounded-full bg-green-600" />
-          </div>
+            {/* Wordmark */}
+            <div className="mb-8 text-center">
+              <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white">
+                Studentle
+              </h1>
+              <div className="mx-auto mt-3 h-0.5 w-16 rounded-full bg-black opacity-20 dark:bg-white" />
+            </div>
 
-          <div className="rounded-2xl bg-white p-7 shadow-2xl dark:bg-slate-800">
             {sent ? (
               <div className="text-center">
-                <div className="mb-4 flex justify-center gap-1.5">
+                <div className="mb-6 flex justify-center gap-1.5">
                   {['C', 'H', 'E', 'C', 'K'].map((l, i) => (
                     <div
                       key={i}
-                      className="flex h-9 w-9 items-center justify-center rounded bg-green-600 text-sm font-black text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded border-2 border-green-600 bg-green-600 text-sm font-bold text-white"
                     >
                       {l}
                     </div>
@@ -129,7 +129,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
                 </p>
                 <button
                   onClick={() => { setSent(false); setEmail('') }}
-                  className="mt-5 text-xs text-slate-400 underline hover:text-slate-600 dark:hover:text-slate-200"
+                  className="mt-6 text-xs text-slate-400 underline hover:text-slate-600 dark:hover:text-slate-200"
                 >
                   Use a different email
                 </button>
@@ -148,7 +148,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
 
                 <input
                   type="email"
-                  className="login-email-input w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold tracking-wide text-black focus:border-green-500 focus:outline-none disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-green-500"
+                  className="login-email-input w-full rounded border-2 border-slate-300 bg-white px-4 py-3 text-center text-sm font-semibold tracking-wide text-black focus:border-black focus:outline-none disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-white"
                   placeholder={`you@${ALLOWED_DOMAIN}`}
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError('') }}
@@ -159,7 +159,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
                 <button
                   type="submit"
                   disabled={isLoading || !email.trim()}
-                  className="w-full rounded-xl border-2 border-green-600 bg-green-600 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-green-700 disabled:opacity-40"
+                  className="w-full rounded border-2 border-black bg-black py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-slate-800 disabled:opacity-40 dark:border-white dark:bg-white dark:text-black dark:hover:bg-slate-200"
                 >
                   {isLoading ? 'Sending…' : 'Send login link'}
                 </button>
