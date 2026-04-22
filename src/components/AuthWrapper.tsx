@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { linkEmailToCurrentAccount, lookupAccountByEmail } from '../lib/api'
-import { isSchoolEmail, signOutMicrosoft } from '../lib/auth'
+import { isSchoolEmail, signOutMicrosoft as signOut } from '../lib/auth'
 import { hasSupabaseConfig, supabase } from '../lib/supabase'
 import { LoginScreen } from './LoginScreen'
 
@@ -80,7 +80,7 @@ export const AuthWrapper = ({ children }: Props) => {
 
       const email = session.user.email ?? ''
       if (!isSchoolEmail(email)) {
-        await signOutMicrosoft()
+        await signOut()
         setStatus('wrong-domain')
         return
       }

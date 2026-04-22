@@ -2,14 +2,17 @@ import { supabase } from './supabase'
 
 export const ALLOWED_DOMAIN = 'bearsmail.org'
 
-/** Redirects to Microsoft sign-in via Supabase Azure OAuth. */
-export const signInWithMicrosoft = async (): Promise<void> => {
+/**
+ * Sends a magic-link login email to the given address.
+ * Throws if Supabase returns an error.
+ * The caller is responsible for checking isSchoolEmail() before calling this.
+ */
+export const sendMagicLink = async (email: string): Promise<void> => {
   if (!supabase) return
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'azure',
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
     options: {
-      scopes: 'email profile',
-      redirectTo: window.location.origin,
+      emailRedirectTo: window.location.origin,
     },
   })
   if (error) throw error
