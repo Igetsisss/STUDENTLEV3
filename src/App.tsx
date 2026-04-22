@@ -1402,6 +1402,19 @@ function App() {
           </div>
         )}
 
+        {/* Current round label — only shown when not in daily mode */}
+        {(isBonusRound || isTeachersRound || isGradeRound) && (
+          <div className="flex justify-center pt-1">
+            <span className="rounded-full bg-indigo-100 px-3 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">
+              {isBonusRound
+                ? 'Bonus Round'
+                : isTeachersRound
+                ? 'Teachers Round'
+                : `${GRADE_LABELS[gradeRoundGrade] ?? 'Grade'} Round`}
+            </span>
+          </div>
+        )}
+
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 sm:px-6 md:max-w-7xl lg:px-8 short:pb-2 short:pt-2">
           {showCompletedLayout ? (
             <div className="flex grow flex-col overflow-y-auto pb-2 short:pb-1">

@@ -512,5 +512,12 @@ if (grade === '"0"') {
 
 export const WORDS = GRADEWORDS
 
+// Filtered word list for daily puzzle selection: skip names that are too short
+// to make a good puzzle (2-3 letters like "jb", "jay", "rio", "mac").
+// The full WORDS list is still used for guess validation so those names remain guessable.
+export const DAILY_WORDS = GRADEWORDS.filter(
+  (w) => w.replace(/-/g, '').replace(/ /g, '').length >= 4
+)
+
 // Export all grade arrays for use in grade-picker rounds
 export { SENIOR, JUNIOR, SOPHOMORE, FRESHMAN }
