@@ -481,43 +481,95 @@ svg.cursor-pointer:hover {
   }
 }
 
-@keyframes loginBoardDriftA {
+@keyframes loginWallpaperDrift {
   from {
-    transform: rotate(13deg) translate3d(0, 0, 0);
+    transform: rotate(12deg) translate3d(-180px, -120px, 0);
   }
   to {
-    transform: rotate(13deg) translate3d(260px, 140px, 0);
+    transform: rotate(12deg) translate3d(180px, 120px, 0);
   }
 }
 
-@keyframes loginBoardDriftB {
-  from {
-    transform: rotate(13deg) translate3d(0, 0, 0);
-  }
-  to {
-    transform: rotate(13deg) translate3d(220px, 130px, 0);
-  }
-}
-
-.login-board-track-a {
-  animation: loginBoardDriftA 52s linear infinite;
+.login-board-wallpaper-layer {
+  position: absolute;
+  width: 240%;
+  height: 210%;
+  top: -56%;
+  left: -72%;
   will-change: transform;
 }
 
-.login-board-track-b {
-  animation: loginBoardDriftB 44s linear infinite;
-  will-change: transform;
+.login-board-wallpaper-layer-a {
+  animation: loginWallpaperDrift 72s linear infinite;
+  opacity: 0.28;
 }
 
-.login-board-track-c {
-  animation: loginBoardDriftA 58s linear infinite reverse;
-  will-change: transform;
+.dark .login-board-wallpaper-layer-a {
+  opacity: 0.22;
+}
+
+.login-board-wallpaper-layer-b {
+  animation: loginWallpaperDrift 88s linear infinite reverse;
+  opacity: 0.18;
+}
+
+.dark .login-board-wallpaper-layer-b {
+  opacity: 0.14;
+}
+
+.login-board-wallpaper-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.login-board-wallpaper-strip {
+  display: flex;
+  gap: 1.2rem;
+}
+
+.login-board-wallpaper-card {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 0.8rem;
+  padding: 0.7rem;
+}
+
+.dark .login-board-wallpaper-card {
+  background: rgba(15, 23, 42, 0.3);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.login-board-wallpaper-card-grid {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.login-board-wallpaper-row {
+  display: flex;
+  gap: 0.22rem;
+}
+
+.login-board-wallpaper-tile {
+  width: clamp(1.7rem, 2.7vw, 3rem);
+  height: clamp(1.7rem, 2.7vw, 3rem);
+  border-radius: 0.3rem;
+  border: 2px solid rgba(15, 23, 42, 0.18);
+  font-size: clamp(0.78rem, 1.4vw, 1.3rem);
+  font-weight: 800;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.dark .login-board-wallpaper-tile {
+  border-color: rgba(148, 163, 184, 0.34);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .login-board-track-a,
-  .login-board-track-b,
-  .login-board-track-c {
+  .login-board-wallpaper-layer-a,
+  .login-board-wallpaper-layer-b {
     animation: none;
   }
 }

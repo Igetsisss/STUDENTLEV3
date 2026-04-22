@@ -1,11 +1,40 @@
 import { useEffect, useState } from 'react'
 
-import { linkEmailToCurrentAccount, lookupAccountByEmail } from '../lib/api'
+import { lookupAccountByEmail } from '../lib/api'
 import { isSchoolEmail, signOutMicrosoft as signOut } from '../lib/auth'
 import { hasSupabaseConfig, supabase } from '../lib/supabase'
 import { LoginScreen } from './LoginScreen'
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'wrong-domain'
+
+const clearLocalIdentity = () => {
+  localStorage.removeItem('playerName')
+  localStorage.removeItem('gradeNumber')
+  localStorage.removeItem('playerPrefix')
+  localStorage.removeItem('playerLastInitial')
+}
+
+const restoreAccountToLocalStorage = (account: {
+  playerName: string
+  grade: string
+  lastInitial?: string
+  prefix?: string
+}) => {
+  localStorage.setItem('gradeNumber', JSON.stringify(account.grade))
+  localStorage.setItem('playerName', account.playerName)
+  if (account.prefix) {
+    localStorage.setItem('playerPrefix', account.prefix)
+    localStorage.removeItem('playerLastInitial')
+    return
+  }
+  if (account.lastInitial) {
+    localStorage.setItem('playerLastInitial', account.lastInitial)
+    localStorage.removeItem('playerPrefix')
+    return
+  }
+  localStorage.removeItem('playerPrefix')
+  localStorage.removeItem('playerLastInitial')
+}
 
 /**
  * Runs once we confirm a valid @bearsmail.org session.
@@ -20,32 +49,28 @@ type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'wrong-domai
 async function applyValidSession(email: string): Promise<void> {
   localStorage.setItem('msAuthEmail', email)
 
+  // Always prefer the email-linked account as source of truth.
+  // This avoids accidentally linking a new email to stale local identity
+  // from a previous user on a shared device.
+  const account = await lookupAccountByEmail(email)
+
+  if (account) {
+    restoreAccountToLocalStorage(account)
+    return
+  }
+
   const hasName = !!localStorage.getItem('playerName')
   const hasGrade = !!localStorage.getItem('gradeNumber')
 
   if (hasName && hasGrade) {
-    // Already registered on this device — link email silently in background.
-    linkEmailToCurrentAccount(email).catch(() => {})
+    // Email is not linked yet, but this device already has local identity.
+    // Keep the first-login flow safe by requiring explicit signup instead of
+    // auto-linking potentially stale local data.
+    clearLocalIdentity()
     return
   }
 
-  // New device or first-time user — try to restore account by email.
-  const account = await lookupAccountByEmail(email)
-  if (!account) {
-    // Brand new user — Grade modal will handle registration.
-    return
-  }
-
-  // Restore the account to localStorage (mirrors handleClaimAccount in Grade.tsx).
-  localStorage.setItem('gradeNumber', JSON.stringify(account.grade))
-  localStorage.setItem('playerName', account.playerName)
-  if (account.prefix) {
-    localStorage.setItem('playerPrefix', account.prefix)
-    localStorage.removeItem('playerLastInitial')
-  } else if (account.lastInitial) {
-    localStorage.setItem('playerLastInitial', account.lastInitial)
-    localStorage.removeItem('playerPrefix')
-  }
+  // Truly new user — Grade modal will handle registration and linking.
 }
 
 type Props = { children: React.ReactNode }

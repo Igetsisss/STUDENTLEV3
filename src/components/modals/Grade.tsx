@@ -8,6 +8,7 @@ import {
   LeaderboardEntry,
   fetchLeaderboard,
   isTrueDailyEntry,
+  linkEmailToCurrentAccount,
   submitHistoricalStats,
   submitNameStepRegistration,
   submitSignupEvent,
@@ -252,6 +253,12 @@ export const GradeModal = ({
     localStorage.setItem('playerName', lastName)
     localStorage.setItem('playerPrefix', selectedPrefix)
     localStorage.removeItem('playerLastInitial')
+
+    const sessionEmail = localStorage.getItem('msAuthEmail')
+    if (sessionEmail) {
+      linkEmailToCurrentAccount(sessionEmail).catch(() => {})
+    }
+
     submitNameStepRegistration(displayName, gradeRaw)
     submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
@@ -294,6 +301,12 @@ export const GradeModal = ({
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
     localStorage.setItem('playerName', name)
     if (initial) localStorage.setItem('playerLastInitial', initial)
+
+    const sessionEmail = localStorage.getItem('msAuthEmail')
+    if (sessionEmail) {
+      linkEmailToCurrentAccount(sessionEmail).catch(() => {})
+    }
+
     submitNameStepRegistration(displayName, gradeRaw)
     submitSignupEvent(displayName, gradeRaw)
     if (!localStorage.getItem('hasSeenInfo')) {
