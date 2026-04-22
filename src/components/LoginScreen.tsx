@@ -195,7 +195,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
           </div>
 
           {/* Tile-style card */}
-          <div className="w-full max-w-xs px-4">
+          <div className="w-full max-w-xs rounded-xl border-2 border-slate-200 bg-white px-4 py-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
             {sent ? (
               <div className="text-center">
                 {/* Wordle-style letter tiles for visual flair */}
