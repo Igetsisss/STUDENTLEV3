@@ -2,9 +2,88 @@ import { useState } from 'react'
 
 import { ALLOWED_DOMAIN, isSchoolEmail, sendMagicLink } from '../lib/auth'
 
+type TileState = 'correct' | 'present' | 'absent' | 'empty'
+
+const TILE_COLORS: Record<TileState, string> = {
+  correct: '#22c55e',
+  present: '#f59e0b',
+  absent: '#64748b',
+  empty: '#e2e8f0',
+}
+
+const BOARD_PATTERNS: { letters: string[]; states: TileState[] }[] = [
+  {
+    letters: ['C', 'H', 'A', 'S', 'E'],
+    states: ['absent', 'absent', 'present', 'absent', 'correct'],
+  },
+  {
+    letters: ['G', 'R', 'A', 'C', 'E'],
+    states: ['correct', 'correct', 'correct', 'correct', 'correct'],
+  },
+  {
+    letters: ['J', 'A', 'C', 'K', 'S'],
+    states: ['correct', 'correct', 'correct', 'present', 'absent'],
+  },
+  {
+    letters: ['S', 'T', 'U', 'D', 'Y'],
+    states: ['absent', 'present', 'absent', 'correct', 'absent'],
+  },
+  {
+    letters: ['M', 'A', 'T', 'H', 'S'],
+    states: ['present', 'absent', 'absent', 'correct', 'absent'],
+  },
+  {
+    letters: ['T', 'E', 'A', 'C', 'H'],
+    states: ['absent', 'correct', 'present', 'absent', 'correct'],
+  },
+]
+
 type Props = {
   wrongDomain?: boolean
 }
+
+const FakeBoard = ({ seed }: { seed: number }) => (
+  <div
+    style={{
+      transform: `rotate(${seed % 2 === 0 ? -2 : 2}deg)`,
+      background: 'rgba(255, 255, 255, 0.12)',
+      border: '1px solid rgba(255, 255, 255, 0.25)',
+      borderRadius: 10,
+      padding: 6,
+      backdropFilter: 'blur(1px)',
+    }}
+  >
+    <div style={{ display: 'grid', gap: 3 }}>
+      {BOARD_PATTERNS.map((row, rowIndex) => (
+        <div key={`${seed}-${rowIndex}`} style={{ display: 'flex', gap: 3 }}>
+          {row.letters.map((letter, tileIndex) => {
+            const state = row.states[tileIndex]
+            return (
+              <div
+                key={`${seed}-${rowIndex}-${tileIndex}`}
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 3,
+                  border: '1px solid rgba(15, 23, 42, 0.22)',
+                  background: TILE_COLORS[state],
+                  color: state === 'empty' ? '#475569' : '#ffffff',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  lineHeight: '18px',
+                  textAlign: 'center',
+                  userSelect: 'none',
+                }}
+              >
+                {letter}
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  </div>
+)
 
 export const LoginScreen = ({ wrongDomain = false }: Props) => {
   const [email, setEmail] = useState('')
@@ -38,7 +117,28 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
 
   return (
     <div className={isDark ? 'dark' : ''}>
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white dark:bg-slate-900">
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-900">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="login-board-track-a absolute -top-28 -left-52 flex gap-7">
+            {Array.from({ length: 11 }).map((_, index) => (
+              <FakeBoard key={`track-a-${index}`} seed={index} />
+            ))}
+          </div>
+          <div className="login-board-track-b absolute top-24 -left-64 flex gap-7">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <FakeBoard key={`track-b-${index}`} seed={index + 100} />
+            ))}
+          </div>
+          <div className="login-board-track-c absolute -bottom-24 -left-56 flex gap-7">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <FakeBoard key={`track-c-${index}`} seed={index + 200} />
+            ))}
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute inset-0 bg-white/45 dark:bg-slate-900/35" />
+
+        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center">
         {/* Navbar-style header */}
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white">
@@ -114,6 +214,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
               </p>
             </form>
           )}
+        </div>
         </div>
       </div>
     </div>

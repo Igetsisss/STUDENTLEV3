@@ -481,6 +481,47 @@ svg.cursor-pointer:hover {
   }
 }
 
+@keyframes loginBoardDriftA {
+  from {
+    transform: rotate(-13deg) translate3d(0, 0, 0);
+  }
+  to {
+    transform: rotate(-13deg) translate3d(-260px, -140px, 0);
+  }
+}
+
+@keyframes loginBoardDriftB {
+  from {
+    transform: rotate(-13deg) translate3d(0, 0, 0);
+  }
+  to {
+    transform: rotate(-13deg) translate3d(-220px, -130px, 0);
+  }
+}
+
+.login-board-track-a {
+  animation: loginBoardDriftA 52s linear infinite;
+  will-change: transform;
+}
+
+.login-board-track-b {
+  animation: loginBoardDriftB 44s linear infinite;
+  will-change: transform;
+}
+
+.login-board-track-c {
+  animation: loginBoardDriftA 58s linear infinite reverse;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-board-track-a,
+  .login-board-track-b,
+  .login-board-track-c {
+    animation: none;
+  }
+}
+
 /* Date picker */
 
 .react-datepicker {
