@@ -262,7 +262,6 @@ const JUNIOR = [
   'chris',
   'munchie',
   'nicole',
-  'grace',
 ]
 
 const SOPHOMORE = [
