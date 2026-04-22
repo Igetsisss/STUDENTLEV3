@@ -1477,6 +1477,64 @@ function App() {
               isRevealing={isRevealing}
             />
           )}
+
+          {/* ── Round picker — shown on main screen after daily is done ── */}
+          {(isGameWon || isGameLost) &&
+            isLatestGame &&
+            !isBonusRound &&
+            !isTeachersRound &&
+            !isGradeRound && (
+              <div className="flex flex-wrap justify-center gap-2 px-2 pt-2 pb-1">
+                {!hasBonusBeenPlayedToday() ? (
+                  <button
+                    type="button"
+                    className="glisten-btn rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-blue-700"
+                    onClick={handleBonusRound}
+                  >
+                    🎉 Bonus Round
+                  </button>
+                ) : (
+                  <span className="rounded-full border border-blue-300 bg-blue-50 px-4 py-1.5 text-xs font-semibold text-blue-500 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                    ✓ Bonus Done
+                  </span>
+                )}
+                {!isTeacherPlayer && (
+                  !hasTeachersBeenPlayedToday() ? (
+                    <button
+                      type="button"
+                      className="glisten-btn rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-700"
+                      onClick={handleTeachersRound}
+                    >
+                      🍎 Teachers Round
+                    </button>
+                  ) : (
+                    <span className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-1.5 text-xs font-semibold text-emerald-600 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                      ✓ Teachers Done
+                    </span>
+                  )
+                )}
+                {(['9', '10', '11', '12'] as const).map((g) => {
+                  const done = gradeRoundsPlayed.includes(g)
+                  return done ? (
+                    <span
+                      key={g}
+                      className="rounded-full border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
+                    >
+                      {GRADE_LABELS[g]} ✓
+                    </span>
+                  ) : (
+                    <button
+                      key={g}
+                      type="button"
+                      className="rounded-full bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-purple-700"
+                      onClick={() => handleGradeRound(g)}
+                    >
+                      {GRADE_LABELS[g]}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           {/* Daily info strip — puzzle number + today's grade leader — always visible */}
           <div className="flex items-center justify-between px-4 pt-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
             <span className="font-semibold text-slate-500 dark:text-slate-400">
