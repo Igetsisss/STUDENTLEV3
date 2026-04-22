@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from 'react'
 import Div100vh from 'react-div-100vh'
 
 import { AlertContainer } from './components/alerts/AlertContainer'
-import { BannedScreen } from './components/BannedScreen'
 import { CompletedGrid } from './components/grid/CompletedGrid'
 import { Grid } from './components/grid/Grid'
 import { Keyboard } from './components/keyboard/Keyboard'
@@ -221,20 +220,7 @@ const isCloudRoundStateNewer = (
   return new Date(cloudUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()
 }
 
-const BANNED_PLAYER_KEYS = new Set(['parker t'])
-
-const isCurrentPlayerBanned = (): boolean => {
-  const firstName = (localStorage.getItem('playerName') || '').trim().toLowerCase()
-  const lastInitial = (localStorage.getItem('playerLastInitial') || '').trim().toLowerCase()
-  if (!firstName || !lastInitial) return false
-  return BANNED_PLAYER_KEYS.has(`${firstName} ${lastInitial}`)
-}
-
 function App() {
-  if (isCurrentPlayerBanned()) {
-    return <BannedScreen />
-  }
-
   const isLatestGame = getIsLatestGame()
   const gameDate = getGameDate()
   // Teachers get their own bonus using all teacher names; students get the regular bonus
