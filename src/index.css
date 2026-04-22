@@ -481,19 +481,6 @@ svg.cursor-pointer:hover {
   }
 }
 
-/* ─── Login Screen ─── */
-@keyframes diagScroll {
-  from { transform: rotate(-18deg) translate(0, 0); }
-  to   { transform: rotate(-18deg) translate(-41px, -41px); }
-}
-
-.login-email-input::placeholder {
-  color: #94a3b8;
-}
-.dark .login-email-input::placeholder {
-  color: #64748b;
-}
-
 /* Date picker */
 
 .react-datepicker {
