@@ -1,9 +1,12 @@
 import { useState } from 'react'
 
+import { FRESHMAN, JUNIOR, SENIOR, SOPHOMORE } from '../constants/wordlist'
 import { ALLOWED_DOMAIN, isSchoolEmail, sendMagicLink } from '../lib/auth'
+import { getGuessStatuses } from '../lib/statuses'
 
 type TileState = 'correct' | 'present' | 'absent' | 'empty'
 type BoardRow = { letters: string[]; states: TileState[] }
+type GradeBoard = { grade: 9 | 10 | 11 | 12; rows: BoardRow[] }
 
 const TILE_COLORS: Record<TileState, string> = {
   correct: '#22c55e',
@@ -12,63 +15,91 @@ const TILE_COLORS: Record<TileState, string> = {
   empty: '#ffffff',
 }
 
-const BOARD_VARIANTS: BoardRow[][] = [
-  [
-    { letters: ['C', 'H', 'A', 'S', 'E'], states: ['absent', 'absent', 'present', 'absent', 'correct'] },
-    { letters: ['C', 'R', 'A', 'N', 'E'], states: ['absent', 'present', 'correct', 'absent', 'correct'] },
-    { letters: ['G', 'R', 'A', 'C', 'E'], states: ['correct', 'correct', 'correct', 'correct', 'correct'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-  ],
-  [
-    { letters: ['J', 'A', 'S', 'O', 'N'], states: ['present', 'correct', 'correct', 'present', 'absent'] },
-    { letters: ['J', 'A', 'C', 'K', 'S'], states: ['correct', 'correct', 'present', 'absent', 'absent'] },
-    { letters: ['J', 'A', 'C', 'K', 'Y'], states: ['correct', 'correct', 'correct', 'correct', 'absent'] },
-    { letters: ['J', 'A', 'C', 'K', 'S'], states: ['correct', 'correct', 'correct', 'correct', 'correct'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-  ],
-  [
-    { letters: ['B', 'L', 'A', 'K', 'E'], states: ['absent', 'present', 'absent', 'absent', 'correct'] },
-    { letters: ['C', 'L', 'A', 'R', 'K'], states: ['present', 'present', 'correct', 'absent', 'correct'] },
-    { letters: ['C', 'O', 'L', 'E', 'N'], states: ['correct', 'absent', 'correct', 'correct', 'absent'] },
-    { letters: ['C', 'O', 'L', 'E', 'S'], states: ['correct', 'correct', 'correct', 'correct', 'absent'] },
-    { letters: ['C', 'O', 'L', 'E', 'Y'], states: ['correct', 'correct', 'correct', 'correct', 'absent'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-  ],
-  [
-    { letters: ['S', 'T', 'E', 'E', 'L'], states: ['absent', 'present', 'absent', 'present', 'absent'] },
-    { letters: ['S', 'T', 'O', 'N', 'E'], states: ['correct', 'correct', 'absent', 'absent', 'present'] },
-    { letters: ['S', 'T', 'O', 'R', 'M'], states: ['correct', 'correct', 'correct', 'absent', 'absent'] },
-    { letters: ['S', 'T', 'O', 'R', 'E'], states: ['correct', 'correct', 'correct', 'correct', 'present'] },
-    { letters: ['S', 'T', 'O', 'R', 'Y'], states: ['correct', 'correct', 'correct', 'correct', 'correct'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-  ],
-  [
-    { letters: ['B', 'E', 'A', 'R', 'S'], states: ['correct', 'correct', 'absent', 'absent', 'absent'] },
-    { letters: ['B', 'E', 'L', 'L', 'Y'], states: ['correct', 'correct', 'present', 'absent', 'absent'] },
-    { letters: ['B', 'E', 'R', 'R', 'Y'], states: ['correct', 'correct', 'present', 'correct', 'absent'] },
-    { letters: ['B', 'E', 'R', 'R', 'Y'], states: ['correct', 'correct', 'correct', 'correct', 'correct'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-    { letters: ['', '', '', '', ''], states: ['empty', 'empty', 'empty', 'empty', 'empty'] },
-  ],
-]
+const FIRST_GAME_DATE = new Date(2023, 2, 1)
+const DAY_MS = 24 * 60 * 60 * 1000
+const HISTORIC_OFFSETS = [14, 72]
+const WALLPAPER_ROW_COUNT = 2
+const WALLPAPER_COL_COUNT = 3
 
-const WALLPAPER_ROW_COUNT = 7
-const WALLPAPER_COL_COUNT = 10
+const getHistoricIndex = (daysAgo: number) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const elapsed = Math.floor((today.getTime() - FIRST_GAME_DATE.getTime()) / DAY_MS)
+  return Math.max(0, elapsed - daysAgo)
+}
+
+const pickGuessFromList = (
+  list: string[],
+  solution: string,
+  length: number,
+  startIndex: number,
+  shift: number
+) => {
+  for (let i = 0; i < list.length; i++) {
+    const candidate = list[(startIndex + shift + i) % list.length].toUpperCase()
+    if (candidate.length === length && candidate !== solution) {
+      return candidate
+    }
+  }
+  return solution
+}
+
+const createBoardRows = (solution: string, list: string[], index: number): BoardRow[] => {
+  const length = solution.length
+  const guesses = [
+    pickGuessFromList(list, solution, length, index, 3),
+    pickGuessFromList(list, solution, length, index, 11),
+    pickGuessFromList(list, solution, length, index, 19),
+    solution,
+  ]
+
+  const rows = guesses.map((guess) => {
+    const letters = guess.split('')
+    const states = getGuessStatuses(solution, guess) as TileState[]
+    return { letters, states }
+  })
+
+  while (rows.length < 6) {
+    rows.push({
+      letters: Array.from({ length }, () => ''),
+      states: Array.from({ length }, () => 'empty' as TileState),
+    })
+  }
+
+  return rows
+}
+
+const GRADE_BOARDS: GradeBoard[] = (() => {
+  const gradeSources: Array<{ grade: 9 | 10 | 11 | 12; words: string[] }> = [
+    { grade: 9, words: FRESHMAN },
+    { grade: 10, words: SOPHOMORE },
+    { grade: 11, words: JUNIOR },
+    { grade: 12, words: SENIOR },
+  ]
+
+  return gradeSources.flatMap(({ grade, words }) => {
+    return HISTORIC_OFFSETS.map((daysAgo) => {
+      const index = getHistoricIndex(daysAgo)
+      const solution = words[index % words.length].toUpperCase()
+      return {
+        grade,
+        rows: createBoardRows(solution, words, index),
+      }
+    })
+  })
+})()
 
 type Props = {
   wrongDomain?: boolean
 }
 
 const FakeBoard = ({ seed }: { seed: number }) => {
-  const boardRows = BOARD_VARIANTS[seed % BOARD_VARIANTS.length]
+  const board = GRADE_BOARDS[seed % GRADE_BOARDS.length]
 
   return (
-    <div className="login-board-wallpaper-card" style={{ transform: `rotate(${seed % 2 === 0 ? -1 : 1}deg)` }}>
+    <div className="login-board-wallpaper-card">
       <div className="login-board-wallpaper-card-grid">
-        {boardRows.map((row, rowIndex) => (
+        {board.rows.map((row, rowIndex) => (
           <div key={`${seed}-${rowIndex}`} className="login-board-wallpaper-row">
             {row.letters.map((letter, tileIndex) => {
               const state = row.states[tileIndex]
@@ -146,12 +177,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
           <div className="login-board-wallpaper-layer login-board-wallpaper-layer-a">
             <WallpaperLayer seedOffset={0} />
           </div>
-          <div className="login-board-wallpaper-layer login-board-wallpaper-layer-b">
-            <WallpaperLayer seedOffset={300} />
-          </div>
         </div>
-
-        <div className="pointer-events-none absolute inset-0 bg-white/28 dark:bg-slate-900/28" />
 
         <div className="relative z-10 flex min-h-screen flex-col items-center justify-center">
           {/* Navbar-style header */}
