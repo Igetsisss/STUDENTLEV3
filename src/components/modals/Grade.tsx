@@ -3,6 +3,7 @@ import './gradestyle.css'
 import { Filter } from 'bad-words'
 import { useEffect, useState } from 'react'
 
+import { parseNameFromEmail } from '../../lib/auth'
 import {
   LeaderboardEntry,
   fetchLeaderboard,
@@ -192,6 +193,16 @@ export const GradeModal = ({
   const [playerName, setPlayerName] = useState('')
   const [lastInitial, setLastInitial] = useState('')
   const [selectedPrefix, setSelectedPrefix] = useState('')
+
+  // Pre-fill name/initial from the Microsoft sign-in email for first-time registrations.
+  // Only runs when the fields are still empty (i.e. the player hasn't typed anything yet).
+  useEffect(() => {
+    const msEmail = localStorage.getItem('msAuthEmail')
+    if (!msEmail || playerName || lastInitial) return
+    const { firstName, lastInitial: li } = parseNameFromEmail(msEmail)
+    if (firstName) setPlayerName(firstName)
+    if (li) setLastInitial(li)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derive whether the current player is a teacher at each step
   const currentGrade =
