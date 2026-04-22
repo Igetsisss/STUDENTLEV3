@@ -18,42 +18,42 @@ export const InfoModal = ({ isOpen, handleClose }: Props) => {
         <Cell
           isRevealing={true}
           isCompleted={true}
-          value="G"
+          value="J"
           status="correct"
         />
-        <Cell value="R" isCompleted={true} />
         <Cell value="A" isCompleted={true} />
         <Cell value="C" isCompleted={true} />
-        <Cell value="E" isCompleted={true} />
+        <Cell value="K" isCompleted={true} />
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-300">
-        <strong>G</strong> is in the name and in the correct spot.
+        <strong>J</strong> is in the name and in the correct spot.
       </p>
 
       <div className="mb-1 mt-4 flex justify-center">
-        <Cell value="C" isCompleted={true} />
-        <Cell value="H" isCompleted={true} />
+        <Cell value="G" isCompleted={true} />
+        <Cell value="E" isCompleted={true} />
         <Cell
           isRevealing={true}
           isCompleted={true}
-          value="A"
+          value="O"
           status="present"
         />
-        <Cell value="S" isCompleted={true} />
+        <Cell value="R" isCompleted={true} />
+        <Cell value="G" isCompleted={true} />
         <Cell value="E" isCompleted={true} />
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-300">
-        <strong>A</strong> is in the name but in the wrong spot.
+        <strong>O</strong> is in the name but in the wrong spot.
       </p>
 
       <div className="mb-1 mt-4 flex justify-center">
-        <Cell value="J" isCompleted={true} />
-        <Cell value="A" isCompleted={true} />
         <Cell value="C" isCompleted={true} />
-        <Cell isRevealing={true} isCompleted={true} value="K" status="absent" />
+        <Cell value="O" isCompleted={true} />
+        <Cell isRevealing={true} isCompleted={true} value="L" status="absent" />
+        <Cell value="T" isCompleted={true} />
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-300">
-        <strong>K</strong> is not in the name in any spot.
+        <strong>L</strong> is not in the name in any spot.
       </p>
 
       <p className="mt-6 text-sm italic text-gray-500 dark:text-gray-300">
