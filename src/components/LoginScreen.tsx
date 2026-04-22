@@ -177,6 +177,12 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
           <div className="login-board-wallpaper-layer login-board-wallpaper-layer-a">
             <WallpaperLayer seedOffset={0} />
           </div>
+          <div className="login-edge-board login-edge-board-top-right">
+            <FakeBoard seed={GRADE_BOARDS.length - 1} />
+          </div>
+          <div className="login-edge-board login-edge-board-bottom-left">
+            <FakeBoard seed={GRADE_BOARDS.length - 3} />
+          </div>
         </div>
 
         <div className="relative z-10 flex min-h-screen flex-col items-center justify-center">
