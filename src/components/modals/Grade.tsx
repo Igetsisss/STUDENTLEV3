@@ -106,6 +106,15 @@ const containsProfanity = (text: string): boolean => {
   )
 }
 
+// Banned player keys — normalized as "firstname lastinitial" (lowercase, trimmed).
+// Add entries here to block a player from registering or playing.
+const BANNED_PLAYERS = new Set(['parker t'])
+
+const isBannedPlayer = (name: string, lastInit: string): boolean => {
+  const key = `${name.trim().toLowerCase()} ${lastInit.trim().toLowerCase()}`
+  return BANNED_PLAYERS.has(key)
+}
+
 const capitalizeName = (name: string): string =>
   name.trim().replace(/\b\w/g, (c) => c.toUpperCase())
 
@@ -256,6 +265,10 @@ export const GradeModal = ({
 
   const handleInitialDone = () => {
     if (!lastInitial.trim()) return
+    if (isBannedPlayer(playerName, lastInitial)) {
+      setNameError('This name is not allowed.')
+      return
+    }
     // Student only: "Jack S"
     const displayName = lastInitial.trim()
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
@@ -708,6 +721,9 @@ export const GradeModal = ({
             on the leaderboard (e.g. "Jack S"). We never store your full last
             name.
           </p>
+          {nameError && (
+            <p className="mb-2 text-center text-sm text-red-500">{nameError}</p>
+          )}
           <div className="enterbutton" onClick={handleInitialDone}>
             <button disabled={!lastInitial.trim()}>Done</button>
           </div>
