@@ -492,10 +492,10 @@ svg.cursor-pointer:hover {
 
 .login-board-wallpaper-layer {
   position: absolute;
-  width: 240%;
-  height: 240%;
-  top: -70%;
-  left: -70%;
+  inset: -40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   will-change: transform;
 }
 
@@ -503,16 +503,17 @@ svg.cursor-pointer:hover {
   transform: rotate(45deg) translate3d(0, 0, 0);
   animation: loginWallpaperDrift 110s linear infinite;
   animation-delay: -55s;
-  opacity: 0.2;
+  opacity: 0.28;
 }
 
 .dark .login-board-wallpaper-layer-a {
-  opacity: 0.18;
+  opacity: 0.24;
 }
 
 .login-board-wallpaper-grid {
   display: grid;
   gap: 3.2rem;
+  width: max-content;
 }
 
 .login-board-wallpaper-strip {
