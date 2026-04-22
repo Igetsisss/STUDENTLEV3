@@ -5,36 +5,90 @@ import { ALLOWED_DOMAIN, isSchoolEmail, sendMagicLink } from '../lib/auth'
 type TileState = 'correct' | 'present' | 'absent' | 'empty'
 
 const TILE_COLORS: Record<TileState, string> = {
-  correct: '#22c55e',
-  present: '#f59e0b',
-  absent: '#64748b',
-  empty: '#e2e8f0',
+  correct: '#6b7280',
+  present: '#7c8798',
+  absent: '#475569',
+  empty: '#cbd5e1',
 }
 
-const BOARD_PATTERNS: { letters: string[]; states: TileState[] }[] = [
+const BOARD_SETS: { letters: string[]; states: TileState[] }[][] = [
   {
     letters: ['C', 'H', 'A', 'S', 'E'],
     states: ['absent', 'absent', 'present', 'absent', 'correct'],
+  },
+  {
+    letters: ['C', 'R', 'A', 'N', 'E'],
+    states: ['absent', 'present', 'correct', 'absent', 'correct'],
   },
   {
     letters: ['G', 'R', 'A', 'C', 'E'],
     states: ['correct', 'correct', 'correct', 'correct', 'correct'],
   },
   {
+    letters: ['', '', '', '', ''],
+    states: ['empty', 'empty', 'empty', 'empty', 'empty'],
+  },
+  {
+    letters: ['', '', '', '', ''],
+    states: ['empty', 'empty', 'empty', 'empty', 'empty'],
+  },
+  {
+    letters: ['', '', '', '', ''],
+    states: ['empty', 'empty', 'empty', 'empty', 'empty'],
+  },
+]
+
+const BOARD_SETS_B: { letters: string[]; states: TileState[] }[] = [
+  {
+    letters: ['M', 'A', 'S', 'O', 'N'],
+    states: ['absent', 'correct', 'absent', 'present', 'absent'],
+  },
+  {
+    letters: ['J', 'A', 'S', 'O', 'N'],
+    states: ['present', 'correct', 'correct', 'present', 'absent'],
+  },
+  {
     letters: ['J', 'A', 'C', 'K', 'S'],
-    states: ['correct', 'correct', 'correct', 'present', 'absent'],
+    states: ['correct', 'correct', 'present', 'absent', 'absent'],
   },
   {
-    letters: ['S', 'T', 'U', 'D', 'Y'],
-    states: ['absent', 'present', 'absent', 'correct', 'absent'],
+    letters: ['J', 'A', 'C', 'K', 'Y'],
+    states: ['correct', 'correct', 'correct', 'correct', 'absent'],
   },
   {
-    letters: ['M', 'A', 'T', 'H', 'S'],
-    states: ['present', 'absent', 'absent', 'correct', 'absent'],
+    letters: ['J', 'A', 'C', 'K', 'S'],
+    states: ['correct', 'correct', 'correct', 'correct', 'correct'],
   },
   {
-    letters: ['T', 'E', 'A', 'C', 'H'],
-    states: ['absent', 'correct', 'present', 'absent', 'correct'],
+    letters: ['', '', '', '', ''],
+    states: ['empty', 'empty', 'empty', 'empty', 'empty'],
+  },
+]
+
+const BOARD_SETS_C: { letters: string[]; states: TileState[] }[] = [
+  {
+    letters: ['B', 'L', 'A', 'K', 'E'],
+    states: ['absent', 'present', 'absent', 'absent', 'correct'],
+  },
+  {
+    letters: ['C', 'L', 'A', 'R', 'K'],
+    states: ['present', 'present', 'correct', 'absent', 'correct'],
+  },
+  {
+    letters: ['C', 'O', 'L', 'E', 'N'],
+    states: ['correct', 'absent', 'correct', 'correct', 'absent'],
+  },
+  {
+    letters: ['C', 'O', 'L', 'E', 'S'],
+    states: ['correct', 'correct', 'correct', 'correct', 'absent'],
+  },
+  {
+    letters: ['C', 'O', 'L', 'E', 'Y'],
+    states: ['correct', 'correct', 'correct', 'correct', 'absent'],
+  },
+  {
+    letters: ['', '', '', '', ''],
+    states: ['empty', 'empty', 'empty', 'empty', 'empty'],
   },
 ]
 
@@ -43,18 +97,21 @@ type Props = {
 }
 
 const FakeBoard = ({ seed }: { seed: number }) => (
-  <div
-    style={{
-      transform: `rotate(${seed % 2 === 0 ? -2 : 2}deg)`,
-      background: 'rgba(255, 255, 255, 0.12)',
-      border: '1px solid rgba(255, 255, 255, 0.25)',
-      borderRadius: 10,
-      padding: 6,
-      backdropFilter: 'blur(1px)',
-    }}
-  >
-    <div style={{ display: 'grid', gap: 3 }}>
-      {BOARD_PATTERNS.map((row, rowIndex) => (
+  (() => {
+    const boardSet = [BOARD_SETS, BOARD_SETS_B, BOARD_SETS_C][seed % 3]
+    return (
+      <div
+        style={{
+          transform: `rotate(${seed % 2 === 0 ? 2 : -2}deg)`,
+          background: 'rgba(226, 232, 240, 0.28)',
+          border: '1px solid rgba(148, 163, 184, 0.4)',
+          borderRadius: 12,
+          padding: 8,
+          backdropFilter: 'blur(1px)',
+        }}
+      >
+        <div style={{ display: 'grid', gap: 4 }}>
+          {boardSet.map((row, rowIndex) => (
         <div key={`${seed}-${rowIndex}`} style={{ display: 'flex', gap: 3 }}>
           {row.letters.map((letter, tileIndex) => {
             const state = row.states[tileIndex]
@@ -62,15 +119,15 @@ const FakeBoard = ({ seed }: { seed: number }) => (
               <div
                 key={`${seed}-${rowIndex}-${tileIndex}`}
                 style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: 3,
-                  border: '1px solid rgba(15, 23, 42, 0.22)',
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
+                  border: '1px solid rgba(71, 85, 105, 0.45)',
                   background: TILE_COLORS[state],
-                  color: state === 'empty' ? '#475569' : '#ffffff',
-                  fontSize: 10,
+                  color: state === 'empty' ? '#64748b' : '#f8fafc',
+                  fontSize: 11,
                   fontWeight: 800,
-                  lineHeight: '18px',
+                  lineHeight: '24px',
                   textAlign: 'center',
                   userSelect: 'none',
                 }}
@@ -80,9 +137,11 @@ const FakeBoard = ({ seed }: { seed: number }) => (
             )
           })}
         </div>
-      ))}
-    </div>
-  </div>
+          ))}
+        </div>
+      </div>
+    )
+  })()
 )
 
 export const LoginScreen = ({ wrongDomain = false }: Props) => {
@@ -119,24 +178,24 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
     <div className={isDark ? 'dark' : ''}>
       <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-900">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="login-board-track-a absolute -top-28 -left-52 flex gap-7">
+          <div className="login-board-track-a absolute -top-44 -left-56 flex gap-8">
             {Array.from({ length: 11 }).map((_, index) => (
               <FakeBoard key={`track-a-${index}`} seed={index} />
             ))}
           </div>
-          <div className="login-board-track-b absolute top-24 -left-64 flex gap-7">
+          <div className="login-board-track-b absolute top-10 -left-72 flex gap-8">
             {Array.from({ length: 12 }).map((_, index) => (
               <FakeBoard key={`track-b-${index}`} seed={index + 100} />
             ))}
           </div>
-          <div className="login-board-track-c absolute -bottom-24 -left-56 flex gap-7">
+          <div className="login-board-track-c absolute -bottom-36 -left-64 flex gap-8">
             {Array.from({ length: 10 }).map((_, index) => (
               <FakeBoard key={`track-c-${index}`} seed={index + 200} />
             ))}
           </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-0 bg-white/45 dark:bg-slate-900/35" />
+        <div className="pointer-events-none absolute inset-0 bg-slate-200/62 dark:bg-slate-900/52" />
 
         <div className="relative z-10 flex min-h-screen flex-col items-center justify-center">
         {/* Navbar-style header */}

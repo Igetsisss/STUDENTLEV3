@@ -483,19 +483,19 @@ svg.cursor-pointer:hover {
 
 @keyframes loginBoardDriftA {
   from {
-    transform: rotate(-13deg) translate3d(0, 0, 0);
+    transform: rotate(13deg) translate3d(0, 0, 0);
   }
   to {
-    transform: rotate(-13deg) translate3d(-260px, -140px, 0);
+    transform: rotate(13deg) translate3d(260px, 140px, 0);
   }
 }
 
 @keyframes loginBoardDriftB {
   from {
-    transform: rotate(-13deg) translate3d(0, 0, 0);
+    transform: rotate(13deg) translate3d(0, 0, 0);
   }
   to {
-    transform: rotate(-13deg) translate3d(-220px, -130px, 0);
+    transform: rotate(13deg) translate3d(220px, 130px, 0);
   }
 }
 
