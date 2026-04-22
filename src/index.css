@@ -482,19 +482,13 @@ svg.cursor-pointer:hover {
 }
 
 /* ─── Login Screen ─── */
-@keyframes loginFloat {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-11px); }
-}
-
-@keyframes loginTilePop {
-  0% { transform: scale(0.25) rotate(-10deg); opacity: 0; }
-  65% { transform: scale(1.12) rotate(2deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+@keyframes diagScroll {
+  from { transform: rotate(-18deg) translate(0, 0); }
+  to   { transform: rotate(-18deg) translate(-41px, -41px); }
 }
 
 .login-email-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: #94a3b8;
 }
 
 /* Date picker */
