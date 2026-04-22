@@ -9,7 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { AlertProvider } from './context/AlertContext'
 import reportWebVitals from './reportWebVitals'
 
-const BANNED_PLAYER_KEYS = new Set(['parker t'])
+const BANNED_PLAYER_KEYS = new Set(['parker t', 'vanna n'])
 
 const isCurrentPlayerBanned = (): boolean => {
   const firstName = (localStorage.getItem('playerName') || '').trim().toLowerCase()
