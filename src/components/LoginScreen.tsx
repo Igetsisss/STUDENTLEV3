@@ -2,23 +2,18 @@ import { useState } from 'react'
 
 import { ALLOWED_DOMAIN, isSchoolEmail, sendMagicLink } from '../lib/auth'
 
-// ── Background tile grid ──────────────────────────────────────────────────
-// Fixed repeating colour pattern — rows offset so diagonal stripes appear.
-// Colours are exactly the in-game Studentle palette.
 type TileStatus = 'correct' | 'present' | 'absent'
 
 const TILE_BG: Record<TileStatus, string> = {
-  correct: '#16a34a',  // green
-  present: '#ca8a04',  // amber (same as in-game)
-  absent:  '#3f4b5e',  // slate (slightly lighter for visibility)
+  correct: '#16a34a',
+  present: '#ca8a04',
+  absent: '#3f4b5e',
 }
 
-// Row × col formula creates diagonal colour stripes.
-// Pattern: mostly absent, occasional correct/present stripes.
 const BG_PATTERN: TileStatus[] = [
-  'absent','absent','correct','absent','absent',
-  'absent','present','absent','absent','correct',
-  'absent','absent',
+  'absent', 'absent', 'correct', 'absent', 'absent',
+  'absent', 'present', 'absent', 'absent', 'correct',
+  'absent', 'absent',
 ]
 const BG_ROWS = 28
 const BG_COLS = 38
@@ -30,6 +25,11 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+
+  const isDark =
+    localStorage.getItem('theme') === 'dark' ||
+    (!localStorage.getItem('theme') &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,136 +51,125 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className={isDark ? 'dark' : ''}>
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-900">
 
-      {/* Diagonal scrolling tile grid */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-        <div
-          style={{
-            position: 'absolute',
-            top: '-30%', left: '-30%',
-            display: 'flex', flexDirection: 'column', gap: 5,
-            animation: 'diagScroll 22s linear infinite',
-            opacity: 0.28,
-          }}
-        >
-          {Array.from({ length: BG_ROWS }, (_, r) => (
-            <div key={r} style={{ display: 'flex', gap: 5 }}>
-              {Array.from({ length: BG_COLS }, (_, c) => {
-                const status = BG_PATTERN[(r * 3 + c * 2) % BG_PATTERN.length]
-                return (
-                  <div
-                    key={c}
-                    style={{
-                      width: 36, height: 36, flexShrink: 0,
-                      background: TILE_BG[status],
-                      borderRadius: 4,
-                    }}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Dark scrim so card is readable */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.55)', pointerEvents: 'none' }} />
-
-      {/* Login card */}
-      <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 320, padding: '0 20px' }}>
-
-        {/* Wordmark */}
-        <div style={{ textAlign: 'center', marginBottom: 22 }}>
-          <h1 style={{ color: 'white', fontSize: 34, fontWeight: 900, letterSpacing: '-0.02em', margin: 0 }}>
-            Studentle
-          </h1>
-          <div style={{ height: 3, width: 40, background: '#16a34a', margin: '8px auto 0', borderRadius: 2 }} />
-        </div>
-
-        <div style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: '28px 24px',
-          boxShadow: '0 24px 48px rgba(0,0,0,0.55)',
-        }}>
-          {sent ? (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 16 }}>
-                {['C','H','E','C','K'].map((l, i) => (
-                  <div key={i} style={{
-                    width: 36, height: 36, background: '#16a34a', borderRadius: 4,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', fontSize: 15, fontWeight: 900,
-                  }}>{l}</div>
-                ))}
+        {/* Diagonal scrolling tile grid */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            style={{
+              position: 'absolute',
+              top: '-30%',
+              left: '-30%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 5,
+              animation: 'diagScroll 22s linear infinite',
+              opacity: 0.25,
+            }}
+          >
+            {Array.from({ length: BG_ROWS }, (_, r) => (
+              <div key={r} style={{ display: 'flex', gap: 5 }}>
+                {Array.from({ length: BG_COLS }, (_, c) => {
+                  const status = BG_PATTERN[(r * 3 + c * 2) % BG_PATTERN.length]
+                  return (
+                    <div
+                      key={c}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        flexShrink: 0,
+                        background: TILE_BG[status],
+                        borderRadius: 4,
+                      }}
+                    />
+                  )
+                })}
               </div>
-              <p style={{ fontWeight: 700, fontSize: 16, color: '#0f172a', margin: '0 0 8px' }}>
-                Check your Bears Mail!
-              </p>
-              <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
-                Login link sent to{' '}
-                <strong style={{ color: '#0f172a' }}>{email.trim().toLowerCase()}</strong>
-              </p>
-              <button
-                onClick={() => { setSent(false); setEmail('') }}
-                style={{ color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}
-              >
-                Use a different email
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={{ textAlign: 'center', fontSize: 13, color: '#64748b', margin: 0 }}>
-                Enter your Bears Mail to play
-              </p>
+            ))}
+          </div>
+        </div>
 
-              {(wrongDomain || error) && (
-                <p style={{ textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#dc2626', margin: 0 }}>
-                  {error || `Only @${ALLOWED_DOMAIN} emails are allowed.`}
+        {/* Scrim — slightly lighter in light mode so the card pops */}
+        <div className="pointer-events-none absolute inset-0 bg-slate-900/40 dark:bg-slate-900/60" />
+
+        {/* Card */}
+        <div className="relative z-10 w-full max-w-xs px-4">
+
+          {/* Wordmark — always white since bg is always dark */}
+          <div className="mb-6 text-center">
+            <h1 className="text-4xl font-black tracking-tight text-white">
+              Studentle
+            </h1>
+            <div className="mx-auto mt-2 h-0.5 w-10 rounded-full bg-green-600" />
+          </div>
+
+          <div className="rounded-2xl bg-white p-7 shadow-2xl dark:bg-slate-800">
+            {sent ? (
+              <div className="text-center">
+                <div className="mb-4 flex justify-center gap-1.5">
+                  {['C', 'H', 'E', 'C', 'K'].map((l, i) => (
+                    <div
+                      key={i}
+                      className="flex h-9 w-9 items-center justify-center rounded bg-green-600 text-sm font-black text-white"
+                    >
+                      {l}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-base font-bold text-black dark:text-white">
+                  Check your Bears Mail!
                 </p>
-              )}
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  We sent a login link to{' '}
+                  <span className="font-semibold text-black dark:text-white">
+                    {email.trim().toLowerCase()}
+                  </span>
+                  . Click it to start playing.
+                </p>
+                <button
+                  onClick={() => { setSent(false); setEmail('') }}
+                  className="mt-5 text-xs text-slate-400 underline hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  Use a different email
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
+                <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                  Enter your Bears Mail to play
+                </p>
 
-              <input
-                type="email"
-                className="login-email-input"
-                placeholder={`you@${ALLOWED_DOMAIN}`}
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError('') }}
-                disabled={isLoading}
-                autoFocus
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  border: '2px solid #e2e8f0', borderRadius: 10,
-                  padding: '12px 14px', fontSize: 14,
-                  textAlign: 'center', color: '#0f172a',
-                  outline: 'none', transition: 'border-color 0.15s',
-                }}
-                onFocus={(e) => { e.target.style.borderColor = '#16a34a' }}
-                onBlur={(e) => { e.target.style.borderColor = '#e2e8f0' }}
-              />
+                {(wrongDomain || error) && (
+                  <p className="text-center text-sm font-semibold text-red-500">
+                    {error || `Only @${ALLOWED_DOMAIN} emails are allowed.`}
+                  </p>
+                )}
 
-              <button
-                type="submit"
-                disabled={isLoading || !email.trim()}
-                style={{
-                  width: '100%', padding: '13px 0',
-                  background: '#16a34a', border: 'none', borderRadius: 10,
-                  color: 'white', fontSize: 13, fontWeight: 700,
-                  letterSpacing: '0.06em', textTransform: 'uppercase',
-                  cursor: isLoading || !email.trim() ? 'not-allowed' : 'pointer',
-                  opacity: isLoading || !email.trim() ? 0.4 : 1,
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                {isLoading ? 'Sending…' : 'Send Login Link'}
-              </button>
+                <input
+                  type="email"
+                  className="login-email-input w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold tracking-wide text-black focus:border-green-500 focus:outline-none disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-green-500"
+                  placeholder={`you@${ALLOWED_DOMAIN}`}
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError('') }}
+                  disabled={isLoading}
+                  autoFocus
+                />
 
-              <p style={{ textAlign: 'center', fontSize: 11, color: '#94a3b8', margin: 0 }}>
-                No password needed — we'll email you a one-click link
-              </p>
-            </form>
-          )}
+                <button
+                  type="submit"
+                  disabled={isLoading || !email.trim()}
+                  className="w-full rounded-xl border-2 border-green-600 bg-green-600 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-green-700 disabled:opacity-40"
+                >
+                  {isLoading ? 'Sending…' : 'Send login link'}
+                </button>
+
+                <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                  No password needed — we'll email you a one-click link
+                </p>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </div>

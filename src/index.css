@@ -490,6 +490,9 @@ svg.cursor-pointer:hover {
 .login-email-input::placeholder {
   color: #94a3b8;
 }
+.dark .login-email-input::placeholder {
+  color: #64748b;
+}
 
 /* Date picker */
 
