@@ -1,7 +1,7 @@
+import { getPlayerGrade } from '../lib/localStorage'
 import { TEACHER_WORDS } from '../teacherWords'
 
-const gradeStatKey = 'gradeNumber'
-const grade = localStorage.getItem(gradeStatKey)
+const grade = getPlayerGrade()
 const nogradeyet = ['error']
 
 let GRADEWORDS = nogradeyet
@@ -491,19 +491,19 @@ const FRESHMAN = [
   'sydney',
 ]
 
-if (grade === '"0"') {
+if (grade === '0') {
   GRADEWORDS = TEACHER_WORDS
-} else if (grade === null) {
-  GRADEWORDS = JUNIOR // Updated to match previous default behavior
-} else if (grade === '"12"' || grade === '"26"') {
+} else if (grade === '') {
+  GRADEWORDS = JUNIOR // Default for no grade set
+} else if (grade === '12' || grade === '26') {
   GRADEWORDS = SENIOR
-} else if (grade === '"11"' || grade === '"27"' || grade === '"8"') {
+} else if (grade === '11' || grade === '27' || grade === '8') {
   // Keeping 8 mapped to Juniors
   GRADEWORDS = JUNIOR
-} else if (grade === '"10"' || grade === '"28"' || grade === '"7"') {
+} else if (grade === '10' || grade === '28' || grade === '7') {
   // Keeping 7 mapped to Sophomores for backward compatibility
   GRADEWORDS = SOPHOMORE
-} else if (grade === '"9"' || grade === '"29"') {
+} else if (grade === '9' || grade === '29') {
   GRADEWORDS = FRESHMAN
 } else {
   GRADEWORDS = nogradeyet

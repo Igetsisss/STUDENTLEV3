@@ -52,8 +52,19 @@ import {
 } from './lib/api'
 import { isInAppBrowser } from './lib/browser'
 import {
+  clearShouldShowInfoAfterReload,
   ensureRoundStateSchemaVersion,
+  getFirstToPlayDate,
+  getGradeRoundsPlayedToday,
+  getPlayerGrade,
+  getPlayerLastInitial,
+  getPlayerName,
+  getPlayerPrefix,
+  getPendingAccountCheck,
+  getShouldShowInfoAfterReload,
   getStoredIsHighContrastMode,
+  getTheme,
+  hasSeenInfoModal,
   loadActiveRoundFromLocalStorage,
   loadBonusGameStateFromLocalStorage,
   loadGameStateFromLocalStorage,
@@ -65,7 +76,11 @@ import {
   saveGameStateToLocalStorage,
   saveGradeRoundGameStateToLocalStorage,
   saveTeachersGameStateToLocalStorage,
+  setFirstToPlayDate,
+  setHasSeenInfoModal,
+  setPlayerGrade,
   setStoredIsHighContrastMode,
+  setTheme,
 } from './lib/localStorage'
 import { addStatsForCompletedGame, loadStats } from './lib/stats'
 import {
@@ -225,8 +240,8 @@ function App() {
   const gameDate = getGameDate()
   // Teachers get their own bonus using all teacher names; students get the regular bonus
   const bonusSolution = (() => {
-    const g = localStorage.getItem('gradeNumber')
-    return g === '"0"' ? getTeachersBonusSolution() : getBonusSolution()
+    const g = getPlayerGrade()
+    return g === '0' ? getTeachersBonusSolution() : getBonusSolution()
   })()
   const teachersSolution = getTeachersSolution()
   const hasLoadedRef = useRef(false)
@@ -235,18 +250,15 @@ function App() {
   // Normalize their gradeNumber to "0" in localStorage so every downstream
   // calculation (daily solution, word list, bonus, gameType) is correct.
   ;(() => {
-    const fn = localStorage.getItem('playerName') || ''
-    const li = localStorage.getItem('playerLastInitial') || ''
-    const prefix = localStorage.getItem('playerPrefix') || ''
+    const fn = getPlayerName()
+    const li = getPlayerLastInitial()
+    const prefix = getPlayerPrefix()
     const storedName = prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
     const key = storedName.toLowerCase().replace(/\s+/g, ' ').trim()
     if (LEGACY_TEACHER_KEYS.includes(key)) {
-      const currentGrade = (localStorage.getItem('gradeNumber') || '').replace(
-        /"/g,
-        ''
-      )
+      const currentGrade = getPlayerGrade()
       if (currentGrade !== '0') {
-        localStorage.setItem('gradeNumber', '"0"')
+        setPlayerGrade('0')
       }
     }
   })()
@@ -255,8 +267,8 @@ function App() {
     '(prefers-color-scheme: dark)'
   ).matches
   const effectiveDailySolution = (() => {
-    const g = localStorage.getItem('gradeNumber')
-    return g === '"0"' ? teachersSolution : dailySolution
+    const g = getPlayerGrade()
+    return g === '0' ? teachersSolution : dailySolution
   })()
   const restoredDailyState = resolveStoredRoundState(
     'daily',
@@ -348,11 +360,7 @@ function App() {
     initialRoundState.outcome === 'lost'
   )
   const [isDarkMode, setIsDarkMode] = useState(
-    localStorage.getItem('theme')
-      ? localStorage.getItem('theme') === 'dark'
-      : prefersDarkMode
-      ? true
-      : false
+    getTheme() ? getTheme() === 'dark' : prefersDarkMode
   )
   const [isHighContrastMode, setIsHighContrastMode] = useState(
     getStoredIsHighContrastMode()
@@ -372,16 +380,8 @@ function App() {
     initialRoundState.mode === 'grade' ? initialRoundState.grade ?? '' : ''
   )
   const [gradeRoundsPlayed, setGradeRoundsPlayed] = useState<string[]>(() => {
-    // Restore which grade rounds were completed today
-    const today = new Date().toISOString().slice(0, 10)
-    const played = ['9', '10', '11', '12'].filter(
-      (g) => localStorage.getItem('gradeRoundPlayedDate_' + g) === today
-    )
-    // Pre-mark player's own grade as done — they shouldn't replay it
-    const ownGrade = (localStorage.getItem('gradeNumber') || '').replace(
-      /"/g,
-      ''
-    )
+    const played = getGradeRoundsPlayedToday()
+    const ownGrade = getPlayerGrade()
     if (
       ['9', '10', '11', '12'].includes(ownGrade) &&
       !played.includes(ownGrade)
@@ -418,10 +418,9 @@ function App() {
   const resetArmedRef = useRef(false)
   const releasedSpaceAfterArmedRef = useRef(false)
 
-  const [isFirstToday, setIsFirstToday] = useState(() => {
-    const stored = localStorage.getItem('firstToPlayDate')
-    return stored === new Date().toISOString().split('T')[0]
-  })
+  const [isFirstToday, setIsFirstToday] = useState(() =>
+    getFirstToPlayDate() === new Date().toISOString().split('T')[0]
+  )
 
   const [todayLeader, setTodayLeader] = useState<TodayLeader | null>(null)
 
@@ -554,27 +553,23 @@ function App() {
 
   const [stats, setStats] = useState(() => loadStats())
 
-  const gradeStatKey = 'gradeNumber'
-  const grade = localStorage.getItem(gradeStatKey)
+  const grade = getPlayerGrade()
   const currentPlayerDisplayName = (() => {
-    const firstName = localStorage.getItem('playerName') || ''
-    const lastInitial = localStorage.getItem('playerLastInitial') || ''
-    const prefix = localStorage.getItem('playerPrefix') || ''
+    const firstName = getPlayerName()
+    const lastInitial = getPlayerLastInitial()
+    const prefix = getPlayerPrefix()
     return prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
   })()
-  // grade is stored as JSON string e.g. '"0"' for teachers, '"9"' for Freshman, etc.
-  const isTeacherPlayer = grade === '"0"'
+  // grade is a clean plain string: '0' for teachers, '9'/'10'/'11'/'12' for students.
+  const isTeacherPlayer = grade === '0'
 
   // Fetch today's grade leader on mount (fire-and-forget)
   useEffect(() => {
-    const rawGrade = (localStorage.getItem('gradeNumber') || '').replace(
-      /"/g,
-      ''
-    )
+    const rawGrade = getPlayerGrade()
     if (!rawGrade) return
     // Use local date to match how game_date is stored in game_submissions
     const d = new Date()
@@ -619,8 +614,7 @@ function App() {
   }, [currentPlayerDisplayName, grade, isGameWon, isGameLost, bothComplete])
 
   useEffect(() => {
-    const hasValidGrade =
-      grade != null && grade !== 'undefined' && grade !== 'null'
+    const hasValidGrade = grade !== ''
 
     if (hasValidGrade) {
       return
@@ -637,12 +631,12 @@ function App() {
 
   // Prompt existing users (have grade but no name) to enter name
   useEffect(() => {
-    const hasGrade = grade != null && grade !== 'undefined' && grade !== 'null'
-    const hasName = !!localStorage.getItem('playerName')
-    const currentGrade = (grade || '').replace(/"/g, '')
+    const hasGrade = grade !== ''
+    const hasName = !!getPlayerName()
+    const currentGrade = grade
     const isTeacher = currentGrade === '0'
-    const hasPrefix = !!localStorage.getItem('playerPrefix')
-    const hasInitial = !!localStorage.getItem('playerLastInitial')
+    const hasPrefix = !!getPlayerPrefix()
+    const hasInitial = !!getPlayerLastInitial()
     const hasRequiredIdentifier = isTeacher ? hasPrefix : hasInitial
     if (hasGrade && (!hasName || !hasRequiredIdentifier)) {
       // Delay past stats modal (1000ms) so name prompt always appears on top
@@ -656,9 +650,9 @@ function App() {
 
   // On page load: show info modal if first time after grade selection
   useEffect(() => {
-    if (localStorage.getItem('showInfoAfterReload')) {
-      localStorage.removeItem('showInfoAfterReload')
-      localStorage.setItem('hasSeenInfo', 'true')
+    if (getShouldShowInfoAfterReload()) {
+      clearShouldShowInfoAfterReload()
+      setHasSeenInfoModal()
       setTimeout(() => {
         setIsInfoModalOpen(true)
       }, 500)
@@ -680,20 +674,17 @@ function App() {
 
     // During account-claim flow, leaderboard/API should drive restoration.
     // Skip cloud hydration so stale snapshots cannot override claim results.
-    if (localStorage.getItem('pendingAccountCheck')) return
+    if (getPendingAccountCheck()) return
 
-    const firstName = localStorage.getItem('playerName') || ''
-    const lastInitial = localStorage.getItem('playerLastInitial') || ''
-    const prefix = localStorage.getItem('playerPrefix') || ''
+    const firstName = getPlayerName()
+    const lastInitial = getPlayerLastInitial()
+    const prefix = getPlayerPrefix()
     const displayName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
-    const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(
-      /"/g,
-      ''
-    )
+    const gradeRaw = getPlayerGrade()
     if (!displayName || !gradeRaw) return
 
     fetchPlayerStateFromCloud(displayName, gradeRaw)
@@ -798,8 +789,8 @@ function App() {
     hasLoadedRef.current = true
 
     const isComplete = isGameWon || isGameLost
-    const hasName = !!localStorage.getItem('playerName')
-    if (isComplete && grade != null && grade !== 'undefined') {
+    const hasName = !!getPlayerName()
+    if (isComplete && grade !== '') {
       hasSubmittedRef.current = true // already done, don't re-submit
       alreadyCompleteOnLoadRef.current = true
       if (hasName) {
@@ -855,7 +846,7 @@ function App() {
 
   const handleDarkMode = (isDark: boolean) => {
     setIsDarkMode(isDark)
-    localStorage.setItem('theme', isDark ? 'dark' : 'light')
+    setTheme(isDark ? 'dark' : 'light')
   }
 
   const handleHighContrastMode = (isHighContrast: boolean) => {
@@ -898,19 +889,16 @@ function App() {
 
   // Debounced full-state sync for seamless cross-device continuity.
   useEffect(() => {
-    const firstName = localStorage.getItem('playerName') || ''
-    const lastInitial = localStorage.getItem('playerLastInitial') || ''
-    const prefix = localStorage.getItem('playerPrefix') || ''
+    const firstName = getPlayerName()
+    const lastInitial = getPlayerLastInitial()
+    const prefix = getPlayerPrefix()
     ensureRoundStateSchemaVersion()
     const displayName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
-    const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(
-      /"/g,
-      ''
-    )
+    const gradeRaw = getPlayerGrade()
     if (!displayName || !gradeRaw) return
 
     if (cloudSyncTimerRef.current !== null) {
@@ -1048,9 +1036,7 @@ function App() {
         const _d = solutionGameDate
         const today = formatDateKey(_d)
         const existing = await fetchLeaderboard(today)
-        const gradeRawCheck = (
-          localStorage.getItem('gradeNumber') || ''
-        ).replace(/"/g, '')
+        const gradeRawCheck = getPlayerGrade()
         const gradeCleanCheck =
           LEGACY_GRADE_NORMALIZATION_MAP[gradeRawCheck] || gradeRawCheck
         const existingDailyCount = existing.filter(
@@ -1058,26 +1044,24 @@ function App() {
         ).length
         if (existingDailyCount === 0) {
           setIsFirstToday(true)
-          localStorage.setItem('firstToPlayDate', today)
+          setFirstToPlayDate(today)
         }
       } catch {
         // ignore - don't block submission
       }
     }
 
-    const firstName = localStorage.getItem('playerName') || ''
-    const lastInitial = localStorage.getItem('playerLastInitial') || ''
-    const prefix = localStorage.getItem('playerPrefix') || ''
+    const firstName = getPlayerName()
+    const lastInitial = getPlayerLastInitial()
+    const prefix = getPlayerPrefix()
     let playerName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
     if (!firstName) return // don't submit nameless games
-    const gradeRaw = localStorage.getItem('gradeNumber') || ''
-    const gradeCleanRaw = gradeRaw.replace(/"/g, '')
-    let gradeClean =
-      LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
+    const gradeCleanRaw = getPlayerGrade()
+    let gradeClean = LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
     // Legacy name/grade corrections (players who registered before certain features existed)
     const normalizePlayerKey = (name: string) =>
       String(name || '')
@@ -1293,8 +1277,8 @@ function App() {
 
   function handleGradeModalClose() {
     setIsGradeModalOpen(false)
-    if (!localStorage.getItem('hasSeenInfo')) {
-      localStorage.setItem('hasSeenInfo', 'true')
+    if (!hasSeenInfoModal()) {
+      setHasSeenInfoModal()
       setIsInfoModalOpen(true)
     }
   }
@@ -1513,26 +1497,45 @@ function App() {
                     </span>
                   )
                 )}
-                {(['9', '10', '11', '12'] as const).map((g) => {
-                  const done = gradeRoundsPlayed.includes(g)
-                  return done ? (
-                    <span
-                      key={g}
-                      className="rounded-full border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
-                    >
-                      {GRADE_LABELS[g]} ✓
-                    </span>
-                  ) : (
-                    <button
-                      key={g}
-                      type="button"
-                      className="rounded-full bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-purple-700"
-                      onClick={() => handleGradeRound(g)}
-                    >
-                      {GRADE_LABELS[g]}
-                    </button>
-                  )
-                })}
+                {(() => {
+                  const prereqsDone =
+                    hasBonusBeenPlayedToday() &&
+                    (isTeacherPlayer || hasTeachersBeenPlayedToday())
+                  return (['9', '10', '11', '12'] as const).map((g) => {
+                    const done = gradeRoundsPlayed.includes(g)
+                    if (done) {
+                      return (
+                        <span
+                          key={g}
+                          className="rounded-full border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
+                        >
+                          {GRADE_LABELS[g]} ✓
+                        </span>
+                      )
+                    }
+                    if (!prereqsDone) {
+                      return (
+                        <span
+                          key={g}
+                          className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-600"
+                          title="Complete Bonus and Teachers rounds first"
+                        >
+                          🔒 {GRADE_LABELS[g]}
+                        </span>
+                      )
+                    }
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        className="rounded-full bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-purple-700"
+                        onClick={() => handleGradeRound(g)}
+                      >
+                        {GRADE_LABELS[g]}
+                      </button>
+                    )
+                  })
+                })()}
               </div>
             )}
           {/* Daily info strip — puzzle number + today's grade leader — always visible */}
