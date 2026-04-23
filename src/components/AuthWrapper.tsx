@@ -40,18 +40,30 @@ const restoreAccountToLocalStorage = (account: {
  * Runs once we confirm a valid @bearsmail.org session.
  *
  * - Stores the email so Grade modal can pre-fill the name field.
- * - If the device already has a registered player, links the email to that
- *   account in the background (fire-and-forget).
- * - If the device has NO registered player, tries to look up the account by
- *   email from Supabase and restores it to localStorage so the app starts
- *   with the correct identity (skipping the Grade modal entirely).
+ * - Returning users (same email already cached) skip the blocking Supabase
+ *   RPC — the app renders immediately and the lookup refreshes in the background.
+ * - New users or email changes always block on the RPC so identity is correct
+ *   before the app is shown.
  */
 async function applyValidSession(email: string): Promise<void> {
+  const previousEmail = localStorage.getItem('msAuthEmail')
+  const hasName = !!localStorage.getItem('playerName')
+  const hasGrade = !!localStorage.getItem('gradeNumber')
+  const isReturningUser = previousEmail === email && hasName && hasGrade
+
   localStorage.setItem('msAuthEmail', email)
 
-  // Always prefer the email-linked account as source of truth.
-  // This avoids accidentally linking a new email to stale local identity
-  // from a previous user on a shared device.
+  if (isReturningUser) {
+    // Identity already verified on a previous load for this email.
+    // Refresh in the background without blocking app render.
+    lookupAccountByEmail(email).then((account) => {
+      if (account) restoreAccountToLocalStorage(account)
+    })
+    return
+  }
+
+  // New device, new email, or no local identity — block on the lookup so the
+  // app starts with the correct identity (or shows the Grade modal).
   const account = await lookupAccountByEmail(email)
 
   if (account) {
@@ -59,13 +71,9 @@ async function applyValidSession(email: string): Promise<void> {
     return
   }
 
-  const hasName = !!localStorage.getItem('playerName')
-  const hasGrade = !!localStorage.getItem('gradeNumber')
-
   if (hasName && hasGrade) {
-    // Email is not linked yet, but this device already has local identity.
-    // Keep the first-login flow safe by requiring explicit signup instead of
-    // auto-linking potentially stale local data.
+    // Email changed but device has stale local identity from a different user.
+    // Clear it so the Grade modal re-runs for the new email owner.
     clearLocalIdentity()
     return
   }
