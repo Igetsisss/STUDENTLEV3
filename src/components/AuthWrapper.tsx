@@ -12,11 +12,13 @@ import {
   getPlayerLastInitial,
   getPlayerName,
   getPlayerPrefix,
+  getWelcomeShownEmail,
   setMsAuthEmail,
   setPlayerGrade,
   setPlayerLastInitial,
   setPlayerName,
   setPlayerPrefix,
+  setWelcomeShownEmail,
 } from '../lib/localStorage'
 import { hasSupabaseConfig, supabase } from '../lib/supabase'
 import { LoginScreen } from './LoginScreen'
@@ -156,16 +158,19 @@ export const AuthWrapper = ({ children }: Props) => {
 
       await applyValidSession(email)
 
-      // Show a brief welcome screen if we know who this player is.
+      // Show the one-time welcome screen only the first time this email signs in
+      // on this device. Every subsequent login goes straight to the app.
       const name = buildDisplayName()
       const grade = getPlayerGrade()
-      if (name && grade) {
+      const alreadyWelcomed = getWelcomeShownEmail() === email
+      if (name && grade && !alreadyWelcomed) {
+        setWelcomeShownEmail(email)
         setWelcomeName(name)
         setWelcomeGrade(GRADE_LABELS[grade] ?? `Grade ${grade}`)
         setStatus('welcome')
         welcomeTimerRef.current = setTimeout(() => {
           setStatus('authenticated')
-        }, 2000)
+        }, 4000)
       } else {
         setStatus('authenticated')
       }
@@ -188,15 +193,20 @@ export const AuthWrapper = ({ children }: Props) => {
   if (status === 'welcome') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center">
+        <div className="text-center px-6">
           <p className="text-sm font-semibold uppercase tracking-widest text-indigo-500">
-            Welcome back
+            Account Ready
           </p>
           <h1 className="mt-2 text-4xl font-bold text-gray-900 dark:text-white">
             {welcomeName}
           </h1>
           <p className="mt-1 text-lg text-gray-500 dark:text-gray-400">
             {welcomeGrade}
+          </p>
+          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">
+            We&apos;ve set up your Studentle account.
+            <br />
+            From now on, just sign in with your school email.
           </p>
         </div>
       </div>

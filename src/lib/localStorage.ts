@@ -27,6 +27,7 @@ const HAS_SEEN_INFO_KEY = 'hasSeenInfo'
 const SHOW_INFO_AFTER_RELOAD_KEY = 'showInfoAfterReload'
 const HISTORICAL_STATS_SUBMITTED_KEY = 'historicalStatsSubmitted'
 const PENDING_ACCOUNT_CHECK_KEY = 'pendingAccountCheck'
+const WELCOME_SHOWN_EMAIL_KEY = 'welcomeShownForEmail'
 
 // Stats
 const GAME_STATS_KEY = 'gameStats'
@@ -139,6 +140,14 @@ export const setPendingAccountCheck = (name: string): void =>
 
 export const clearPendingAccountCheck = (): void =>
   localStorage.removeItem(PENDING_ACCOUNT_CHECK_KEY)
+
+/** Returns the email for which the one-time welcome screen has already been shown. */
+export const getWelcomeShownEmail = (): string =>
+  localStorage.getItem(WELCOME_SHOWN_EMAIL_KEY) ?? ''
+
+/** Marks the one-time welcome screen as shown for this email. */
+export const setWelcomeShownEmail = (email: string): void =>
+  localStorage.setItem(WELCOME_SHOWN_EMAIL_KEY, email)
 
 /** Returns the grade rounds (9–12) completed today (by checking played-date markers). */
 export const getGradeRoundsPlayedToday = (): string[] => {
