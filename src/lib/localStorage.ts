@@ -85,6 +85,9 @@ export const clearPlayerPrefix = (): void =>
 export const getMsAuthEmail = (): string =>
   localStorage.getItem(MS_AUTH_EMAIL_KEY) ?? ''
 
+export const setMsAuthEmail = (email: string): void =>
+  localStorage.setItem(MS_AUTH_EMAIL_KEY, email)
+
 // ─── Settings ──────────────────────────────────────────────────────────────────
 
 export const getTheme = (): string | null => localStorage.getItem(THEME_KEY)

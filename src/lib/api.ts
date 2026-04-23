@@ -1,4 +1,10 @@
 import { hasSupabaseConfig, supabase } from './supabase'
+import {
+  getPlayerGrade,
+  getPlayerLastInitial,
+  getPlayerName,
+  getPlayerPrefix,
+} from './localStorage'
 import { getSolutionForGrade } from './words'
 
 const SUPABASE_TABLES = {
@@ -1007,10 +1013,10 @@ export const lookupAccountByEmail = async (
 export const linkEmailToCurrentAccount = async (email: string): Promise<void> => {
   if (!hasSupabaseConfig || !supabase) return
 
-  const playerName = localStorage.getItem('playerName') || ''
-  const prefix = localStorage.getItem('playerPrefix') || ''
-  const lastInitial = localStorage.getItem('playerLastInitial') || ''
-  const rawGrade = (localStorage.getItem('gradeNumber') || '').replace(/"/g, '')
+  const playerName = getPlayerName()
+  const prefix = getPlayerPrefix()
+  const lastInitial = getPlayerLastInitial()
+  const rawGrade = getPlayerGrade()
 
   if (!playerName || !rawGrade) return
 

@@ -7,6 +7,7 @@ import {
   isSchoolEmail,
   sendMagicLink,
 } from '../lib/auth'
+import { getTheme } from '../lib/localStorage'
 import { getGuessStatuses } from '../lib/statuses'
 
 type TileState = 'correct' | 'present' | 'absent' | 'empty'
@@ -157,8 +158,8 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
   const [error, setError] = useState('')
 
   const isDark =
-    localStorage.getItem('theme') === 'dark' ||
-    (!localStorage.getItem('theme') &&
+    getTheme() === 'dark' ||
+    (!getTheme() &&
       window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   const handleSubmit = async (e: React.FormEvent) => {

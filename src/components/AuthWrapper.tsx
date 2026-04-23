@@ -5,6 +5,10 @@ import { isSchoolEmail, signOutMicrosoft as signOut } from '../lib/auth'
 import {
   clearPlayerLastInitial,
   clearPlayerPrefix,
+  getMsAuthEmail,
+  getPlayerGrade,
+  getPlayerName,
+  setMsAuthEmail,
   setPlayerGrade,
   setPlayerLastInitial,
   setPlayerName,
@@ -54,12 +58,12 @@ const restoreAccountToLocalStorage = (account: {
  *   before the app is shown.
  */
 async function applyValidSession(email: string): Promise<void> {
-  const previousEmail = localStorage.getItem('msAuthEmail')
-  const hasName = !!localStorage.getItem('playerName')
-  const hasGrade = !!localStorage.getItem('gradeNumber')
+  const previousEmail = getMsAuthEmail()
+  const hasName = !!getPlayerName()
+  const hasGrade = !!getPlayerGrade()
   const isReturningUser = previousEmail === email && hasName && hasGrade
 
-  localStorage.setItem('msAuthEmail', email)
+  setMsAuthEmail(email)
 
   if (isReturningUser) {
     // Identity already verified on a previous load for this email.
