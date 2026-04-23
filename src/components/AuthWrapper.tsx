@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { lookupAccountByEmail } from '../lib/api'
 import { isSchoolEmail, signOutMicrosoft as signOut } from '../lib/auth'
