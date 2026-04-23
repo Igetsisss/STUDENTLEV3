@@ -135,7 +135,13 @@ export const AuthWrapper = ({ children }: Props) => {
       data: { subscription },
     } = supabase!.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
-        setStatus('unauthenticated')
+        // If the player already has a stored identity (name + grade), let them
+        // straight into the app — no need to re-verify via email every session.
+        if (getPlayerName() && getPlayerGrade()) {
+          setStatus('authenticated')
+        } else {
+          setStatus('unauthenticated')
+        }
         return
       }
 
