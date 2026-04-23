@@ -58,11 +58,17 @@ export const getPlayerGrade = (): string =>
 export const setPlayerGrade = (grade: string): void =>
   localStorage.setItem(GRADE_NUMBER_KEY, grade)
 
+export const clearPlayerGrade = (): void =>
+  localStorage.removeItem(GRADE_NUMBER_KEY)
+
 export const getPlayerName = (): string =>
   localStorage.getItem(PLAYER_NAME_KEY) ?? ''
 
 export const setPlayerName = (name: string): void =>
   localStorage.setItem(PLAYER_NAME_KEY, name)
+
+export const clearPlayerName = (): void =>
+  localStorage.removeItem(PLAYER_NAME_KEY)
 
 export const getPlayerLastInitial = (): string =>
   localStorage.getItem(PLAYER_LAST_INITIAL_KEY) ?? ''
