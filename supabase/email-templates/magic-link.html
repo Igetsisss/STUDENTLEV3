@@ -53,6 +53,7 @@
           <tr>
             <td style="padding:36px 40px 16px;">
               <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827;">Your login link is ready</p>
+              <p style="margin:0 0 16px;font-size:15px;color:#111827;line-height:1.6;">{{ if index .Data "first_name" }}Dear {{ index .Data "first_name" }}{{ if index .Data "last_initial" }} {{ index .Data "last_initial" }}.{{ end }},{{ else }}Hello,{{ end }}</p>
               <p style="margin:0 0 28px;font-size:15px;color:#4b5563;line-height:1.6;">
                 Click the button below to sign in to Studentle. This link expires in 1 hour and can only be used once.
               </p>

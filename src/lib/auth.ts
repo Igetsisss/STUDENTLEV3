@@ -11,10 +11,15 @@ export const ALLOWED_DOMAINS_LABEL = ALLOWED_DOMAINS.map((d) => `@${d}`).join(' 
  */
 export const sendMagicLink = async (email: string): Promise<void> => {
   if (!supabase) return
+  const { firstName, lastInitial } = parseNameFromEmail(email)
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
       emailRedirectTo: window.location.origin,
+      data: {
+        first_name: firstName,
+        last_initial: lastInitial,
+      },
     },
   })
   if (error) throw error
