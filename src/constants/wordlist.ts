@@ -295,7 +295,6 @@ const SOPHOMORE = [
   'martin',
   'landen',
   'cooper',
-  'cathryn-rose',
   'mary-grace',
   'whitney',
   'ellison',
