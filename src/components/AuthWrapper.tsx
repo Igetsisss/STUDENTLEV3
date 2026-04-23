@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 
 import { lookupAccountByEmail } from '../lib/api'
 import { isSchoolEmail, signOutMicrosoft as signOut } from '../lib/auth'
+import {
+  clearPlayerLastInitial,
+  clearPlayerPrefix,
+  setPlayerGrade,
+  setPlayerLastInitial,
+  setPlayerName,
+  setPlayerPrefix,
+} from '../lib/localStorage'
 import { hasSupabaseConfig, supabase } from '../lib/supabase'
 import { LoginScreen } from './LoginScreen'
 
@@ -20,20 +28,20 @@ const restoreAccountToLocalStorage = (account: {
   lastInitial?: string
   prefix?: string
 }) => {
-  localStorage.setItem('gradeNumber', JSON.stringify(account.grade))
-  localStorage.setItem('playerName', account.playerName)
+  setPlayerGrade(account.grade)
+  setPlayerName(account.playerName)
   if (account.prefix) {
-    localStorage.setItem('playerPrefix', account.prefix)
-    localStorage.removeItem('playerLastInitial')
+    setPlayerPrefix(account.prefix)
+    clearPlayerLastInitial()
     return
   }
   if (account.lastInitial) {
-    localStorage.setItem('playerLastInitial', account.lastInitial)
-    localStorage.removeItem('playerPrefix')
+    setPlayerLastInitial(account.lastInitial)
+    clearPlayerPrefix()
     return
   }
-  localStorage.removeItem('playerPrefix')
-  localStorage.removeItem('playerLastInitial')
+  clearPlayerPrefix()
+  clearPlayerLastInitial()
 }
 
 /**

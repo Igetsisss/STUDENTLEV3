@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 
 import { FRESHMAN, JUNIOR, SENIOR, SOPHOMORE } from '../constants/wordlist'
 import { ALLOWED_DOMAIN, isSchoolEmail, sendMagicLink } from '../lib/auth'
@@ -96,7 +96,7 @@ type Props = {
   wrongDomain?: boolean
 }
 
-const FakeBoard = ({ board, uid }: { board: GradeBoard; uid: string }) => {
+const FakeBoard = ({ board, uid }: { board: GradeBoard; uid: string; key?: string | number }) => {
   return (
     <div className="login-board-wallpaper-card">
       <div className="login-board-wallpaper-card-grid">
@@ -132,6 +132,7 @@ const WallpaperStrip = ({
   boards: GradeBoard[]
   reverse: boolean
   stripId: string
+  key?: string | number
 }) => {
   // Duplicate for seamless infinite scroll loop
   const doubled = [...boards, ...boards]

@@ -4,5 +4,6 @@ declare const process: {
   env: {
     REACT_APP_SUPABASE_URL?: string
     REACT_APP_SUPABASE_ANON_KEY?: string
+    REACT_APP_LOCALE_STRING?: string
   }
 }
