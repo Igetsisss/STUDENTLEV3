@@ -345,7 +345,6 @@ function App() {
   const { showError: showErrorAlert, showSuccess: showSuccessAlert } =
     useAlert()
   const [currentGuess, setCurrentGuess] = useState('')
-  const [isUpdateBannerDismissed, setIsUpdateBannerDismissed] = useState(false)
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
@@ -1386,33 +1385,6 @@ function App() {
             </p>
           </div>
         )}
-
-        {!isUpdateBannerDismissed &&
-          new Date().toLocaleDateString('en-CA') === '2026-04-23' && (
-            <div className="relative mx-2 mt-1 mb-1 rounded-lg border border-yellow-400 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 shadow dark:border-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-200">
-              <button
-                onClick={() => setIsUpdateBannerDismissed(true)}
-                className="absolute right-2 top-2 text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-100"
-                aria-label="Dismiss"
-              >
-                ✕
-              </button>
-              <p className="font-bold">🚀 Big update today!</p>
-              <p className="mt-1">
-                Studentle just got a major upgrade. Things should be faster and
-                smoother — but there may be a few bugs while we settle in, and
-                the app could temporarily revert if something breaks. The daily
-                word also reset with today's update.
-              </p>
-              <p className="mt-1">
-                📧 When you get the sign-in email, <strong>check your junk/spam
-                folder</strong> — that's usually where it lands.
-              </p>
-              <p className="mt-1">
-                Let <strong>Jack</strong> know how it's going!
-              </p>
-            </div>
-          )}
 
         {/* Current round label — only shown when not in daily mode */}
         {(isBonusRound || isTeachersRound || isGradeRound) && (
