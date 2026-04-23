@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { lookupAccountByEmail } from '../lib/api'
 import { isSchoolEmail, signOutMicrosoft as signOut } from '../lib/auth'
@@ -9,9 +9,7 @@ import {
   clearPlayerPrefix,
   getMsAuthEmail,
   getPlayerGrade,
-  getPlayerLastInitial,
   getPlayerName,
-  getPlayerPrefix,
   setMsAuthEmail,
   setPlayerGrade,
   setPlayerLastInitial,
@@ -22,15 +20,6 @@ import { hasSupabaseConfig, supabase } from '../lib/supabase'
 import { LoginScreen } from './LoginScreen'
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'wrong-domain'
-
-const buildDisplayName = (): string => {
-  const name = getPlayerName()
-  const prefix = getPlayerPrefix()
-  const lastInitial = getPlayerLastInitial()
-  if (prefix) return `${prefix} ${name}`
-  if (lastInitial) return `${name} ${lastInitial}`
-  return name
-}
 
 const clearLocalIdentity = () => {
   clearPlayerName()
@@ -118,9 +107,6 @@ type Props = { children: React.ReactNode }
  */
 export const AuthWrapper = ({ children }: Props) => {
   const [status, setStatus] = useState<AuthStatus>('loading')
-  const [welcomeName, setWelcomeName] = useState('')
-  const [welcomeGrade, setWelcomeGrade] = useState('')
-  const welcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     // Dev mode without Supabase env vars — skip auth gate.
@@ -153,28 +139,11 @@ export const AuthWrapper = ({ children }: Props) => {
       }
 
       await applyValidSession(email)
-
-      // Show the one-time welcome screen the first time this email signs in
-      // on this device. Every subsequent login goes straight to the app.
-      const name = buildDisplayName()
-      const grade = getPlayerGrade()
-      const alreadyWelcomed = getWelcomeShownEmail() === email
-      if (name && grade && !alreadyWelcomed) {
-        setWelcomeShownEmail(email)
-        setWelcomeName(name)
-        setWelcomeGrade(GRADE_LABELS[grade] ?? `Grade ${grade}`)
-        setStatus('welcome')
-        welcomeTimerRef.current = setTimeout(() => {
-          setStatus('authenticated')
-        }, 6000)
-      } else {
-        setStatus('authenticated')
-      }
+      setStatus('authenticated')
     })
 
     return () => {
       subscription.unsubscribe()
-      if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current)
     }
   }, [])
 
@@ -182,29 +151,6 @@ export const AuthWrapper = ({ children }: Props) => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-900">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-      </div>
-    )
-  }
-
-  if (status === 'welcome') {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center px-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-indigo-500">
-            Account Ready
-          </p>
-          <h1 className="mt-2 text-4xl font-bold text-gray-900 dark:text-white">
-            {welcomeName}
-          </h1>
-          <p className="mt-1 text-lg font-medium text-indigo-400">
-            {welcomeGrade}
-          </p>
-          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">
-            Welcome to Studentle, {welcomeName}!
-            <br />
-            From now on, just sign in with your school email.
-          </p>
-        </div>
       </div>
     )
   }
