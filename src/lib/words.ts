@@ -12,7 +12,6 @@ import { ENABLE_ARCHIVED_GAMES } from '../constants/settings'
 import { NOT_CONTAINED_MESSAGE, WRONG_SPOT_MESSAGE } from '../constants/strings'
 import { VALID_GUESSES } from '../constants/validGuesses'
 import {
-  DAILY_WORDS,
   FRESHMAN,
   JUNIOR,
   SENIOR,
@@ -144,10 +143,7 @@ export const getWordOfDay = (index: number) => {
     throw new Error('Invalid index')
   }
 
-  // Use DAILY_WORDS (names ≥ 4 letters) so short names like "jb" or "rio" never
-  // become the daily answer. WORDS is still used for full guess validation.
-  const pool = DAILY_WORDS.length > 0 ? DAILY_WORDS : WORDS
-  return localeAwareUpperCase(pool[index % pool.length])
+  return localeAwareUpperCase(WORDS[index % WORDS.length])
 }
 
 export const getSolution = (gameDate: Date) => {

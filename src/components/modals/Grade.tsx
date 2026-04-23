@@ -3,12 +3,10 @@ import './gradestyle.css'
 import { Filter } from 'bad-words'
 import { useEffect, useState } from 'react'
 
-import { parseNameFromEmail } from '../../lib/auth'
 import {
   LeaderboardEntry,
   fetchLeaderboard,
   isTrueDailyEntry,
-  linkEmailToCurrentAccount,
   submitHistoricalStats,
   submitNameStepRegistration,
   submitSignupEvent,
@@ -17,30 +15,11 @@ import {
   GameStats,
   clearActiveRoundFromLocalStorage,
   clearBonusGameState,
-  clearDailyGameStates,
   clearGradeRoundGameState,
-  clearPendingAccountCheck,
-  clearPlayerLastInitial,
-  clearPlayerPrefix,
   clearTeachersGameState,
-  getMsAuthEmail,
-  getPendingAccountCheck,
-  getPlayerGrade,
-  getPlayerLastInitial,
-  getPlayerName,
-  getPlayerPrefix,
-  hasSeenInfoModal,
-  hasSubmittedHistoricalStats,
   loadStatsFromLocalStorage,
   saveGameStateToLocalStorage,
   saveStatsToLocalStorage,
-  setHistoricalStatsSubmitted,
-  setPendingAccountCheck,
-  setPlayerGrade,
-  setPlayerLastInitial as lsSetPlayerLastInitial,
-  setPlayerName as lsSetPlayerName,
-  setPlayerPrefix,
-  setShouldShowInfoAfterReload,
 } from '../../lib/localStorage'
 import { getGameDate, getSolution } from '../../lib/words'
 import {
@@ -56,6 +35,8 @@ import {
   setTeachersPlayedToday,
 } from '../../utils/teachersRound'
 import { BaseModal } from './BaseModal2'
+
+const gradeStatKey = 'gradeNumber'
 
 const LEGACY_GRADE_NORMALIZATION_MAP: Record<string, string> = {
   '7': '10',
@@ -188,15 +169,18 @@ export const GradeModal = ({
   isGameActive = false,
   isInfoOpen = false,
 }: Props) => {
-  const hasExistingGrade = !!getPlayerGrade()
+  const hasExistingGrade = !!localStorage.getItem(gradeStatKey)
 
+  // Registration is only complete when grade + name + the required identifier
+  // (last initial for students, title prefix for teachers) are all stored.
+  // Until then the modal is locked — there is no way to bypass registration.
   const hasCompletedRegistration = (() => {
-    const grd = getPlayerGrade()
+    const grd = (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')
     if (!grd) return false
-    if (!getPlayerName()) return false
+    if (!localStorage.getItem('playerName')) return false
     return grd === '0'
-      ? !!getPlayerPrefix()
-      : !!getPlayerLastInitial()
+      ? !!localStorage.getItem('playerPrefix')
+      : !!localStorage.getItem('playerLastInitial')
   })()
 
   // If they already have a grade + name, go straight to nothing (shouldn't open)
@@ -209,20 +193,10 @@ export const GradeModal = ({
   const [lastInitial, setLastInitial] = useState('')
   const [selectedPrefix, setSelectedPrefix] = useState('')
 
-  // Pre-fill name/initial from the Microsoft sign-in email for first-time registrations.
-  // Only runs when the fields are still empty (i.e. the player hasn't typed anything yet).
-  useEffect(() => {
-    const msEmail = getMsAuthEmail()
-    if (!msEmail || playerName || lastInitial) return
-    const { firstName, lastInitial: li } = parseNameFromEmail(msEmail)
-    if (firstName) setPlayerName(firstName)
-    if (li) setLastInitial(li)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   // Derive whether the current player is a teacher at each step
   const currentGrade =
     selectedGrade ||
-    getPlayerGrade()
+    (localStorage.getItem(gradeStatKey) || '').replace(/"/g, '')
   const isTeacherFlow = currentGrade === '0'
   const [existingAccount, setExistingAccount] =
     useState<ExistingAccount | null>(null)
@@ -234,7 +208,7 @@ export const GradeModal = ({
 
   const handleGradeNext = () => {
     if (!selectedGrade) return
-    setPlayerGrade(selectedGrade)
+    localStorage.setItem(gradeStatKey, JSON.stringify(selectedGrade))
     setStep('name')
   }
 
@@ -247,8 +221,11 @@ export const GradeModal = ({
     const capitalized = capitalizeName(playerName)
     setPlayerName(capitalized)
     setNameError('')
-    const gradeRawValEarly = getPlayerGrade()
-    const isTeacher = gradeRawValEarly === '0' || selectedGrade === '0'
+    // Check grade directly — handle both '"0"' (JSON.stringify) and '0' (plain) storage
+    const rawGrade = localStorage.getItem(gradeStatKey) || ''
+    const gradeRawValEarly = (rawGrade || '').replace(/"/g, '')
+    const isTeacher =
+      rawGrade === '"0"' || rawGrade === '0' || selectedGrade === '0'
     setStep(isTeacher ? 'prefix' : 'initial')
   }
 
@@ -256,26 +233,23 @@ export const GradeModal = ({
     if (!selectedPrefix) return
     const lastName = capitalizeName(playerName)
     const displayName = `${selectedPrefix} ${lastName}`
-    const gradeRawVal = getPlayerGrade()
+    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
     const gradeRaw = LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
-    lsSetPlayerName(lastName)
-    setPlayerPrefix(selectedPrefix)
-    clearPlayerLastInitial()
-
-    const sessionEmail = getMsAuthEmail()
-    if (sessionEmail) {
-      linkEmailToCurrentAccount(sessionEmail).catch(() => {})
-    }
-
+    localStorage.setItem('playerName', lastName)
+    localStorage.setItem('playerPrefix', selectedPrefix)
+    localStorage.removeItem('playerLastInitial')
     submitNameStepRegistration(displayName, gradeRaw)
     submitSignupEvent(displayName, gradeRaw)
-    if (!hasSeenInfoModal()) {
-      setShouldShowInfoAfterReload()
+    if (!localStorage.getItem('hasSeenInfo')) {
+      localStorage.setItem('showInfoAfterReload', 'true')
     }
-    if (!hasSubmittedHistoricalStats()) {
+    if (!localStorage.getItem('historicalStatsSubmitted')) {
       const stats = loadStatsFromLocalStorage()
       if (stats && stats.totalGames > 0 && gradeRaw) {
-        setHistoricalStatsSubmitted()
+        localStorage.setItem('historicalStatsSubmitted', 'true')
         submitHistoricalStats(
           displayName,
           gradeRaw,
@@ -284,7 +258,7 @@ export const GradeModal = ({
         )
       }
     }
-    setPendingAccountCheck(displayName)
+    localStorage.setItem('pendingAccountCheck', displayName)
     handleClose()
     window.location.reload()
   }
@@ -299,29 +273,26 @@ export const GradeModal = ({
     const displayName = lastInitial.trim()
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
       : capitalizeName(playerName)
-    const gradeRawVal = getPlayerGrade()
+    const gradeRawVal = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
     const gradeRaw = LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
     const parts = displayName.split(' ')
     const initial = parts.length > 1 ? parts[parts.length - 1] : ''
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
-    lsSetPlayerName(name)
-    if (initial) lsSetPlayerLastInitial(initial)
-
-    const sessionEmail = getMsAuthEmail()
-    if (sessionEmail) {
-      linkEmailToCurrentAccount(sessionEmail).catch(() => {})
-    }
-
+    localStorage.setItem('playerName', name)
+    if (initial) localStorage.setItem('playerLastInitial', initial)
     submitNameStepRegistration(displayName, gradeRaw)
     submitSignupEvent(displayName, gradeRaw)
-    if (!hasSeenInfoModal()) {
-      setShouldShowInfoAfterReload()
+    if (!localStorage.getItem('hasSeenInfo')) {
+      localStorage.setItem('showInfoAfterReload', 'true')
     }
 
-    if (!hasSubmittedHistoricalStats()) {
+    if (!localStorage.getItem('historicalStatsSubmitted')) {
       const stats = loadStatsFromLocalStorage()
       if (stats && stats.totalGames > 0 && gradeRaw) {
-        setHistoricalStatsSubmitted()
+        localStorage.setItem('historicalStatsSubmitted', 'true')
         submitHistoricalStats(
           displayName,
           gradeRaw,
@@ -332,7 +303,7 @@ export const GradeModal = ({
     }
 
     // Queue a background duplicate-account check after reload
-    setPendingAccountCheck(displayName)
+    localStorage.setItem('pendingAccountCheck', displayName)
 
     handleClose()
     window.location.reload()
@@ -340,9 +311,12 @@ export const GradeModal = ({
 
   // Background account check — runs silently, does NOT open modal during loading
   useEffect(() => {
-    const pending = getPendingAccountCheck()
+    const pending = localStorage.getItem('pendingAccountCheck')
     if (!pending) return
-    const pendingGradeRaw = getPlayerGrade()
+    const pendingGradeRaw = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
     const pendingGrade =
       LEGACY_GRADE_NORMALIZATION_MAP[pendingGradeRaw] || pendingGradeRaw
 
@@ -358,7 +332,7 @@ export const GradeModal = ({
           )
         })
         if (matches.length === 0) {
-          clearPendingAccountCheck()
+          localStorage.removeItem('pendingAccountCheck')
           return
         }
         // Build a quick stats summary for the confirmation screen
@@ -453,7 +427,7 @@ export const GradeModal = ({
         })
       })
       .catch(() => {
-        clearPendingAccountCheck()
+        localStorage.removeItem('pendingAccountCheck')
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -480,22 +454,22 @@ export const GradeModal = ({
     if (isTeacher) {
       const prefix = parts[0]
       const lastName = parts.slice(1).join(' ')
-      lsSetPlayerName(lastName)
-      setPlayerPrefix(prefix)
-      clearPlayerLastInitial()
+      localStorage.setItem('playerName', lastName)
+      localStorage.setItem('playerPrefix', prefix)
+      localStorage.removeItem('playerLastInitial')
     } else {
       const initial = parts.length > 1 ? parts[parts.length - 1] : ''
       const firstName = initial ? parts.slice(0, -1).join(' ') : name
-      lsSetPlayerName(firstName)
-      if (initial) lsSetPlayerLastInitial(initial)
-      clearPlayerPrefix()
+      localStorage.setItem('playerName', firstName)
+      if (initial) localStorage.setItem('playerLastInitial', initial)
+      localStorage.removeItem('playerPrefix')
     }
-    if (!hasSeenInfoModal()) {
-      setShouldShowInfoAfterReload()
+    if (!localStorage.getItem('hasSeenInfo')) {
+      localStorage.setItem('showInfoAfterReload', 'true')
     }
-    setPlayerGrade(account.gradeCode)
+    localStorage.setItem('gradeNumber', JSON.stringify(account.gradeCode))
 
-    clearPendingAccountCheck()
+    localStorage.removeItem('pendingAccountCheck')
 
     // Treat the live leaderboard/API as source of truth for "played today" status.
     // Re-fetch here so claim restore always uses fresh server data.
@@ -548,7 +522,8 @@ export const GradeModal = ({
 
     // Treat leaderboard/API as source of truth for "played today" status.
     // Clear local round state first, then restore only what API confirms.
-    clearDailyGameStates()
+    localStorage.removeItem('gameState')
+    localStorage.removeItem('archiveGameState')
     clearBonusGameState()
     clearActiveRoundFromLocalStorage()
     clearTeachersGameState()
@@ -606,7 +581,7 @@ export const GradeModal = ({
 
   const handleMakeNewAccount = () => {
     // "No, make a new one" — go back to the name step
-    clearPendingAccountCheck()
+    localStorage.removeItem('pendingAccountCheck')
     setPlayerName('')
     setLastInitial('')
     setExistingAccount(null)
