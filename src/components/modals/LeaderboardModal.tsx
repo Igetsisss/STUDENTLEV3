@@ -10,6 +10,7 @@ import {
   computeStreaks,
   fetchLeaderboard,
 } from '../../lib/api'
+import { getPlayerLastInitial, getPlayerName, getPlayerPrefix } from '../../lib/localStorage'
 import { BaseModal } from './BaseModal'
 
 // ── In-memory leaderboard cache ──────────────────────────────────────────────
@@ -375,9 +376,9 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameCo
   })()
   const todayLeader = filtered[0] ?? null
   const myName = (() => {
-    const fn = localStorage.getItem('playerName') || ''
-    const li = localStorage.getItem('playerLastInitial') || ''
-    const prefix = localStorage.getItem('playerPrefix') || ''
+    const fn = getPlayerName()
+    const li = getPlayerLastInitial()
+    const prefix = getPlayerPrefix()
     return prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
   })()
 

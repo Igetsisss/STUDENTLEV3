@@ -1,107 +1,164 @@
-import { hasSupabaseConfig, supabase } from './supabase'
+// ─── Key registry ─────────────────────────────────────────────────────────────
+// All localStorage keys used in this app. Never use raw string literals outside this file.
 
-// Cloud-first save: writes to Supabase player_state_snapshots and localStorage
-export const saveGameState = async (
-  isLatestGame: boolean,
-  gameState: StoredGameState,
-  playerName: string,
-  grade: string
-) => {
-  const key = isLatestGame ? 'gameState' : 'archiveGameState'
-  const versioned = buildVersionedStoredGameState(gameState)
-  localStorage.setItem(key, JSON.stringify(versioned))
-  saveRoundStateSchemaVersion()
+// Game state
+const GAME_STATE_KEY = 'gameState'
+const ARCHIVE_GAME_STATE_KEY = 'archiveGameState'
+const BONUS_GAME_STATE_KEY = 'bonusGameState'
+const TEACHERS_GAME_STATE_KEY = 'teachersGameState'
+const GRADE_ROUND_GAME_STATE_PREFIX = 'gradeRoundGameState_'
+const ACTIVE_ROUND_STATE_KEY = 'activeRoundState'
+const ROUND_STATE_SCHEMA_VERSION_KEY = 'roundStateSchemaVersion'
 
-  if (hasSupabaseConfig && supabase && playerName && grade) {
-    try {
-      const now = new Date().toISOString()
-      await supabase.from('player_state_snapshots').upsert(
-        {
-          player_key: `${playerName.toLowerCase().trim()}|${grade}`,
-          player_name: playerName,
-          player_name_key: playerName.toLowerCase().trim(),
-          grade: Number(grade) || 0,
-          state: {
-            ...gameState,
-            isLatestGame,
-            version: ROUND_STATE_SCHEMA_VERSION,
-            updatedAt: now,
-          },
-          device: navigator.userAgent || '',
-          app_version: 'v2',
-          updated_at: now,
-        },
-        { onConflict: 'player_key' }
-      )
-    } catch (e) {
-      // fallback: already saved to localStorage
-    }
-  }
+// Player identity
+const GRADE_NUMBER_KEY = 'gradeNumber'
+const PLAYER_NAME_KEY = 'playerName'
+const PLAYER_LAST_INITIAL_KEY = 'playerLastInitial'
+const PLAYER_PREFIX_KEY = 'playerPrefix'
+const MS_AUTH_EMAIL_KEY = 'msAuthEmail'
+
+// Settings
+const HIGH_CONTRAST_KEY = 'highContrast'
+const THEME_KEY = 'theme'
+
+// Flags
+const FIRST_TO_PLAY_DATE_KEY = 'firstToPlayDate'
+const HAS_SEEN_INFO_KEY = 'hasSeenInfo'
+const SHOW_INFO_AFTER_RELOAD_KEY = 'showInfoAfterReload'
+const HISTORICAL_STATS_SUBMITTED_KEY = 'historicalStatsSubmitted'
+const PENDING_ACCOUNT_CHECK_KEY = 'pendingAccountCheck'
+const WELCOME_SHOWN_EMAIL_KEY = 'welcomeShownForEmail'
+
+// Stats
+const GAME_STATS_KEY = 'gameStats'
+const EXTRA_ROUND_STATS_KEY = 'extraRoundStats'
+
+// Round played date markers (must match prefixes in gradeRound.ts / bonusRound.ts)
+const GRADE_ROUND_PLAYED_DATE_PREFIX = 'gradeRoundPlayedDate_'
+
+// Internal aliases so existing function bodies below continue to work unchanged.
+const gameStateKey = GAME_STATE_KEY
+const archiveGameStateKey = ARCHIVE_GAME_STATE_KEY
+const bonusGameStateKey = BONUS_GAME_STATE_KEY
+const highContrastKey = HIGH_CONTRAST_KEY
+const activeRoundStateKey = ACTIVE_ROUND_STATE_KEY
+const roundStateSchemaVersionKey = ROUND_STATE_SCHEMA_VERSION_KEY
+const teachersGameStateKey = TEACHERS_GAME_STATE_KEY
+const gradeRoundGameStateKeyPrefix = GRADE_ROUND_GAME_STATE_PREFIX
+
+// ─── Player profile ────────────────────────────────────────────────────────────
+
+/**
+ * Returns the stored grade as a clean plain string ('0', '9', '10', '11', '12').
+ * Handles legacy JSON-wrapped values like '"9"' transparently.
+ */
+export const getPlayerGrade = (): string =>
+  (localStorage.getItem(GRADE_NUMBER_KEY) ?? '').replace(/"/g, '').trim()
+
+/** Stores the grade as a plain string — never JSON-wrapped. */
+export const setPlayerGrade = (grade: string): void =>
+  localStorage.setItem(GRADE_NUMBER_KEY, grade)
+
+export const clearPlayerGrade = (): void =>
+  localStorage.removeItem(GRADE_NUMBER_KEY)
+
+export const getPlayerName = (): string =>
+  localStorage.getItem(PLAYER_NAME_KEY) ?? ''
+
+export const setPlayerName = (name: string): void =>
+  localStorage.setItem(PLAYER_NAME_KEY, name)
+
+export const clearPlayerName = (): void =>
+  localStorage.removeItem(PLAYER_NAME_KEY)
+
+export const getPlayerLastInitial = (): string =>
+  localStorage.getItem(PLAYER_LAST_INITIAL_KEY) ?? ''
+
+export const setPlayerLastInitial = (initial: string): void =>
+  localStorage.setItem(PLAYER_LAST_INITIAL_KEY, initial)
+
+export const clearPlayerLastInitial = (): void =>
+  localStorage.removeItem(PLAYER_LAST_INITIAL_KEY)
+
+export const getPlayerPrefix = (): string =>
+  localStorage.getItem(PLAYER_PREFIX_KEY) ?? ''
+
+export const setPlayerPrefix = (prefix: string): void =>
+  localStorage.setItem(PLAYER_PREFIX_KEY, prefix)
+
+export const clearPlayerPrefix = (): void =>
+  localStorage.removeItem(PLAYER_PREFIX_KEY)
+
+export const getMsAuthEmail = (): string =>
+  localStorage.getItem(MS_AUTH_EMAIL_KEY) ?? ''
+
+export const setMsAuthEmail = (email: string): void =>
+  localStorage.setItem(MS_AUTH_EMAIL_KEY, email)
+
+// ─── Settings ──────────────────────────────────────────────────────────────────
+
+export const getTheme = (): string | null => localStorage.getItem(THEME_KEY)
+
+export const setTheme = (theme: 'dark' | 'light'): void =>
+  localStorage.setItem(THEME_KEY, theme)
+
+// ─── Flags ─────────────────────────────────────────────────────────────────────
+
+export const getFirstToPlayDate = (): string =>
+  localStorage.getItem(FIRST_TO_PLAY_DATE_KEY) ?? ''
+
+export const setFirstToPlayDate = (date: string): void =>
+  localStorage.setItem(FIRST_TO_PLAY_DATE_KEY, date)
+
+/** True if the player has previously opened the info / how-to-play modal. */
+export const hasSeenInfoModal = (): boolean =>
+  !!localStorage.getItem(HAS_SEEN_INFO_KEY)
+
+export const setHasSeenInfoModal = (): void =>
+  localStorage.setItem(HAS_SEEN_INFO_KEY, '1')
+
+export const getShouldShowInfoAfterReload = (): boolean =>
+  !!localStorage.getItem(SHOW_INFO_AFTER_RELOAD_KEY)
+
+export const setShouldShowInfoAfterReload = (): void =>
+  localStorage.setItem(SHOW_INFO_AFTER_RELOAD_KEY, 'true')
+
+export const clearShouldShowInfoAfterReload = (): void =>
+  localStorage.removeItem(SHOW_INFO_AFTER_RELOAD_KEY)
+
+export const hasSubmittedHistoricalStats = (): boolean =>
+  !!localStorage.getItem(HISTORICAL_STATS_SUBMITTED_KEY)
+
+export const setHistoricalStatsSubmitted = (): void =>
+  localStorage.setItem(HISTORICAL_STATS_SUBMITTED_KEY, 'true')
+
+export const getPendingAccountCheck = (): string =>
+  localStorage.getItem(PENDING_ACCOUNT_CHECK_KEY) ?? ''
+
+export const setPendingAccountCheck = (name: string): void =>
+  localStorage.setItem(PENDING_ACCOUNT_CHECK_KEY, name)
+
+export const clearPendingAccountCheck = (): void =>
+  localStorage.removeItem(PENDING_ACCOUNT_CHECK_KEY)
+
+/** Returns the email for which the one-time welcome screen has already been shown. */
+export const getWelcomeShownEmail = (): string =>
+  localStorage.getItem(WELCOME_SHOWN_EMAIL_KEY) ?? ''
+
+/** Marks the one-time welcome screen as shown for this email. */
+export const setWelcomeShownEmail = (email: string): void =>
+  localStorage.setItem(WELCOME_SHOWN_EMAIL_KEY, email)
+
+/** Returns the grade rounds (9–12) completed today (by checking played-date markers). */
+export const getGradeRoundsPlayedToday = (): string[] => {
+  const today = new Date().toISOString().slice(0, 10)
+  return ['9', '10', '11', '12'].filter(
+    (g) => localStorage.getItem(GRADE_ROUND_PLAYED_DATE_PREFIX + g) === today
+  )
 }
 
-// Cloud-first load: tries Supabase player_state_snapshots, falls back to localStorage
-export const loadGameState = async (
-  isLatestGame: boolean,
-  playerName: string,
-  grade: string
-): Promise<StoredGameState | null> => {
-  const key = isLatestGame ? 'gameState' : 'archiveGameState'
-  if (hasSupabaseConfig && supabase && playerName && grade) {
-    try {
-      const { data, error } = await supabase
-        .from('player_state_snapshots')
-        .select('state')
-        .eq('player_key', `${playerName.toLowerCase().trim()}|${grade}`)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-      if (!error && data && data.length > 0 && data[0].state) {
-        const state = data[0].state as StoredGameState & {
-          isLatestGame?: boolean
-          version?: number
-          updatedAt?: string
-        }
-        if (
-          state &&
-          (state.isLatestGame === isLatestGame ||
-            state.isLatestGame === undefined)
-        ) {
-          // Accept both versioned and unversioned
-          return { guesses: state.guesses, solution: state.solution }
-        }
-      }
-    } catch (e) {
-      // fallback below
-    }
-  }
-  // fallback to localStorage
-  const local = localStorage.getItem(key)
-  if (local) {
-    try {
-      const parsed = JSON.parse(local) as unknown
-      if (isVersionedStoredGameState(parsed)) {
-        return parsed.state
-      }
-      if (isStoredGameState(parsed)) {
-        return parsed
-      }
-    } catch {
-      localStorage.removeItem(key)
-    }
-  }
-  return null
-}
-const gameStateKey = 'gameState'
-const archiveGameStateKey = 'archiveGameState'
-const bonusGameStateKey = 'bonusGameState'
-const highContrastKey = 'highContrast'
-const activeRoundStateKey = 'activeRoundState'
-const roundStateSchemaVersionKey = 'roundStateSchemaVersion'
+// ─── Schema version ────────────────────────────────────────────────────────────
 const ROUND_STATE_SCHEMA_VERSION = 2
-
-export type StoredGameState = {
-  guesses: string[]
-  solution: string
-}
 
 type VersionedStoredGameState = {
   version: number
@@ -273,6 +330,12 @@ export const loadGameStateFromLocalStorage = (
   return loadStoredGameStateMetadata(isLatestGame)?.state ?? null
 }
 
+/** Removes both the daily and archive game state entries. */
+export const clearDailyGameStates = (): void => {
+  localStorage.removeItem(GAME_STATE_KEY)
+  localStorage.removeItem(ARCHIVE_GAME_STATE_KEY)
+}
+
 export const loadBonusGameStateMetadata = () =>
   loadVersionedStoredGameState(bonusGameStateKey)
 
@@ -302,8 +365,6 @@ export const clearBonusGameState = () => {
   localStorage.removeItem(bonusGameStateKey)
 }
 
-const teachersGameStateKey = 'teachersGameState'
-
 export const saveTeachersGameStateToLocalStorage = (
   gameState: StoredGameState
 ) => {
@@ -320,8 +381,6 @@ export const loadTeachersGameStateFromLocalStorage = () => {
 export const clearTeachersGameState = () => {
   localStorage.removeItem(teachersGameStateKey)
 }
-
-const gradeRoundGameStateKeyPrefix = 'gradeRoundGameState_'
 
 export const saveGradeRoundGameStateToLocalStorage = (
   grade: string,
@@ -358,10 +417,7 @@ export const clearActiveRoundFromLocalStorage = () => {
   localStorage.removeItem(activeRoundStateKey)
 }
 
-const gameStatKey = 'gameStats'
-
-const gradeStatKey = 'gradeNumber'
-
+// ─── Game statistics ──────────────────────────────────────────────────────────
 export type GameStats = {
   winDistribution: number[]
   gamesFailed: number
@@ -370,26 +426,14 @@ export type GameStats = {
   totalGames: number
   successRate: number
 }
-export type GradeNumber = {
-  gradeNumber: number
-}
 
 export const saveStatsToLocalStorage = (gameStats: GameStats) => {
-  localStorage.setItem(gameStatKey, JSON.stringify(gameStats))
+  localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats))
 }
 
 export const loadStatsFromLocalStorage = () => {
-  const stats = localStorage.getItem(gameStatKey)
+  const stats = localStorage.getItem(GAME_STATS_KEY)
   return stats ? (JSON.parse(stats) as GameStats) : null
-}
-
-export const saveGradeToLocalStorage = (gradenumber: GradeNumber) => {
-  localStorage.setItem(gradeStatKey, JSON.stringify(gradenumber))
-}
-
-export const loadGradeFromLocalStorage = () => {
-  const grade = localStorage.getItem(gradeStatKey)
-  return grade ? (JSON.parse(grade) as GradeNumber) : null
 }
 
 export const setStoredIsHighContrastMode = (isHighContrast: boolean) => {
@@ -405,8 +449,7 @@ export const getStoredIsHighContrastMode = () => {
   return highContrast === '1'
 }
 
-// ── Extra-round stats (bonus, teachers, grade rounds) ──────────────────────
-const extraRoundStatsKey = 'extraRoundStats'
+// ─── Extra-round stats ────────────────────────────────────────────────────────
 
 export type ExtraRoundStats = {
   bonus: { played: number; won: number }
@@ -421,7 +464,7 @@ const defaultExtraRoundStats: ExtraRoundStats = {
 }
 
 export const loadExtraRoundStats = (): ExtraRoundStats => {
-  const raw = localStorage.getItem(extraRoundStatsKey)
+  const raw = localStorage.getItem(EXTRA_ROUND_STATS_KEY)
   if (!raw) return { ...defaultExtraRoundStats }
   try {
     const parsed = JSON.parse(raw) as ExtraRoundStats
@@ -447,6 +490,6 @@ export const recordExtraRoundResult = (
       won: stats[type].won + (won ? 1 : 0),
     },
   }
-  localStorage.setItem(extraRoundStatsKey, JSON.stringify(updated))
+  localStorage.setItem(EXTRA_ROUND_STATS_KEY, JSON.stringify(updated))
   return updated
 }

@@ -6,6 +6,9 @@ import { fetchLeaderboard, isTrueDailyEntry } from '../../lib/api'
 import {
   ExtraRoundStats,
   GameStats,
+  getPlayerLastInitial,
+  getPlayerName,
+  getPlayerPrefix,
   loadExtraRoundStats,
   saveStatsToLocalStorage,
 } from '../../lib/localStorage'
@@ -41,9 +44,9 @@ const normalizeName = (name: string) =>
     .trim()
 
 const getMyDisplayName = () => {
-  const fn = localStorage.getItem('playerName') || ''
-  const li = localStorage.getItem('playerLastInitial') || ''
-  const prefix = localStorage.getItem('playerPrefix') || ''
+  const fn = getPlayerName()
+  const li = getPlayerLastInitial()
+  const prefix = getPlayerPrefix()
   return prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
 }
 
