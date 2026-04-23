@@ -222,7 +222,9 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
                   ))}
                 </div>
                 <p className="text-base font-bold text-black dark:text-white">
-                  Check your Bears Mail!
+                  {email.trim().toLowerCase().endsWith('@hies.org')
+                    ? 'Check your HIES email!'
+                    : 'Check your Bears Mail!'}
                 </p>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   We sent a login link to{' '}
@@ -231,7 +233,10 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
                   </span>
                   . Click it to start playing.
                 </p>
-                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                <p className="mt-3 text-xs font-semibold text-amber-500 dark:text-amber-400">
+                  ⚠️ Check your junk/spam folder — it usually ends up there!
+                </p>
+                <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                   Your Studentle account is all set — from now on, just sign in
                   with your school email and you&apos;re good to go.
                 </p>
