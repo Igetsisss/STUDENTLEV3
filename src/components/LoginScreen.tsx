@@ -17,9 +17,13 @@ const TILE_COLORS: Record<TileState, string> = {
 
 const FIRST_GAME_DATE = new Date(2023, 2, 1)
 const DAY_MS = 24 * 60 * 60 * 1000
-const HISTORIC_OFFSETS = [14, 72]
-const WALLPAPER_BOARDS_PER_ROW = 10
-const WALLPAPER_STRIP_COUNT = 4
+
+// 10 varied historical offsets to get 10 different solutions per grade
+const BOARD_OFFSETS = [7, 21, 35, 48, 63, 79, 95, 112, 128, 145]
+// How many guesses each board took — simulates real, varied games
+const BOARD_GUESS_COUNTS = [3, 5, 2, 4, 6, 3, 4, 2, 5, 3]
+// Shifts used to pick each "wrong" guess — spread far apart so they look different
+const GUESS_SHIFTS = [3, 11, 23, 37, 53]
 
 const getHistoricIndex = (daysAgo: number) => {
   const today = new Date()
@@ -44,14 +48,18 @@ const pickGuessFromList = (
   return solution
 }
 
-const createBoardRows = (solution: string, list: string[], index: number): BoardRow[] => {
+const createBoardRows = (
+  solution: string,
+  list: string[],
+  index: number,
+  guessCount: number
+): BoardRow[] => {
   const length = solution.length
-  const guesses = [
-    pickGuessFromList(list, solution, length, index, 3),
-    pickGuessFromList(list, solution, length, index, 11),
-    pickGuessFromList(list, solution, length, index, 19),
-    solution,
-  ]
+  const guesses: string[] = []
+  for (let g = 0; g < guessCount - 1; g++) {
+    guesses.push(pickGuessFromList(list, solution, length, index, GUESS_SHIFTS[g]))
+  }
+  guesses.push(solution)
 
   const rows = guesses.map((guess) => {
     const letters = guess.split('')
@@ -69,43 +77,43 @@ const createBoardRows = (solution: string, list: string[], index: number): Board
   return rows
 }
 
-const GRADE_BOARDS: GradeBoard[] = (() => {
+// 4 strips ordered: Senior, Junior, Sophomore, Freshman (top → bottom on screen)
+const GRADE_STRIPS: Array<{ grade: 9 | 10 | 11 | 12; boards: GradeBoard[] }> = (() => {
   const gradeSources: Array<{ grade: 9 | 10 | 11 | 12; words: string[] }> = [
-    { grade: 9, words: FRESHMAN },
-    { grade: 10, words: SOPHOMORE },
-    { grade: 11, words: JUNIOR },
     { grade: 12, words: SENIOR },
+    { grade: 11, words: JUNIOR },
+    { grade: 10, words: SOPHOMORE },
+    { grade: 9, words: FRESHMAN },
   ]
 
-  return gradeSources.flatMap(({ grade, words }) => {
-    return HISTORIC_OFFSETS.map((daysAgo) => {
+  return gradeSources.map(({ grade, words }) => ({
+    grade,
+    boards: BOARD_OFFSETS.map((daysAgo, boardIdx) => {
       const index = getHistoricIndex(daysAgo)
       const solution = words[index % words.length].toUpperCase()
       return {
         grade,
-        rows: createBoardRows(solution, words, index),
+        rows: createBoardRows(solution, words, index, BOARD_GUESS_COUNTS[boardIdx]),
       }
-    })
-  })
+    }),
+  }))
 })()
 
 type Props = {
   wrongDomain?: boolean
 }
 
-const FakeBoard = ({ seed }: { seed: number }) => {
-  const board = GRADE_BOARDS[seed % GRADE_BOARDS.length]
-
+const FakeBoard = ({ board, uid }: { board: GradeBoard; uid: string }) => {
   return (
     <div className="login-board-wallpaper-card">
       <div className="login-board-wallpaper-card-grid">
         {board.rows.map((row, rowIndex) => (
-          <div key={`${seed}-${rowIndex}`} className="login-board-wallpaper-row">
+          <div key={`${uid}-${rowIndex}`} className="login-board-wallpaper-row">
             {row.letters.map((letter, tileIndex) => {
               const state = row.states[tileIndex]
               return (
                 <div
-                  key={`${seed}-${rowIndex}-${tileIndex}`}
+                  key={`${uid}-${rowIndex}-${tileIndex}`}
                   className="login-board-wallpaper-tile"
                   style={{
                     background: TILE_COLORS[state],
@@ -123,16 +131,21 @@ const FakeBoard = ({ seed }: { seed: number }) => {
   )
 }
 
-const WallpaperStrip = ({ seedOffset, reverse }: { seedOffset: number; reverse: boolean }) => {
-  const seeds = Array.from({ length: WALLPAPER_BOARDS_PER_ROW }, (_, i) =>
-    (seedOffset + i) % GRADE_BOARDS.length
-  )
+const WallpaperStrip = ({
+  boards,
+  reverse,
+  stripId,
+}: {
+  boards: GradeBoard[]
+  reverse: boolean
+  stripId: string
+}) => {
   // Duplicate for seamless infinite scroll loop
-  const allSeeds = [...seeds, ...seeds]
+  const doubled = [...boards, ...boards]
   return (
     <div className={`login-wallpaper-strip${reverse ? ' login-wallpaper-strip-reverse' : ''}`}>
-      {allSeeds.map((seed, i) => (
-        <FakeBoard key={`${seedOffset}-${i}`} seed={seed} />
+      {doubled.map((board, i) => (
+        <FakeBoard key={`${stripId}-${i}`} board={board} uid={`${stripId}-${i}`} />
       ))}
     </div>
   )
@@ -173,11 +186,12 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
       <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-900">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="login-wallpaper-bg">
-            {Array.from({ length: WALLPAPER_STRIP_COUNT }, (_, i) => (
+            {GRADE_STRIPS.map(({ grade, boards }, i) => (
               <WallpaperStrip
-                key={i}
-                seedOffset={(i * WALLPAPER_BOARDS_PER_ROW) % GRADE_BOARDS.length}
+                key={grade}
+                boards={boards}
                 reverse={i % 2 === 1}
+                stripId={`g${grade}`}
               />
             ))}
           </div>
