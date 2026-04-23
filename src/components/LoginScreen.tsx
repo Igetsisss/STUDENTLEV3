@@ -22,30 +22,11 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const BOARD_OFFSETS = [7, 21, 35, 48, 63, 79, 95, 112, 128, 145]
 // How many guesses each board took — simulates real, varied games
 const BOARD_GUESS_COUNTS = [3, 5, 2, 4, 6, 3, 4, 2, 5, 3]
-// Shifts used to pick each "wrong" guess — spread far apart so they look different
-const GUESS_SHIFTS = [3, 11, 23, 37, 53]
-
 const getHistoricIndex = (daysAgo: number) => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const elapsed = Math.floor((today.getTime() - FIRST_GAME_DATE.getTime()) / DAY_MS)
   return Math.max(0, elapsed - daysAgo)
-}
-
-const pickGuessFromList = (
-  list: string[],
-  solution: string,
-  length: number,
-  startIndex: number,
-  shift: number
-) => {
-  for (let i = 0; i < list.length; i++) {
-    const candidate = list[(startIndex + shift + i) % list.length].toUpperCase()
-    if (candidate.length === length && candidate !== solution) {
-      return candidate
-    }
-  }
-  return solution
 }
 
 const createBoardRows = (
@@ -55,9 +36,21 @@ const createBoardRows = (
   guessCount: number
 ): BoardRow[] => {
   const length = solution.length
+  const used = new Set<string>([solution])
   const guesses: string[] = []
+
+  // Scan the list from varied starting points, skipping already-used words
+  const scanStart = [index + 7, index + 31, index + 61, index + 97, index + 137]
   for (let g = 0; g < guessCount - 1; g++) {
-    guesses.push(pickGuessFromList(list, solution, length, index, GUESS_SHIFTS[g]))
+    const start = scanStart[g % scanStart.length]
+    for (let i = 0; i < list.length; i++) {
+      const candidate = list[(start + i) % list.length].toUpperCase()
+      if (candidate.length === length && !used.has(candidate)) {
+        guesses.push(candidate)
+        used.add(candidate)
+        break
+      }
+    }
   }
   guesses.push(solution)
 
