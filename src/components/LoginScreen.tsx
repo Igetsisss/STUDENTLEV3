@@ -231,6 +231,10 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
                   </span>
                   . Click it to start playing.
                 </p>
+                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                  Your Studentle account is all set — from now on, just sign in
+                  with your school email and you&apos;re good to go.
+                </p>
                 <button
                   onClick={() => {
                     setSent(false)
