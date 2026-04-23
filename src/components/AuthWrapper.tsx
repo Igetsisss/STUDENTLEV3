@@ -166,7 +166,7 @@ export const AuthWrapper = ({ children }: Props) => {
         setStatus('welcome')
         welcomeTimerRef.current = setTimeout(() => {
           setStatus('authenticated')
-        }, 4000)
+        }, 6000)
       } else {
         setStatus('authenticated')
       }
