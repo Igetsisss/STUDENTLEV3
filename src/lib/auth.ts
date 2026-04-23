@@ -1,6 +1,8 @@
 import { supabase } from './supabase'
 
-export const ALLOWED_DOMAIN = 'bearsmail.org'
+export const ALLOWED_DOMAINS = ['bearsmail.org', 'hies.org'] as const
+export const ALLOWED_DOMAIN = ALLOWED_DOMAINS[0]
+export const ALLOWED_DOMAINS_LABEL = ALLOWED_DOMAINS.map((d) => `@${d}`).join(' or ')
 
 /**
  * Sends a magic-link login email to the given address.
@@ -24,9 +26,9 @@ export const signOutMicrosoft = async (): Promise<void> => {
   await supabase.auth.signOut()
 }
 
-/** Returns true only for @bearsmail.org addresses. */
+/** Returns true only for approved school domains. */
 export const isSchoolEmail = (email: string): boolean =>
-  email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`)
+  ALLOWED_DOMAINS.some((domain) => email.toLowerCase().endsWith(`@${domain}`))
 
 /**
  * Parses a bearsmail email into a first name and last initial for

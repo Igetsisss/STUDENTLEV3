@@ -1,7 +1,12 @@
 import React, { useState } from 'react'
 
 import { FRESHMAN, JUNIOR, SENIOR, SOPHOMORE } from '../constants/wordlist'
-import { ALLOWED_DOMAIN, isSchoolEmail, sendMagicLink } from '../lib/auth'
+import {
+  ALLOWED_DOMAIN,
+  ALLOWED_DOMAINS_LABEL,
+  isSchoolEmail,
+  sendMagicLink,
+} from '../lib/auth'
 import { getGuessStatuses } from '../lib/statuses'
 
 type TileState = 'correct' | 'present' | 'absent' | 'empty'
@@ -161,7 +166,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
     setError('')
     const trimmed = email.trim().toLowerCase()
     if (!isSchoolEmail(trimmed)) {
-      setError(`Only @${ALLOWED_DOMAIN} emails are allowed.`)
+      setError(`Only ${ALLOWED_DOMAINS_LABEL} emails are allowed.`)
       return
     }
     setIsLoading(true)
@@ -243,7 +248,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
 
                 {(wrongDomain || error) && (
                   <p className="text-center text-sm font-semibold text-red-500">
-                    {error || `Only @${ALLOWED_DOMAIN} emails are allowed.`}
+                    {error || `Only ${ALLOWED_DOMAINS_LABEL} emails are allowed.`}
                   </p>
                 )}
 
