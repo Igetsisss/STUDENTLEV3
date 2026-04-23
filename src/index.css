@@ -492,13 +492,14 @@ svg.cursor-pointer:hover {
 
 .login-wallpaper-bg {
   position: absolute;
-  inset: 0;
+  inset: -50%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 2.5rem;
-  overflow: hidden;
+  gap: 2.2rem;
+  transform: rotate(-18deg);
+  overflow: visible;
 }
 
 .login-wallpaper-strip {

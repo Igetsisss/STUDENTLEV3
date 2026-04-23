@@ -18,7 +18,8 @@ const TILE_COLORS: Record<TileState, string> = {
 const FIRST_GAME_DATE = new Date(2023, 2, 1)
 const DAY_MS = 24 * 60 * 60 * 1000
 const HISTORIC_OFFSETS = [14, 72]
-const WALLPAPER_BOARDS_PER_ROW = 7
+const WALLPAPER_BOARDS_PER_ROW = 10
+const WALLPAPER_STRIP_COUNT = 4
 
 const getHistoricIndex = (daysAgo: number) => {
   const today = new Date()
@@ -172,8 +173,13 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
       <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-900">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="login-wallpaper-bg">
-            <WallpaperStrip seedOffset={0} reverse={false} />
-            <WallpaperStrip seedOffset={WALLPAPER_BOARDS_PER_ROW} reverse={true} />
+            {Array.from({ length: WALLPAPER_STRIP_COUNT }, (_, i) => (
+              <WallpaperStrip
+                key={i}
+                seedOffset={(i * WALLPAPER_BOARDS_PER_ROW) % GRADE_BOARDS.length}
+                reverse={i % 2 === 1}
+              />
+            ))}
           </div>
         </div>
 
