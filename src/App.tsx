@@ -52,19 +52,8 @@ import {
 } from './lib/api'
 import { isInAppBrowser } from './lib/browser'
 import {
-  clearShouldShowInfoAfterReload,
   ensureRoundStateSchemaVersion,
-  getFirstToPlayDate,
-  getGradeRoundsPlayedToday,
-  getPlayerGrade,
-  getPlayerLastInitial,
-  getPlayerName,
-  getPlayerPrefix,
-  getPendingAccountCheck,
-  getShouldShowInfoAfterReload,
   getStoredIsHighContrastMode,
-  getTheme,
-  hasSeenInfoModal,
   loadActiveRoundFromLocalStorage,
   loadBonusGameStateFromLocalStorage,
   loadGameStateFromLocalStorage,
@@ -76,11 +65,7 @@ import {
   saveGameStateToLocalStorage,
   saveGradeRoundGameStateToLocalStorage,
   saveTeachersGameStateToLocalStorage,
-  setFirstToPlayDate,
-  setHasSeenInfoModal,
-  setPlayerGrade,
   setStoredIsHighContrastMode,
-  setTheme,
 } from './lib/localStorage'
 import { addStatsForCompletedGame, loadStats } from './lib/stats'
 import {
@@ -240,8 +225,8 @@ function App() {
   const gameDate = getGameDate()
   // Teachers get their own bonus using all teacher names; students get the regular bonus
   const bonusSolution = (() => {
-    const g = getPlayerGrade()
-    return g === '0' ? getTeachersBonusSolution() : getBonusSolution()
+    const g = localStorage.getItem('gradeNumber')
+    return g === '"0"' ? getTeachersBonusSolution() : getBonusSolution()
   })()
   const teachersSolution = getTeachersSolution()
   const hasLoadedRef = useRef(false)
@@ -250,15 +235,18 @@ function App() {
   // Normalize their gradeNumber to "0" in localStorage so every downstream
   // calculation (daily solution, word list, bonus, gameType) is correct.
   ;(() => {
-    const fn = getPlayerName()
-    const li = getPlayerLastInitial()
-    const prefix = getPlayerPrefix()
+    const fn = localStorage.getItem('playerName') || ''
+    const li = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
     const storedName = prefix ? `${prefix} ${fn}` : li ? `${fn} ${li}` : fn
     const key = storedName.toLowerCase().replace(/\s+/g, ' ').trim()
     if (LEGACY_TEACHER_KEYS.includes(key)) {
-      const currentGrade = getPlayerGrade()
+      const currentGrade = (localStorage.getItem('gradeNumber') || '').replace(
+        /"/g,
+        ''
+      )
       if (currentGrade !== '0') {
-        setPlayerGrade('0')
+        localStorage.setItem('gradeNumber', '"0"')
       }
     }
   })()
@@ -267,8 +255,8 @@ function App() {
     '(prefers-color-scheme: dark)'
   ).matches
   const effectiveDailySolution = (() => {
-    const g = getPlayerGrade()
-    return g === '0' ? teachersSolution : dailySolution
+    const g = localStorage.getItem('gradeNumber')
+    return g === '"0"' ? teachersSolution : dailySolution
   })()
   const restoredDailyState = resolveStoredRoundState(
     'daily',
@@ -308,19 +296,25 @@ function App() {
       : restoredGradeStates.find((state) => state.outcome === 'in-progress') ??
         null
   const initialRoundState = (() => {
-    // Restore the last active round regardless of whether it was in-progress or
-    // already completed — so refreshing after winning still shows your result.
-    if (activeRoundPreference?.type === 'teachers' && restoredTeachersState) {
+    if (
+      activeRoundPreference?.type === 'teachers' &&
+      restoredTeachersState?.outcome === 'in-progress'
+    ) {
       return restoredTeachersState
     }
 
-    if (activeRoundPreference?.type === 'bonus' && restoredBonusState) {
+    if (
+      activeRoundPreference?.type === 'bonus' &&
+      restoredBonusState?.outcome === 'in-progress'
+    ) {
       return restoredBonusState
     }
 
     if (activeRoundPreference?.type === 'grade') {
       const matchingGradeState = restoredGradeStates.find(
-        (state) => state.grade === activeRoundPreference.grade
+        (state) =>
+          state.outcome === 'in-progress' &&
+          state.grade === activeRoundPreference.grade
       )
       if (matchingGradeState) {
         return matchingGradeState
@@ -345,7 +339,6 @@ function App() {
   const { showError: showErrorAlert, showSuccess: showSuccessAlert } =
     useAlert()
   const [currentGuess, setCurrentGuess] = useState('')
-  const [isUpdateBannerDismissed, setIsUpdateBannerDismissed] = useState(false)
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
@@ -361,7 +354,11 @@ function App() {
     initialRoundState.outcome === 'lost'
   )
   const [isDarkMode, setIsDarkMode] = useState(
-    getTheme() ? getTheme() === 'dark' : prefersDarkMode
+    localStorage.getItem('theme')
+      ? localStorage.getItem('theme') === 'dark'
+      : prefersDarkMode
+      ? true
+      : false
   )
   const [isHighContrastMode, setIsHighContrastMode] = useState(
     getStoredIsHighContrastMode()
@@ -381,8 +378,16 @@ function App() {
     initialRoundState.mode === 'grade' ? initialRoundState.grade ?? '' : ''
   )
   const [gradeRoundsPlayed, setGradeRoundsPlayed] = useState<string[]>(() => {
-    const played = getGradeRoundsPlayedToday()
-    const ownGrade = getPlayerGrade()
+    // Restore which grade rounds were completed today
+    const today = new Date().toISOString().slice(0, 10)
+    const played = ['9', '10', '11', '12'].filter(
+      (g) => localStorage.getItem('gradeRoundPlayedDate_' + g) === today
+    )
+    // Pre-mark player's own grade as done — they shouldn't replay it
+    const ownGrade = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
     if (
       ['9', '10', '11', '12'].includes(ownGrade) &&
       !played.includes(ownGrade)
@@ -419,9 +424,10 @@ function App() {
   const resetArmedRef = useRef(false)
   const releasedSpaceAfterArmedRef = useRef(false)
 
-  const [isFirstToday, setIsFirstToday] = useState(() =>
-    getFirstToPlayDate() === new Date().toISOString().split('T')[0]
-  )
+  const [isFirstToday, setIsFirstToday] = useState(() => {
+    const stored = localStorage.getItem('firstToPlayDate')
+    return stored === new Date().toISOString().split('T')[0]
+  })
 
   const [todayLeader, setTodayLeader] = useState<TodayLeader | null>(null)
 
@@ -554,23 +560,27 @@ function App() {
 
   const [stats, setStats] = useState(() => loadStats())
 
-  const grade = getPlayerGrade()
+  const gradeStatKey = 'gradeNumber'
+  const grade = localStorage.getItem(gradeStatKey)
   const currentPlayerDisplayName = (() => {
-    const firstName = getPlayerName()
-    const lastInitial = getPlayerLastInitial()
-    const prefix = getPlayerPrefix()
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
     return prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
   })()
-  // grade is a clean plain string: '0' for teachers, '9'/'10'/'11'/'12' for students.
-  const isTeacherPlayer = grade === '0'
+  // grade is stored as JSON string e.g. '"0"' for teachers, '"9"' for Freshman, etc.
+  const isTeacherPlayer = grade === '"0"'
 
   // Fetch today's grade leader on mount (fire-and-forget)
   useEffect(() => {
-    const rawGrade = getPlayerGrade()
+    const rawGrade = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
     if (!rawGrade) return
     // Use local date to match how game_date is stored in game_submissions
     const d = new Date()
@@ -615,7 +625,8 @@ function App() {
   }, [currentPlayerDisplayName, grade, isGameWon, isGameLost, bothComplete])
 
   useEffect(() => {
-    const hasValidGrade = grade !== ''
+    const hasValidGrade =
+      grade != null && grade !== 'undefined' && grade !== 'null'
 
     if (hasValidGrade) {
       return
@@ -632,12 +643,12 @@ function App() {
 
   // Prompt existing users (have grade but no name) to enter name
   useEffect(() => {
-    const hasGrade = grade !== ''
-    const hasName = !!getPlayerName()
-    const currentGrade = grade
+    const hasGrade = grade != null && grade !== 'undefined' && grade !== 'null'
+    const hasName = !!localStorage.getItem('playerName')
+    const currentGrade = (grade || '').replace(/"/g, '')
     const isTeacher = currentGrade === '0'
-    const hasPrefix = !!getPlayerPrefix()
-    const hasInitial = !!getPlayerLastInitial()
+    const hasPrefix = !!localStorage.getItem('playerPrefix')
+    const hasInitial = !!localStorage.getItem('playerLastInitial')
     const hasRequiredIdentifier = isTeacher ? hasPrefix : hasInitial
     if (hasGrade && (!hasName || !hasRequiredIdentifier)) {
       // Delay past stats modal (1000ms) so name prompt always appears on top
@@ -651,9 +662,9 @@ function App() {
 
   // On page load: show info modal if first time after grade selection
   useEffect(() => {
-    if (getShouldShowInfoAfterReload()) {
-      clearShouldShowInfoAfterReload()
-      setHasSeenInfoModal()
+    if (localStorage.getItem('showInfoAfterReload')) {
+      localStorage.removeItem('showInfoAfterReload')
+      localStorage.setItem('hasSeenInfo', 'true')
       setTimeout(() => {
         setIsInfoModalOpen(true)
       }, 500)
@@ -675,17 +686,20 @@ function App() {
 
     // During account-claim flow, leaderboard/API should drive restoration.
     // Skip cloud hydration so stale snapshots cannot override claim results.
-    if (getPendingAccountCheck()) return
+    if (localStorage.getItem('pendingAccountCheck')) return
 
-    const firstName = getPlayerName()
-    const lastInitial = getPlayerLastInitial()
-    const prefix = getPlayerPrefix()
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
     const displayName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
-    const gradeRaw = getPlayerGrade()
+    const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
     if (!displayName || !gradeRaw) return
 
     fetchPlayerStateFromCloud(displayName, gradeRaw)
@@ -790,8 +804,8 @@ function App() {
     hasLoadedRef.current = true
 
     const isComplete = isGameWon || isGameLost
-    const hasName = !!getPlayerName()
-    if (isComplete && grade !== '') {
+    const hasName = !!localStorage.getItem('playerName')
+    if (isComplete && grade != null && grade !== 'undefined') {
       hasSubmittedRef.current = true // already done, don't re-submit
       alreadyCompleteOnLoadRef.current = true
       if (hasName) {
@@ -847,7 +861,7 @@ function App() {
 
   const handleDarkMode = (isDark: boolean) => {
     setIsDarkMode(isDark)
-    setTheme(isDark ? 'dark' : 'light')
+    localStorage.setItem('theme', isDark ? 'dark' : 'light')
   }
 
   const handleHighContrastMode = (isHighContrast: boolean) => {
@@ -890,16 +904,19 @@ function App() {
 
   // Debounced full-state sync for seamless cross-device continuity.
   useEffect(() => {
-    const firstName = getPlayerName()
-    const lastInitial = getPlayerLastInitial()
-    const prefix = getPlayerPrefix()
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
     ensureRoundStateSchemaVersion()
     const displayName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
-    const gradeRaw = getPlayerGrade()
+    const gradeRaw = (localStorage.getItem('gradeNumber') || '').replace(
+      /"/g,
+      ''
+    )
     if (!displayName || !gradeRaw) return
 
     if (cloudSyncTimerRef.current !== null) {
@@ -1037,7 +1054,9 @@ function App() {
         const _d = solutionGameDate
         const today = formatDateKey(_d)
         const existing = await fetchLeaderboard(today)
-        const gradeRawCheck = getPlayerGrade()
+        const gradeRawCheck = (
+          localStorage.getItem('gradeNumber') || ''
+        ).replace(/"/g, '')
         const gradeCleanCheck =
           LEGACY_GRADE_NORMALIZATION_MAP[gradeRawCheck] || gradeRawCheck
         const existingDailyCount = existing.filter(
@@ -1045,24 +1064,26 @@ function App() {
         ).length
         if (existingDailyCount === 0) {
           setIsFirstToday(true)
-          setFirstToPlayDate(today)
+          localStorage.setItem('firstToPlayDate', today)
         }
       } catch {
         // ignore - don't block submission
       }
     }
 
-    const firstName = getPlayerName()
-    const lastInitial = getPlayerLastInitial()
-    const prefix = getPlayerPrefix()
+    const firstName = localStorage.getItem('playerName') || ''
+    const lastInitial = localStorage.getItem('playerLastInitial') || ''
+    const prefix = localStorage.getItem('playerPrefix') || ''
     let playerName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
     if (!firstName) return // don't submit nameless games
-    const gradeCleanRaw = getPlayerGrade()
-    let gradeClean = LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
+    const gradeRaw = localStorage.getItem('gradeNumber') || ''
+    const gradeCleanRaw = gradeRaw.replace(/"/g, '')
+    let gradeClean =
+      LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
     // Legacy name/grade corrections (players who registered before certain features existed)
     const normalizePlayerKey = (name: string) =>
       String(name || '')
@@ -1278,8 +1299,8 @@ function App() {
 
   function handleGradeModalClose() {
     setIsGradeModalOpen(false)
-    if (!hasSeenInfoModal()) {
-      setHasSeenInfoModal()
+    if (!localStorage.getItem('hasSeenInfo')) {
+      localStorage.setItem('hasSeenInfo', 'true')
       setIsInfoModalOpen(true)
     }
   }
@@ -1387,46 +1408,6 @@ function App() {
           </div>
         )}
 
-        {!isUpdateBannerDismissed &&
-          new Date().toLocaleDateString('en-CA') === '2026-04-23' && (
-            <div className="relative mx-2 mt-1 mb-1 rounded-lg border border-yellow-400 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 shadow dark:border-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-200">
-              <button
-                onClick={() => setIsUpdateBannerDismissed(true)}
-                className="absolute right-2 top-2 text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-100"
-                aria-label="Dismiss"
-              >
-                ✕
-              </button>
-              <p className="font-bold">🚀 Big update today!</p>
-              <p className="mt-1">
-                Studentle just got a major upgrade. Things should be faster and
-                smoother — but there may be a few bugs while we settle in, and
-                the app could temporarily revert if something breaks. The daily
-                word also reset with today's update.
-              </p>
-              <p className="mt-1">
-                📧 When you get the sign-in email, <strong>check your junk/spam
-                folder</strong> — that's usually where it lands.
-              </p>
-              <p className="mt-1">
-                Let <strong>Jack</strong> know how it's going!
-              </p>
-            </div>
-          )}
-
-        {/* Current round label — only shown when not in daily mode */}
-        {(isBonusRound || isTeachersRound || isGradeRound) && (
-          <div className="flex justify-center pt-1">
-            <span className="rounded-full bg-indigo-100 px-3 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">
-              {isBonusRound
-                ? 'Bonus Round'
-                : isTeachersRound
-                ? 'Teachers Round'
-                : `${GRADE_LABELS[gradeRoundGrade] ?? 'Grade'} Round`}
-            </span>
-          </div>
-        )}
-
         <div className="mx-auto flex w-full grow flex-col px-1 pt-2 pb-8 sm:px-6 md:max-w-7xl lg:px-8 short:pb-2 short:pt-2">
           {showCompletedLayout ? (
             <div className="flex grow flex-col overflow-y-auto pb-2 short:pb-1">
@@ -1489,83 +1470,6 @@ function App() {
               isRevealing={isRevealing}
             />
           )}
-
-          {/* ── Round picker — shown on main screen after daily is done ── */}
-          {(isGameWon || isGameLost) &&
-            isLatestGame &&
-            !isBonusRound &&
-            !isTeachersRound &&
-            !isGradeRound && (
-              <div className="flex flex-wrap justify-center gap-2 px-2 pt-2 pb-1">
-                {!hasBonusBeenPlayedToday() ? (
-                  <button
-                    type="button"
-                    className="glisten-btn rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-blue-700"
-                    onClick={handleBonusRound}
-                  >
-                    🎉 Bonus Round
-                  </button>
-                ) : (
-                  <span className="rounded-full border border-blue-300 bg-blue-50 px-4 py-1.5 text-xs font-semibold text-blue-500 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                    ✓ Bonus Done
-                  </span>
-                )}
-                {!isTeacherPlayer && (
-                  !hasTeachersBeenPlayedToday() ? (
-                    <button
-                      type="button"
-                      className="glisten-btn rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-700"
-                      onClick={handleTeachersRound}
-                    >
-                      🍎 Teachers Round
-                    </button>
-                  ) : (
-                    <span className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-1.5 text-xs font-semibold text-emerald-600 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
-                      ✓ Teachers Done
-                    </span>
-                  )
-                )}
-                {(() => {
-                  const prereqsDone =
-                    hasBonusBeenPlayedToday() &&
-                    (isTeacherPlayer || hasTeachersBeenPlayedToday())
-                  return (['9', '10', '11', '12'] as const).map((g) => {
-                    const done = gradeRoundsPlayed.includes(g)
-                    if (done) {
-                      return (
-                        <span
-                          key={g}
-                          className="rounded-full border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
-                        >
-                          {GRADE_LABELS[g]} ✓
-                        </span>
-                      )
-                    }
-                    if (!prereqsDone) {
-                      return (
-                        <span
-                          key={g}
-                          className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-600"
-                          title="Complete Bonus and Teachers rounds first"
-                        >
-                          🔒 {GRADE_LABELS[g]}
-                        </span>
-                      )
-                    }
-                    return (
-                      <button
-                        key={g}
-                        type="button"
-                        className="rounded-full bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-purple-700"
-                        onClick={() => handleGradeRound(g)}
-                      >
-                        {GRADE_LABELS[g]}
-                      </button>
-                    )
-                  })
-                })()}
-              </div>
-            )}
           {/* Daily info strip — puzzle number + today's grade leader — always visible */}
           <div className="flex items-center justify-between px-4 pt-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
             <span className="font-semibold text-slate-500 dark:text-slate-400">
