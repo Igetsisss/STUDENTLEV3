@@ -145,36 +145,38 @@ alter table public.game_submissions      enable row level security;
 alter table public.keystroke_logs        enable row level security;
 
 -- game_submissions: anyone can read (leaderboard) and write (submit a game)
+-- Both anon and authenticated are covered because magic-link sessions use the
+-- authenticated role (persistSession: true), while legacy/anon access uses anon.
 create policy "anon_select_game_submissions"
-  on public.game_submissions for select to anon using (true);
+  on public.game_submissions for select to anon, authenticated using (true);
 
 create policy "anon_insert_game_submissions"
-  on public.game_submissions for insert to anon with check (true);
+  on public.game_submissions for insert to anon, authenticated with check (true);
 
--- keystroke_logs: write-only for anon; raw keystrokes are private
+-- keystroke_logs: write-only; raw keystrokes are private
 create policy "anon_insert_keystroke_logs"
-  on public.keystroke_logs for insert to anon with check (true);
+  on public.keystroke_logs for insert to anon, authenticated with check (true);
 
 -- signup_events: write-only
 create policy "anon_insert_signup_events"
-  on public.signup_events for insert to anon with check (true);
+  on public.signup_events for insert to anon, authenticated with check (true);
 
--- player_state_snapshots: anon can read and upsert their own row
+-- player_state_snapshots: read and upsert
 create policy "anon_select_player_state_snapshots"
-  on public.player_state_snapshots for select to anon using (true);
+  on public.player_state_snapshots for select to anon, authenticated using (true);
 
 create policy "anon_insert_player_state_snapshots"
-  on public.player_state_snapshots for insert to anon with check (true);
+  on public.player_state_snapshots for insert to anon, authenticated with check (true);
 
 create policy "anon_update_player_state_snapshots"
-  on public.player_state_snapshots for update to anon using (true) with check (true);
+  on public.player_state_snapshots for update to anon, authenticated using (true) with check (true);
 
--- player_profiles: anon can upsert
+-- player_profiles: upsert
 create policy "anon_insert_player_profiles"
-  on public.player_profiles for insert to anon with check (true);
+  on public.player_profiles for insert to anon, authenticated with check (true);
 
 create policy "anon_update_player_profiles"
-  on public.player_profiles for update to anon using (true) with check (true);
+  on public.player_profiles for update to anon, authenticated using (true) with check (true);
 
 -- ─── Grants ───────────────────────────────────────────────────────────────────
 
