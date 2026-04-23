@@ -18,8 +18,7 @@ const TILE_COLORS: Record<TileState, string> = {
 const FIRST_GAME_DATE = new Date(2023, 2, 1)
 const DAY_MS = 24 * 60 * 60 * 1000
 const HISTORIC_OFFSETS = [14, 72]
-const WALLPAPER_ROW_COUNT = 2
-const WALLPAPER_COL_COUNT = 3
+const WALLPAPER_BOARDS_PER_ROW = 7
 
 const getHistoricIndex = (daysAgo: number) => {
   const today = new Date()
@@ -123,18 +122,16 @@ const FakeBoard = ({ seed }: { seed: number }) => {
   )
 }
 
-const WallpaperLayer = ({ seedOffset }: { seedOffset: number }) => {
+const WallpaperStrip = ({ seedOffset, reverse }: { seedOffset: number; reverse: boolean }) => {
+  const seeds = Array.from({ length: WALLPAPER_BOARDS_PER_ROW }, (_, i) =>
+    (seedOffset + i) % GRADE_BOARDS.length
+  )
+  // Duplicate for seamless infinite scroll loop
+  const allSeeds = [...seeds, ...seeds]
   return (
-    <div className="login-board-wallpaper-grid">
-      {Array.from({ length: WALLPAPER_ROW_COUNT }).map((_, rowIndex) => (
-        <div key={`wallpaper-row-${seedOffset}-${rowIndex}`} className="login-board-wallpaper-strip">
-          {Array.from({ length: WALLPAPER_COL_COUNT }).map((_, colIndex) => (
-            <FakeBoard
-              key={`wallpaper-card-${seedOffset}-${rowIndex}-${colIndex}`}
-              seed={seedOffset + rowIndex * WALLPAPER_COL_COUNT + colIndex}
-            />
-          ))}
-        </div>
+    <div className={`login-wallpaper-strip${reverse ? ' login-wallpaper-strip-reverse' : ''}`}>
+      {allSeeds.map((seed, i) => (
+        <FakeBoard key={`${seedOffset}-${i}`} seed={seed} />
       ))}
     </div>
   )
@@ -174,14 +171,9 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
     <div className={isDark ? 'dark' : ''}>
       <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-900">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="login-board-wallpaper-layer login-board-wallpaper-layer-a">
-            <WallpaperLayer seedOffset={0} />
-          </div>
-          <div className="login-edge-board login-edge-board-top-right">
-            <FakeBoard seed={GRADE_BOARDS.length - 1} />
-          </div>
-          <div className="login-edge-board login-edge-board-bottom-left">
-            <FakeBoard seed={GRADE_BOARDS.length - 3} />
+          <div className="login-wallpaper-bg">
+            <WallpaperStrip seedOffset={0} reverse={false} />
+            <WallpaperStrip seedOffset={WALLPAPER_BOARDS_PER_ROW} reverse={true} />
           </div>
         </div>
 

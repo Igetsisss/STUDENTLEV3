@@ -481,44 +481,52 @@ svg.cursor-pointer:hover {
   }
 }
 
-@keyframes loginWallpaperDrift {
+@keyframes loginScrollLeft {
   from {
-    transform: rotate(45deg) translate3d(-140px, -140px, 0);
+    transform: translateX(0);
   }
   to {
-    transform: rotate(45deg) translate3d(140px, 140px, 0);
+    transform: translateX(-50%);
   }
 }
 
-.login-board-wallpaper-layer {
+.login-wallpaper-bg {
   position: absolute;
-  inset: -40%;
+  inset: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
-  will-change: transform;
+  gap: 2.5rem;
+  overflow: hidden;
 }
 
-.login-board-wallpaper-layer-a {
-  transform: rotate(45deg) translate3d(0, 0, 0);
-  animation: loginWallpaperDrift 110s linear infinite;
-  animation-delay: -55s;
-  opacity: 0.28;
-}
-
-.dark .login-board-wallpaper-layer-a {
-  opacity: 0.24;
-}
-
-.login-board-wallpaper-grid {
-  display: grid;
-  gap: 3.2rem;
-  width: max-content;
-}
-
-.login-board-wallpaper-strip {
+.login-wallpaper-strip {
   display: flex;
-  gap: 2.8rem;
+  gap: 1.5rem;
+  width: max-content;
+  animation: loginScrollLeft 80s linear infinite;
+  opacity: 0.26;
+}
+
+.dark .login-wallpaper-strip {
+  opacity: 0.22;
+}
+
+.login-wallpaper-strip-reverse {
+  animation-direction: reverse;
+}
+
+.login-wallpaper-strip .login-board-wallpaper-tile {
+  width: 2.15rem;
+  height: 2.15rem;
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-wallpaper-strip {
+    animation: none;
+  }
 }
 
 .login-board-wallpaper-card {
@@ -543,38 +551,12 @@ svg.cursor-pointer:hover {
   gap: 0.36rem;
 }
 
-.login-edge-board {
-  position: absolute;
-  transform: rotate(45deg);
-  opacity: 0.23;
-}
-
-.login-edge-board .login-board-wallpaper-tile {
-  width: clamp(2.6rem, 4.5vw, 3.9rem);
-  height: clamp(2.6rem, 4.5vw, 3.9rem);
-  font-size: clamp(1.1rem, 2vw, 1.9rem);
-}
-
-.login-edge-board-top-right {
-  top: -8.5rem;
-  right: -9.5rem;
-}
-
-.login-edge-board-bottom-left {
-  bottom: -8.5rem;
-  left: -9.5rem;
-}
-
-.dark .login-edge-board {
-  opacity: 0.2;
-}
-
 .login-board-wallpaper-tile {
-  width: clamp(2.75rem, 4.9vw, 4.3rem);
-  height: clamp(2.75rem, 4.9vw, 4.3rem);
+  width: clamp(2.15rem, 3.5vw, 2.8rem);
+  height: clamp(2.15rem, 3.5vw, 2.8rem);
   border-radius: 0.34rem;
   border: 2px solid rgba(15, 23, 42, 0.22);
-  font-size: clamp(1.2rem, 2.3vw, 2.2rem);
+  font-size: clamp(0.85rem, 1.5vw, 1.1rem);
   font-weight: 800;
   line-height: 1;
   display: flex;
@@ -585,12 +567,6 @@ svg.cursor-pointer:hover {
 
 .dark .login-board-wallpaper-tile {
   border-color: rgba(148, 163, 184, 0.42);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .login-board-wallpaper-layer-a {
-    animation: none;
-  }
 }
 
 /* Date picker */
