@@ -2,6 +2,16 @@
 -- Admin helper queries — run these in the Supabase SQL Editor
 -- ============================================================
 
+-- ─── 0. Repair/test automatic email lookup for sign-in ───────────────────────
+-- If a student or teacher is being treated like a brand-new user even though
+-- their email already exists in player_profiles, run this grant first:
+GRANT EXECUTE ON FUNCTION public.lookup_player_by_email(text) TO authenticated;
+
+-- Then test a real school email here. If this returns a row, the app can
+-- auto-restore the correct name/grade from email on login.
+SELECT *
+FROM public.lookup_player_by_email('student@bearsmail.org');
+
 -- ─── 1. See every player who has registered (email + grade) ───────────────────
 SELECT
   player_name,
