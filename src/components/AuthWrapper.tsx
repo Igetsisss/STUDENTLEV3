@@ -11,6 +11,7 @@ import {
   getPlayerGrade,
   getPlayerLastInitial,
   getPlayerName,
+  getPlayerPrefix,
   setMsAuthEmail,
   setPlayerGrade,
   setPlayerLastInitial,
@@ -106,13 +107,22 @@ const FORCE_REAUTH_PLAYERS = [
   'wimberly',
   'lowcountryd d',
   'strick b',
+  'mrs. b',
 ]
 
 const shouldForceReauth = (): boolean => {
   const name = getPlayerName()
   const lastInitial = getPlayerLastInitial()
+  const prefix = getPlayerPrefix()
   if (!name) return false
-  const full = lastInitial ? `${name} ${lastInitial}`.toLowerCase() : name.toLowerCase()
+  let full: string
+  if (prefix) {
+    full = `${prefix} ${name}`.toLowerCase()
+  } else if (lastInitial) {
+    full = `${name} ${lastInitial}`.toLowerCase()
+  } else {
+    full = name.toLowerCase()
+  }
   return FORCE_REAUTH_PLAYERS.includes(full)
 }
 
