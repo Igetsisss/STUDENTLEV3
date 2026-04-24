@@ -8,13 +8,20 @@ export const ALLOWED_DOMAINS_LABEL = ALLOWED_DOMAINS.map((d) => `@${d}`).join(' 
  * Sends a magic-link login email to the given address.
  * Throws if Supabase returns an error.
  * The caller is responsible for checking isSchoolEmail() before calling this.
+ * Passes first_name and last_initial as template data so the email can greet
+ * the student by name (e.g. "Dear Jack U.") instead of the generic "Hello,".
  */
 export const sendMagicLink = async (email: string): Promise<void> => {
   if (!supabase) return
+  const { firstName, lastInitial } = parseNameFromEmail(email)
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
       emailRedirectTo: window.location.origin,
+      data: {
+        first_name: firstName || undefined,
+        last_initial: lastInitial || undefined,
+      },
     },
   })
   if (error) throw error
