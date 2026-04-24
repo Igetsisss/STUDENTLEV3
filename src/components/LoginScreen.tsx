@@ -253,7 +253,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
             ) : (
               <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
                 <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-                  Enter your Bears Mail to play
+                  Enter your Bears Mail or HIES email to play
                 </p>
 
                 {(wrongDomain || error) && (
