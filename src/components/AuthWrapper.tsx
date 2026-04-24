@@ -87,14 +87,11 @@ async function applyValidSession(email: string): Promise<void> {
     return
   }
 
-  if (hasName && hasGrade) {
-    // Email changed but device has stale local identity from a different user.
-    // Clear it so the Grade modal re-runs for the new email owner.
-    clearLocalIdentity()
-    return
-  }
-
-  // Truly new user — Grade modal will handle registration and linking.
+  // No account linked to this email — clear any stale local identity.
+  // Covers: new user on a fresh device, shared/school device with someone
+  // else's partial data, and incomplete registrations (grade selected but
+  // name never entered). Grade modal will open from the grade-selection step.
+  clearLocalIdentity()
 }
 
 // Players who must re-authenticate via email — their local identity is cleared
