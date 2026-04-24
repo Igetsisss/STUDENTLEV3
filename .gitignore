@@ -25,3 +25,4 @@ yarn-error.log*
 
 # Student directory seed — contains personal email data, keep off git
 supabase/seed-student-directory.sql
+supabase/seed-teacher-directory.sql
