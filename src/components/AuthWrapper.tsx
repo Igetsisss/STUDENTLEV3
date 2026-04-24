@@ -102,6 +102,10 @@ const FORCE_REAUTH_PLAYERS = [
   'vanna n',
   'parker t',
   'payton t',
+  'cdub w',
+  'wimberly',
+  'lowcountryd d',
+  'strick b',
 ]
 
 const shouldForceReauth = (): boolean => {
