@@ -95,7 +95,23 @@ async function applyValidSession(email: string): Promise<void> {
   // Truly new user — Grade modal will handle registration and linking.
 }
 
-type Props = { children: React.ReactNode }
+// Players who must re-authenticate via email — their local identity is cleared
+// on load so they hit the login screen regardless of what's in localStorage.
+const FORCE_REAUTH_PLAYERS = [
+  'vanna n',
+  'parker t',
+  'payton t',
+]
+
+const shouldForceReauth = (): boolean => {
+  const name = getPlayerName()
+  const lastInitial = getPlayerLastInitial()
+  if (!name) return false
+  const full = lastInitial ? `${name} ${lastInitial}`.toLowerCase() : name.toLowerCase()
+  return FORCE_REAUTH_PLAYERS.includes(full)
+}
+
+
 
 /**
  * Gates the entire app behind Microsoft sign-in.
@@ -117,6 +133,12 @@ export const AuthWrapper = ({ children }: Props) => {
 
     // onAuthStateChange fires immediately with the current session state
     // (INITIAL_SESSION event), so we don't need a separate getSession() call.
+
+    // Force specific players to re-authenticate via email.
+    if (shouldForceReauth()) {
+      clearLocalIdentity()
+    }
+
     const {
       data: { subscription },
     } = supabase!.auth.onAuthStateChange(async (_event, session) => {
