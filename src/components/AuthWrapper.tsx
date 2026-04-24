@@ -9,6 +9,7 @@ import {
   clearPlayerPrefix,
   getMsAuthEmail,
   getPlayerGrade,
+  getPlayerLastInitial,
   getPlayerName,
   setMsAuthEmail,
   setPlayerGrade,
