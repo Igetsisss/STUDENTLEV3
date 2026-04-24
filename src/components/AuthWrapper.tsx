@@ -108,6 +108,7 @@ const FORCE_REAUTH_PLAYERS = [
   'lowcountryd d',
   'strick b',
   'mrs. b',
+  'frye f',
 ]
 
 const shouldForceReauth = (): boolean => {
