@@ -53,6 +53,7 @@ import {
 import { isInAppBrowser } from './lib/browser'
 import {
   clearShouldShowInfoAfterReload,
+  clearShouldShowWelcomeAfterReload,
   ensureRoundStateSchemaVersion,
   getFirstToPlayDate,
   getGradeRoundsPlayedToday,
@@ -62,6 +63,7 @@ import {
   getPlayerPrefix,
   getPendingAccountCheck,
   getShouldShowInfoAfterReload,
+  getShouldShowWelcomeAfterReload,
   getStoredIsHighContrastMode,
   getTheme,
   hasSeenInfoModal,
@@ -657,6 +659,29 @@ function App() {
         setIsInfoModalOpen(true)
       }, 500)
     }
+  }, [])
+
+  // On page load: show one-time welcome message after first-ever registration
+  useEffect(() => {
+    if (!getShouldShowWelcomeAfterReload()) return
+    clearShouldShowWelcomeAfterReload()
+    const gradeLabel: Record<string, string> = {
+      '0': 'Teacher',
+      '9': 'Freshman',
+      '10': 'Sophomore',
+      '11': 'Junior',
+      '12': 'Senior',
+    }
+    const name = currentPlayerDisplayName
+    const gradeCode = getPlayerGrade()
+    const label = gradeLabel[gradeCode] ?? ''
+    const message = label
+      ? `Welcome to Studentle, ${name}! You're registered as a ${label}.`
+      : `Welcome to Studentle, ${name}!`
+    setTimeout(() => {
+      showSuccessAlert(message, { persist: true })
+    }, 800)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // On page load: hydrate localStorage from cloud state if the remote snapshot is newer.

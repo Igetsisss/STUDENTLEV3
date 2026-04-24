@@ -28,6 +28,7 @@ const SHOW_INFO_AFTER_RELOAD_KEY = 'showInfoAfterReload'
 const HISTORICAL_STATS_SUBMITTED_KEY = 'historicalStatsSubmitted'
 const PENDING_ACCOUNT_CHECK_KEY = 'pendingAccountCheck'
 const WELCOME_SHOWN_EMAIL_KEY = 'welcomeShownForEmail'
+const SHOW_WELCOME_AFTER_RELOAD_KEY = 'showWelcomeAfterReload'
 
 // Stats
 const GAME_STATS_KEY = 'gameStats'
@@ -148,6 +149,16 @@ export const getWelcomeShownEmail = (): string =>
 /** Marks the one-time welcome screen as shown for this email. */
 export const setWelcomeShownEmail = (email: string): void =>
   localStorage.setItem(WELCOME_SHOWN_EMAIL_KEY, email)
+
+/** True if the app should show the one-time first-login welcome message on next load. */
+export const getShouldShowWelcomeAfterReload = (): boolean =>
+  !!localStorage.getItem(SHOW_WELCOME_AFTER_RELOAD_KEY)
+
+export const setShouldShowWelcomeAfterReload = (): void =>
+  localStorage.setItem(SHOW_WELCOME_AFTER_RELOAD_KEY, 'true')
+
+export const clearShouldShowWelcomeAfterReload = (): void =>
+  localStorage.removeItem(SHOW_WELCOME_AFTER_RELOAD_KEY)
 
 /** Returns the grade rounds (9–12) completed today (by checking played-date markers). */
 export const getGradeRoundsPlayedToday = (): string[] => {

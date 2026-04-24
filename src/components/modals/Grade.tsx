@@ -41,6 +41,7 @@ import {
   setPlayerName as lsSetPlayerName,
   setPlayerPrefix,
   setShouldShowInfoAfterReload,
+  setShouldShowWelcomeAfterReload,
 } from '../../lib/localStorage'
 import { getGameDate, getSolution } from '../../lib/words'
 import {
@@ -252,7 +253,7 @@ export const GradeModal = ({
     setStep(isTeacher ? 'prefix' : 'initial')
   }
 
-  const handlePrefixDone = () => {
+  const handlePrefixDone = async () => {
     if (!selectedPrefix) return
     const lastName = capitalizeName(playerName)
     const displayName = `${selectedPrefix} ${lastName}`
@@ -263,14 +264,18 @@ export const GradeModal = ({
     clearPlayerLastInitial()
 
     const sessionEmail = getMsAuthEmail()
-    if (sessionEmail) {
-      linkEmailToCurrentAccount(sessionEmail).catch(() => {})
-    }
-
+    // Await both writes so the page reload doesn't cancel the in-flight requests.
+    await Promise.all([
+      sessionEmail ? linkEmailToCurrentAccount(sessionEmail).catch(() => {}) : Promise.resolve(),
+      submitSignupEvent(displayName, gradeRaw),
+    ])
     submitNameStepRegistration(displayName, gradeRaw)
-    submitSignupEvent(displayName, gradeRaw)
     if (!hasSeenInfoModal()) {
       setShouldShowInfoAfterReload()
+    }
+    // One-time welcome banner on the very first login
+    if (!hasCompletedRegistration) {
+      setShouldShowWelcomeAfterReload()
     }
     if (!hasSubmittedHistoricalStats()) {
       const stats = loadStatsFromLocalStorage()
@@ -289,7 +294,7 @@ export const GradeModal = ({
     window.location.reload()
   }
 
-  const handleInitialDone = () => {
+  const handleInitialDone = async () => {
     if (!lastInitial.trim()) return
     if (isBannedPlayer(playerName, lastInitial)) {
       setNameError('This name is not allowed.')
@@ -308,16 +313,19 @@ export const GradeModal = ({
     if (initial) lsSetPlayerLastInitial(initial)
 
     const sessionEmail = getMsAuthEmail()
-    if (sessionEmail) {
-      linkEmailToCurrentAccount(sessionEmail).catch(() => {})
-    }
-
+    // Await both writes so the page reload doesn't cancel the in-flight requests.
+    await Promise.all([
+      sessionEmail ? linkEmailToCurrentAccount(sessionEmail).catch(() => {}) : Promise.resolve(),
+      submitSignupEvent(displayName, gradeRaw),
+    ])
     submitNameStepRegistration(displayName, gradeRaw)
-    submitSignupEvent(displayName, gradeRaw)
     if (!hasSeenInfoModal()) {
       setShouldShowInfoAfterReload()
     }
-
+    // One-time welcome banner on the very first login
+    if (!hasCompletedRegistration) {
+      setShouldShowWelcomeAfterReload()
+    }
     if (!hasSubmittedHistoricalStats()) {
       const stats = loadStatsFromLocalStorage()
       if (stats && stats.totalGames > 0 && gradeRaw) {
