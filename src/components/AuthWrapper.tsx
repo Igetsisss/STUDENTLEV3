@@ -18,6 +18,7 @@ import {
   setPlayerName,
   setPlayerPrefix,
 } from '../lib/localStorage'
+import { normalizeGrade } from '../lib/gradeUtils'
 import { hasSupabaseConfig, supabase } from '../lib/supabase'
 import { LoginScreen } from './LoginScreen'
 
@@ -36,7 +37,7 @@ const restoreAccountToLocalStorage = (account: {
   lastInitial?: string
   prefix?: string
 }) => {
-  setPlayerGrade(account.grade)
+  setPlayerGrade(normalizeGrade(account.grade))
   setPlayerName(account.playerName)
   if (account.prefix) {
     setPlayerPrefix(account.prefix)

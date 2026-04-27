@@ -1,3 +1,4 @@
+import { normalizeGrade } from '../../lib/gradeUtils'
 import './gradestyle.css'
 
 import { Filter } from 'bad-words'
@@ -235,7 +236,7 @@ export const GradeModal = ({
 
   const handleGradeNext = () => {
     if (!selectedGrade) return
-    setPlayerGrade(selectedGrade)
+    setPlayerGrade(normalizeGrade(selectedGrade))
     setStep('name')
   }
 
@@ -258,7 +259,7 @@ export const GradeModal = ({
     const lastName = capitalizeName(playerName)
     const displayName = `${selectedPrefix} ${lastName}`
     const gradeRawVal = getPlayerGrade()
-    const gradeRaw = LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
+    const gradeRaw = normalizeGrade(gradeRawVal)
     lsSetPlayerName(lastName)
     setPlayerPrefix(selectedPrefix)
     clearPlayerLastInitial()
@@ -305,7 +306,7 @@ export const GradeModal = ({
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
       : capitalizeName(playerName)
     const gradeRawVal = getPlayerGrade()
-    const gradeRaw = LEGACY_GRADE_NORMALIZATION_MAP[gradeRawVal] || gradeRawVal
+    const gradeRaw = normalizeGrade(gradeRawVal)
     const parts = displayName.split(' ')
     const initial = parts.length > 1 ? parts[parts.length - 1] : ''
     const name = initial ? parts.slice(0, -1).join(' ') : displayName
@@ -351,8 +352,7 @@ export const GradeModal = ({
     const pending = getPendingAccountCheck()
     if (!pending) return
     const pendingGradeRaw = getPlayerGrade()
-    const pendingGrade =
-      LEGACY_GRADE_NORMALIZATION_MAP[pendingGradeRaw] || pendingGradeRaw
+    const pendingGrade = normalizeGrade(pendingGradeRaw)
 
     fetchLeaderboard()
       .then((data: LeaderboardEntry[]) => {
@@ -372,8 +372,7 @@ export const GradeModal = ({
         // Build a quick stats summary for the confirmation screen
         const wins = matches.filter((e) => e.won)
         const gradeNumRaw = String(matches[0].grade)
-        const gradeNum =
-          LEGACY_GRADE_NORMALIZATION_MAP[gradeNumRaw] || gradeNumRaw
+        const gradeNum = normalizeGrade(gradeNumRaw)
         const gradeLabel: Record<string, string> = {
           '0': 'Teachers',
           '9': 'Freshman (9th)',

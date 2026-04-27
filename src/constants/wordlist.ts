@@ -1,7 +1,8 @@
 import { getPlayerGrade } from '../lib/localStorage'
+import { normalizeGrade } from '../lib/gradeUtils'
 import { TEACHER_WORDS } from '../teacherWords'
 
-const grade = getPlayerGrade()
+const grade = normalizeGrade(getPlayerGrade())
 const nogradeyet = ['error']
 
 let GRADEWORDS = nogradeyet
@@ -495,15 +496,13 @@ if (grade === '0') {
   GRADEWORDS = TEACHER_WORDS
 } else if (grade === '') {
   GRADEWORDS = JUNIOR // Default for no grade set
-} else if (grade === '12' || grade === '26') {
+} else if (grade === '12') {
   GRADEWORDS = SENIOR
-} else if (grade === '11' || grade === '27' || grade === '8') {
-  // Keeping 8 mapped to Juniors
+} else if (grade === '11') {
   GRADEWORDS = JUNIOR
-} else if (grade === '10' || grade === '28' || grade === '7') {
-  // Keeping 7 mapped to Sophomores for backward compatibility
+} else if (grade === '10') {
   GRADEWORDS = SOPHOMORE
-} else if (grade === '9' || grade === '29') {
+} else if (grade === '9') {
   GRADEWORDS = FRESHMAN
 } else {
   GRADEWORDS = nogradeyet
