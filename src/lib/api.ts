@@ -587,12 +587,14 @@ const normalizeLegacyGrade = (rawGrade: string): string => {
   const clean = String(rawGrade || '')
     .replace(/"/g, '')
     .trim()
+  // Only map legacy codes, never touch valid grades
   const legacyMap: Record<string, string> = {
     '8': '11',
     '27': '11',
     '7': '10',
     '28': '10',
   }
+  if (['9', '10', '11', '12', '0'].includes(clean)) return clean
   return legacyMap[clean] || clean
 }
 
