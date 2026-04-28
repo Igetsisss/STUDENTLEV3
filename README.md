@@ -4,7 +4,7 @@ Studentle is a school-wide Wordle-style game I started in 8th grade. At its peak
 
 The current codebase is built to run on Supabase for all live app data. Google Sheets is kept only as a one-time legacy import source so historical data can be migrated when you are ready.
 
-Try it out: https://studentle.jackunderwood.org
+Try it out: https://studentle.org
 
 ## Features
 
