@@ -1,3 +1,61 @@
+// Returns the top 10 MVPs by new Weighted Difficulty Score
+export const computeTopMvpList = (entries: LeaderboardEntry[]): MvpEntry[] => {
+  const valid = entries.filter((e) => e.name && String(e.name).trim())
+  if (valid.length === 0) return []
+
+  const map = new Map<string, LeaderboardEntry[]>()
+  for (const e of valid) {
+    const key = e.name.toLowerCase().trim()
+    map.set(key, [...(map.get(key) || []), e])
+  }
+
+  const stats: MvpEntry[] = []
+  map.forEach((games) => {
+    if (games.length < 3) return
+    let totalWeightedPoints = 0
+    let totalWins = 0
+    let totalGuesses = 0
+    let totalGames = games.length
+    games.forEach((g) => {
+      let points = 0
+      if (g.won) {
+        if (g.gameType === 'bonus') {
+          points = 1.5
+        } else if (g.gameType === 'teachers') {
+          points = 1.2
+        } else if (
+          g.gameType === `grade${g.grade}` ||
+          (g.gameType === 'daily' && g.grade > 0)
+        ) {
+          points = 1.0
+        } else if (/^grade\d+$/.test(g.gameType)) {
+          points = 0.8
+        }
+        totalWins++
+      }
+      totalWeightedPoints += points
+      totalGuesses += g.guessCount
+    })
+    const winRate = totalGames > 0 ? totalWins / totalGames : 0
+    const avgGuesses = totalGames > 0 ? totalGuesses / totalGames : 0
+    const score =
+      avgGuesses > 0
+        ? (totalWeightedPoints / avgGuesses) * winRate
+        : 0
+    stats.push({
+      name: games[0].name,
+      grade: games[0].grade,
+      totalGames,
+      activeDays: getActiveDayCount(games),
+      wins: totalWins,
+      winRate,
+      avgGuesses,
+      score,
+    })
+  })
+  stats.sort((a, b) => b.score - a.score)
+  return stats.slice(0, 10)
+}
 import { hasSupabaseConfig, supabase } from './supabase'
 import {
   getPlayerGrade,
@@ -6,55 +64,55 @@ import {
   getPlayerPrefix,
 } from './localStorage'
 import { getSolutionForGrade } from './words'
+  const stats: MvpEntry[] = []
+  map.forEach((games) => {
+    if (games.length < 3) return
 
-const SUPABASE_TABLES = {
-  gameSubmissions: 'game_submissions',
-  keystrokeLogs: 'keystroke_logs',
-  playerProfiles: 'player_profiles',
-  playerStateSnapshots: 'player_state_snapshots',
-  signupEvents: 'signup_events',
-} as const
+    // Calculate metrics
+    let totalWeightedPoints = 0
+    let totalWins = 0
+    let totalGuesses = 0
+    let totalGames = games.length
+    games.forEach((g) => {
+      let points = 0
+      if (g.won) {
+        if (g.gameType === 'bonus') {
+          points = 1.5
+        } else if (g.gameType === 'teachers') {
+          points = 1.2
+        } else if (
+          g.gameType === `grade${g.grade}` ||
+          (g.gameType === 'daily' && g.grade > 0)
+        ) {
+          points = 1.0
+        } else if (/^grade\d+$/.test(g.gameType)) {
+          points = 0.8
+        }
+        totalWins++
+      }
+      totalWeightedPoints += points
+      totalGuesses += g.guessCount
+    })
+    const winRate = totalGames > 0 ? totalWins / totalGames : 0
+    const avgGuesses = totalGames > 0 ? totalGuesses / totalGames : 0
+    const score =
+      avgGuesses > 0
+        ? (totalWeightedPoints / avgGuesses) * winRate
+        : 0
+    stats.push({
+      name: games[0].name,
+      grade: games[0].grade,
+      totalGames,
+      activeDays: getActiveDayCount(games),
+      wins: totalWins,
+      winRate,
+      avgGuesses,
+      score,
+    })
+  })
 
-export type GuessData = {
-  word: string
-  timeSec: number
-  keystrokes: number
-  deletes: number
-}
-
-// ─── Live Keystroke Tracking ────────────────────────────────────────────────
-
-export type KeystrokeEvent = {
-  timestamp: string
-  keyType:
-    | 'char' // letter successfully added to current guess
-    | 'char_blocked' // letter pressed but couldn't be added
-    | 'delete' // backspace, removed a character
-    | 'delete_empty' // backspace pressed when input was already empty
-    | 'delete_blocked' // backspace blocked by modal/animation
-    | 'enter_submit' // valid guess submitted
-    | 'enter_blocked' // enter pressed but rejected
-  keyValue: string // the actual letter, 'BACKSPACE', or 'ENTER'
-  reason?: string // why blocked: 'word_full'|'game_over'|'clearing'|'modal_open'|'too_short'|'invalid_word'|'hard_mode'
-  guessNum: number // which guess row (0-based)
-  inputBefore: string // current guess before the keypress
-  inputAfter: string // current guess after the keypress
-}
-
-export type KeystrokeBatchPayload = {
-  action: 'keystrokes'
-  sessionId: string
-  playerName: string
-  grade: string
-  date: string
-  gameType: string
-  events: KeystrokeEvent[]
-}
-
-export const submitKeystrokeBatch = async (
-  sessionId: string,
-  meta: { playerName: string; grade: string; date: string; gameType: string },
-  events: KeystrokeEvent[]
+  stats.sort((a, b) => b.score - a.score)
+  return stats.length > 0 ? stats[0] : null
 ): Promise<void> => {
   if (!events.length) return
   if (!hasSupabaseConfig || !supabase) return

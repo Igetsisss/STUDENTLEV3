@@ -196,33 +196,31 @@ const MvpExplainerModal = ({
           <ul className="space-y-1 text-sm" style={{ color: '#e8d5a0' }}>
             <li>
               <span className="font-bold" style={{ color: '#f5c518' }}>
-                40 pts
+                Weighted Difficulty Score
               </span>{' '}
-              — Total games across all modes
+              — You earn more points for winning harder rounds:
+              <ul className="ml-4 mt-1 list-disc text-xs">
+                <li>Bonus Round win: <b>1.5</b> pts</li>
+                <li>Teacher Round win: <b>1.2</b> pts</li>
+                <li>Your Grade's Daily win: <b>1.0</b> pts</li>
+                <li>Other Grade win: <b>0.8</b> pts</li>
+                <li>Losses: <b>0</b> pts</li>
+              </ul>
             </li>
             <li>
               <span className="font-bold" style={{ color: '#f5c518' }}>
-                25 pts
+                Final MVP Score
               </span>{' '}
-              — Total wins
+              — Calculated as: <br />
+              <span className="ml-2 text-xs">
+                (<b>Total Weighted Points</b> / <b>Average Guesses</b>) × <b>Win Rate</b>
+              </span>
             </li>
             <li>
               <span className="font-bold" style={{ color: '#f5c518' }}>
-                20 pts
+                Top 10 MVPs
               </span>{' '}
-              — Win rate
-            </li>
-            <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>
-                10 pts
-              </span>{' '}
-              — Guess efficiency
-            </li>
-            <li>
-              <span className="font-bold" style={{ color: '#f5c518' }}>
-                5 pts
-              </span>{' '}
-              — Active days
+              — The leaderboard shows the 10 players with the highest MVP Score.
             </li>
           </ul>
         </div>
