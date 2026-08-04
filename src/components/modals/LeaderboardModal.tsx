@@ -423,7 +423,12 @@ export const LeaderboardModal = ({
   })()
 
   return (
-    <BaseModal title="Leaderboard" isOpen={isOpen} handleClose={handleClose}>
+    <BaseModal
+      title="Leaderboard"
+      isOpen={isOpen}
+      handleClose={handleClose}
+      maxWidthClassName="sm:max-w-lg"
+    >
       {/* ── View mode row: Today | All-Time + grade filter ── */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1.5">
@@ -579,12 +584,12 @@ export const LeaderboardModal = ({
               {rankedAllTimeEntries.length !== 1 ? 's' : ''}
             </p>
             <div className="max-h-72 overflow-y-auto">
-              <table className="w-full text-sm text-gray-800 dark:text-gray-200">
+              <table className="w-full table-fixed text-sm text-gray-800 dark:text-gray-200">
                 <thead className="sticky top-0 bg-white dark:bg-slate-900">
                   <tr className="border-b border-gray-300 text-left dark:border-gray-600">
                     <th className="w-6 pb-1.5 pr-1">#</th>
                     <th className="pb-1.5 pr-1">Name</th>
-                    <th className="w-10 pb-1.5 pr-1 text-center">Grade</th>
+                    <th className="w-11 pb-1.5 pr-1 text-center">Grade</th>
                     <th className="w-12 pb-1.5 pr-1 text-center">Days</th>
                     <th className="w-10 pb-1.5 pr-1 text-center">Wins</th>
                     <th className="w-12 py-1 text-right">Win%</th>
@@ -677,14 +682,14 @@ export const LeaderboardModal = ({
             {filtered.length} player{filtered.length !== 1 ? 's' : ''} today
           </p>
           <div className="max-h-72 overflow-y-auto">
-            <table className="w-full text-sm text-gray-800 dark:text-gray-200">
+            <table className="w-full table-fixed text-sm text-gray-800 dark:text-gray-200">
               <thead className="sticky top-0 bg-white dark:bg-slate-900">
                 <tr className="border-b border-gray-300 text-left dark:border-gray-600">
                   <th className="w-6 pb-1.5 pr-1">#</th>
                   <th className="pb-1.5 pr-1">Name</th>
-                  <th className="w-10 pb-1.5 pr-1 text-center">Grade</th>
+                  <th className="w-11 pb-1.5 pr-1 text-center">Grade</th>
                   <th className="w-14 pb-1.5 pr-1 text-center">Guesses</th>
-                  <th className="w-14 pb-1.5 text-right">Time</th>
+                  <th className="w-12 pb-1.5 text-right">Time</th>
                 </tr>
               </thead>
               <tbody>
@@ -718,7 +723,7 @@ export const LeaderboardModal = ({
                           {i + 1}
                         </span>
                       </td>
-                      <td className="max-w-[110px] truncate py-1.5 pr-1">
+                      <td className="truncate py-1.5 pr-1">
                         <span
                           className={
                             isMe

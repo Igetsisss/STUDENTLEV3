@@ -38,7 +38,7 @@ export const Navbar = ({
   return (
     <div className={`navbar${isMvp ? ' navbar-mvp' : ''}`}>
       <div className="navbar-content px-5 short:h-auto">
-        <div className="flex items-center">
+        <div className="navbar-side flex items-center">
           <button
             className="flex cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent p-0"
             onClick={openModal(setIsInfoModalOpen)}
@@ -50,7 +50,7 @@ export const Navbar = ({
             </span>
           </button>
         </div>
-        <div className="navbar-title-group flex items-center gap-1">
+        <div className="navbar-title-group">
           <p
             className={`cursor-pointer select-none text-xl font-bold${
               isMvp ? ' mvp-title' : ' dark:text-white'
@@ -66,7 +66,7 @@ export const Navbar = ({
             </span>
           )}
         </div>
-        <div className="right-icons flex items-end gap-3">
+        <div className="navbar-side right-icons flex items-end gap-3">
           <button
             className="flex cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent p-0"
             onClick={openModal(setIsLeaderboardModalOpen)}

@@ -7,9 +7,16 @@ type Props = {
   children: React.ReactNode
   isOpen: boolean
   handleClose: () => void
+  maxWidthClassName?: string
 }
 
-export const BaseModal = ({ title, children, isOpen, handleClose }: Props) => {
+export const BaseModal = ({
+  title,
+  children,
+  isOpen,
+  handleClose,
+  maxWidthClassName = 'sm:max-w-sm',
+}: Props) => {
   return (
     <Transition.Root
       show={isOpen}
@@ -49,7 +56,9 @@ export const BaseModal = ({ title, children, isOpen, handleClose }: Props) => {
             leaveFrom="opacity-100 translate-y-0 sm:scale-100"
             leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
           >
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all dark:bg-gray-800 dark:text-white sm:my-8 sm:w-full sm:max-w-sm sm:p-6 sm:align-middle">
+            <div
+              className={`inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all dark:bg-gray-800 dark:text-white sm:my-8 sm:w-full sm:p-6 sm:align-middle ${maxWidthClassName}`}
+            >
               <button
                 onClick={() => handleClose()}
                 tabIndex={0}

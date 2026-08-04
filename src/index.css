@@ -355,16 +355,29 @@ svg.cursor-pointer:hover {
 
 .navbar-content {
   display: flex;
-  position: relative;
   height: 3rem;
   align-items: center;
-  justify-content: space-between;
+}
+
+.navbar-side {
+  flex: 0 0 auto;
 }
 
 .navbar-title-group {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.navbar-title-group p {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .right-icons {
