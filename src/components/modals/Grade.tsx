@@ -1,10 +1,8 @@
-import { normalizeGrade } from '../../lib/gradeUtils'
 import './gradestyle.css'
 
 import { Filter } from 'bad-words'
 import { useEffect, useState } from 'react'
 
-import { parseNameFromEmail } from '../../lib/auth'
 import {
   LeaderboardEntry,
   fetchLeaderboard,
@@ -14,6 +12,8 @@ import {
   submitNameStepRegistration,
   submitSignupEvent,
 } from '../../lib/api'
+import { parseNameFromEmail } from '../../lib/auth'
+import { normalizeGrade } from '../../lib/gradeUtils'
 import {
   GameStats,
   clearActiveRoundFromLocalStorage,
@@ -33,13 +33,13 @@ import {
   hasSeenInfoModal,
   hasSubmittedHistoricalStats,
   loadStatsFromLocalStorage,
+  setPlayerLastInitial as lsSetPlayerLastInitial,
+  setPlayerName as lsSetPlayerName,
   saveGameStateToLocalStorage,
   saveStatsToLocalStorage,
   setHistoricalStatsSubmitted,
   setPendingAccountCheck,
   setPlayerGrade,
-  setPlayerLastInitial as lsSetPlayerLastInitial,
-  setPlayerName as lsSetPlayerName,
   setPlayerPrefix,
   setShouldShowInfoAfterReload,
   setShouldShowWelcomeAfterReload,
@@ -58,13 +58,6 @@ import {
   setTeachersPlayedToday,
 } from '../../utils/teachersRound'
 import { BaseModal } from './BaseModal2'
-
-const LEGACY_GRADE_NORMALIZATION_MAP: Record<string, string> = {
-  '7': '10',
-  '8': '11',
-  '27': '11',
-  '28': '10',
-}
 
 const formatDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
@@ -196,9 +189,7 @@ export const GradeModal = ({
     const grd = getPlayerGrade()
     if (!grd) return false
     if (!getPlayerName()) return false
-    return grd === '0'
-      ? !!getPlayerPrefix()
-      : !!getPlayerLastInitial()
+    return grd === '0' ? !!getPlayerPrefix() : !!getPlayerLastInitial()
   })()
 
   // If they already have a grade + name, go straight to nothing (shouldn't open)
@@ -222,9 +213,7 @@ export const GradeModal = ({
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derive whether the current player is a teacher at each step
-  const currentGrade =
-    selectedGrade ||
-    getPlayerGrade()
+  const currentGrade = selectedGrade || getPlayerGrade()
   const isTeacherFlow = currentGrade === '0'
   const [existingAccount, setExistingAccount] =
     useState<ExistingAccount | null>(null)
@@ -267,7 +256,9 @@ export const GradeModal = ({
     const sessionEmail = getMsAuthEmail()
     // Await both writes so the page reload doesn't cancel the in-flight requests.
     await Promise.all([
-      sessionEmail ? linkEmailToCurrentAccount(sessionEmail).catch(() => {}) : Promise.resolve(),
+      sessionEmail
+        ? linkEmailToCurrentAccount(sessionEmail).catch(() => {})
+        : Promise.resolve(),
       submitSignupEvent(displayName, gradeRaw),
     ])
     submitNameStepRegistration(displayName, gradeRaw)
@@ -316,7 +307,9 @@ export const GradeModal = ({
     const sessionEmail = getMsAuthEmail()
     // Await both writes so the page reload doesn't cancel the in-flight requests.
     await Promise.all([
-      sessionEmail ? linkEmailToCurrentAccount(sessionEmail).catch(() => {}) : Promise.resolve(),
+      sessionEmail
+        ? linkEmailToCurrentAccount(sessionEmail).catch(() => {})
+        : Promise.resolve(),
       submitSignupEvent(displayName, gradeRaw),
     ])
     submitNameStepRegistration(displayName, gradeRaw)
@@ -664,7 +657,6 @@ export const GradeModal = ({
                 id="format"
                 value={selectedGrade}
                 onChange={(e) => setSelectedGrade(e.target.value)}
-                defaultValue=""
               >
                 <option hidden disabled value="">
                   {' '}
@@ -769,7 +761,6 @@ export const GradeModal = ({
               <select
                 value={selectedPrefix}
                 onChange={(e) => setSelectedPrefix(e.target.value)}
-                defaultValue=""
               >
                 <option hidden disabled value="">
                   Choose Your Title

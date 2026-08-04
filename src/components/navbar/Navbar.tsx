@@ -24,17 +24,30 @@ export const Navbar = ({
   onTitleTap,
   isMvp = false,
 }: Props) => {
+  // Blur on click (like the on-screen game keyboard does) so Headless UI's
+  // dialog doesn't capture this button as the element to restore focus to
+  // when the modal closes. Left focused, a physical Enter keypress meant to
+  // submit a word guess would re-click this button and reopen the modal.
+  const openModal =
+    (setOpen: (value: boolean) => void) =>
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      setOpen(true)
+      event.currentTarget.blur()
+    }
+
   return (
     <div className={`navbar${isMvp ? ' navbar-mvp' : ''}`}>
       <div className="navbar-content px-5 short:h-auto">
         <div className="flex items-center">
           <button
-            className="flex flex-col items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0"
-            onClick={() => setIsInfoModalOpen(true)}
+            className="flex cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent p-0"
+            onClick={openModal(setIsInfoModalOpen)}
             aria-label="How to play"
           >
             <InformationCircleIcon className="h-6 w-6 dark:stroke-white" />
-            <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-none">How to play</span>
+            <span className="text-[9px] font-medium leading-none text-gray-500 dark:text-gray-400">
+              How to play
+            </span>
           </button>
         </div>
         <div className="navbar-title-group flex items-center gap-1">
@@ -55,28 +68,34 @@ export const Navbar = ({
         </div>
         <div className="right-icons flex items-end gap-3">
           <button
-            className="flex flex-col items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0"
-            onClick={() => setIsLeaderboardModalOpen(true)}
+            className="flex cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent p-0"
+            onClick={openModal(setIsLeaderboardModalOpen)}
             aria-label="Leaderboard"
           >
             <StarIcon className="h-6 w-6 dark:stroke-white" />
-            <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-none">Leaderboard</span>
+            <span className="text-[9px] font-medium leading-none text-gray-500 dark:text-gray-400">
+              Leaderboard
+            </span>
           </button>
           <button
-            className="flex flex-col items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0"
-            onClick={() => setIsStatsModalOpen(true)}
+            className="flex cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent p-0"
+            onClick={openModal(setIsStatsModalOpen)}
             aria-label="My Stats"
           >
             <ChartBarIcon className="h-6 w-6 dark:stroke-white" />
-            <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-none">My Stats</span>
+            <span className="text-[9px] font-medium leading-none text-gray-500 dark:text-gray-400">
+              My Stats
+            </span>
           </button>
           <button
-            className="flex flex-col items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0"
-            onClick={() => setIsSettingsModalOpen(true)}
+            className="flex cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent p-0"
+            onClick={openModal(setIsSettingsModalOpen)}
             aria-label="Settings"
           >
             <CogIcon className="h-6 w-6 dark:stroke-white" />
-            <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-none">Settings</span>
+            <span className="text-[9px] font-medium leading-none text-gray-500 dark:text-gray-400">
+              Settings
+            </span>
           </button>
         </div>
       </div>

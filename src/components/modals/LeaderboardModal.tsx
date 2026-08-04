@@ -1,6 +1,6 @@
-import { useMemo, useEffect, useState } from 'react'
-import { VALID_GUESSES } from '../../constants/validGuesses'
+import { useEffect, useMemo, useState } from 'react'
 
+import { VALID_GUESSES } from '../../constants/validGuesses'
 import {
   AllTimeEntry,
   LeaderboardEntry,
@@ -10,7 +10,11 @@ import {
   computeStreaks,
   fetchLeaderboard,
 } from '../../lib/api'
-import { getPlayerLastInitial, getPlayerName, getPlayerPrefix } from '../../lib/localStorage'
+import {
+  getPlayerLastInitial,
+  getPlayerName,
+  getPlayerPrefix,
+} from '../../lib/localStorage'
 import { BaseModal } from './BaseModal'
 
 // ── In-memory leaderboard cache ──────────────────────────────────────────────
@@ -76,7 +80,15 @@ const samePlayer = (left?: string | null, right?: string | null) =>
     .trim()
 
 // Tokens that are title prefixes — not real name words.
-const NAME_PREFIXES = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'coach', 'prof'])
+const NAME_PREFIXES = new Set([
+  'mr',
+  'mrs',
+  'ms',
+  'miss',
+  'dr',
+  'coach',
+  'prof',
+])
 
 // Returns true when any "real" word in the name (not a prefix or single-letter
 // initial) exactly matches one of the valid solution words — meaning the player
@@ -84,7 +96,9 @@ const NAME_PREFIXES = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'coach', 'prof']
 // Only called while the game is still in progress; once complete, names are shown.
 const shouldRedactName = (name: string, validWords: Set<string>): boolean => {
   if (validWords.size === 0) return false
-  const tokens = String(name || '').trim().split(/\s+/)
+  const tokens = String(name || '')
+    .trim()
+    .split(/\s+/)
   for (const token of tokens) {
     const letters = token.replace(/[^a-zA-Z]/g, '').toLowerCase()
     if (letters.length <= 1 || NAME_PREFIXES.has(letters)) continue
@@ -200,11 +214,21 @@ const MvpExplainerModal = ({
               </span>{' '}
               — You earn more points for winning harder rounds:
               <ul className="ml-4 mt-1 list-disc text-xs">
-                <li>Bonus Round win: <b>1.5</b> pts</li>
-                <li>Teacher Round win: <b>1.2</b> pts</li>
-                <li>Your Grade's Daily win: <b>1.0</b> pts</li>
-                <li>Other Grade win: <b>0.8</b> pts</li>
-                <li>Losses: <b>0</b> pts</li>
+                <li>
+                  Bonus Round win: <b>1.5</b> pts
+                </li>
+                <li>
+                  Teacher Round win: <b>1.2</b> pts
+                </li>
+                <li>
+                  Your Grade's Daily win: <b>1.0</b> pts
+                </li>
+                <li>
+                  Other Grade win: <b>0.8</b> pts
+                </li>
+                <li>
+                  Losses: <b>0</b> pts
+                </li>
               </ul>
             </li>
             <li>
@@ -213,7 +237,8 @@ const MvpExplainerModal = ({
               </span>{' '}
               — Calculated as: <br />
               <span className="ml-2 text-xs">
-                (<b>Total Weighted Points</b> / <b>Average Guesses</b>) × <b>Win Rate</b>
+                (<b>Total Weighted Points</b> / <b>Average Guesses</b>) ×{' '}
+                <b>Win Rate</b>
               </span>
             </li>
             <li>
@@ -241,7 +266,12 @@ const MvpExplainerModal = ({
   )
 }
 
-export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameComplete }: Props) => {
+export const LeaderboardModal = ({
+  isOpen,
+  handleClose,
+  solutionLength,
+  isGameComplete,
+}: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [allTimeEntries, setAllTimeEntries] = useState<AllTimeEntry[]>([])
   const [mvp, setMvp] = useState<MvpEntry | null>(null)
@@ -398,7 +428,10 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameCo
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1.5">
           <button
-            onClick={() => { setViewMode('today'); setFilterType('daily') }}
+            onClick={() => {
+              setViewMode('today')
+              setFilterType('daily')
+            }}
             className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
               viewMode === 'today'
                 ? 'bg-blue-600 text-white shadow-sm'
@@ -562,7 +595,8 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameCo
                     const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                     const isMe =
                       entry.name.toLowerCase() === myName.toLowerCase()
-                    const redact = !isMe && shouldRedactName(entry.name, validWordsForLength)
+                    const redact =
+                      !isMe && shouldRedactName(entry.name, validWordsForLength)
                     return (
                       <tr
                         key={i}
@@ -595,12 +629,13 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameCo
                               toTitleCase(entry.name)
                             )}
                           </span>
-                          {!redact && (streaks.get(entry.name.toLowerCase().trim()) ??
-                            0) >= 2 && (
-                            <span className="ml-1 text-xs text-orange-500">
-                              🔥{streaks.get(entry.name.toLowerCase().trim())}
-                            </span>
-                          )}
+                          {!redact &&
+                            (streaks.get(entry.name.toLowerCase().trim()) ??
+                              0) >= 2 && (
+                              <span className="ml-1 text-xs text-orange-500">
+                                🔥{streaks.get(entry.name.toLowerCase().trim())}
+                              </span>
+                            )}
                         </td>
                         <td className="py-1.5 pr-1 text-center">
                           <span
@@ -657,7 +692,8 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameCo
                   const isMvpRow = mvp && samePlayer(entry.name, mvp.name)
                   const isTodayLeader = i === 0
                   const isMe = entry.name.toLowerCase() === myName.toLowerCase()
-                  const redact = !isMe && shouldRedactName(entry.name, validWordsForLength)
+                  const redact =
+                    !isMe && shouldRedactName(entry.name, validWordsForLength)
                   return (
                     <tr
                       key={i}
@@ -703,12 +739,13 @@ export const LeaderboardModal = ({ isOpen, handleClose, solutionLength, isGameCo
                         {!redact && isMvpRow && (
                           <span className="all-time-mvp-pill ml-1">MVP</span>
                         )}
-                        {!redact && (streaks.get(entry.name.toLowerCase().trim()) ?? 0) >=
-                          2 && (
-                          <span className="ml-1 text-xs text-orange-500">
-                            🔥{streaks.get(entry.name.toLowerCase().trim())}
-                          </span>
-                        )}
+                        {!redact &&
+                          (streaks.get(entry.name.toLowerCase().trim()) ?? 0) >=
+                            2 && (
+                            <span className="ml-1 text-xs text-orange-500">
+                              🔥{streaks.get(entry.name.toLowerCase().trim())}
+                            </span>
+                          )}
                       </td>
                       <td className="py-1.5 pr-1 text-center">
                         <span

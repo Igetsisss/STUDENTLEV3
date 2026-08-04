@@ -18,7 +18,18 @@ export const BaseModal = ({
   isDismissible = true,
 }: Props) => {
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
+    <Transition.Root
+      show={isOpen}
+      as={Fragment}
+      afterLeave={() => {
+        // Headless UI restores focus to the button that opened this dialog
+        // (e.g. the navbar icon) once it closes. Left focused, a physical
+        // Enter keypress meant to submit a word guess re-clicks that button
+        // and reopens the modal instead. Blur it once the close transition
+        // finishes so gameplay input goes back to the board.
+        ;(document.activeElement as HTMLElement | null)?.blur?.()
+      }}
+    >
       <Dialog
         as="div"
         className="fixed inset-0 z-0 overflow-y-auto"

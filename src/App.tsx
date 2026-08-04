@@ -6,6 +6,7 @@ import { default as GraphemeSplitter } from 'grapheme-splitter'
 import { useEffect, useRef, useState } from 'react'
 import Div100vh from 'react-div-100vh'
 
+import { BONUS_WORDS } from './bonusRoundWords'
 import { AlertContainer } from './components/alerts/AlertContainer'
 import { CompletedGrid } from './components/grid/CompletedGrid'
 import { Grid } from './components/grid/Grid'
@@ -25,7 +26,6 @@ import {
   REVEAL_TIME_MS,
   WELCOME_GRADE_MODAL_MS,
 } from './constants/settings'
-import { VALID_GUESSES } from './constants/validGuesses'
 import {
   CORRECT_TEACHER_MESSAGE,
   CORRECT_WORD_MESSAGE,
@@ -38,6 +38,7 @@ import {
   WIN_MESSAGES,
   WORD_NOT_FOUND_MESSAGE,
 } from './constants/strings'
+import { VALID_GUESSES } from './constants/validGuesses'
 import { useAlert } from './context/AlertContext'
 import { useGameTracker } from './hooks/useGameTracker'
 import {
@@ -57,11 +58,11 @@ import {
   ensureRoundStateSchemaVersion,
   getFirstToPlayDate,
   getGradeRoundsPlayedToday,
+  getPendingAccountCheck,
   getPlayerGrade,
   getPlayerLastInitial,
   getPlayerName,
   getPlayerPrefix,
-  getPendingAccountCheck,
   getShouldShowInfoAfterReload,
   getShouldShowWelcomeAfterReload,
   getStoredIsHighContrastMode,
@@ -90,17 +91,15 @@ import {
   getGameDate,
   getIsLatestGame,
   isWordInWordList,
-  setGameDate,
   solutionGameDate,
   solutionIndex,
   unicodeLength,
 } from './lib/words'
 import {
-  getTeachersBonusSolution,
   TEACHER_WORDS,
   TEACHER_WORDS_FULL,
+  getTeachersBonusSolution,
 } from './teacherWords'
-import { BONUS_WORDS } from './bonusRoundWords'
 import {
   getBonusSolution,
   hasBonusBeenPlayedToday,
@@ -420,8 +419,8 @@ function App() {
   const resetArmedRef = useRef(false)
   const releasedSpaceAfterArmedRef = useRef(false)
 
-  const [isFirstToday, setIsFirstToday] = useState(() =>
-    getFirstToPlayDate() === new Date().toISOString().split('T')[0]
+  const [isFirstToday, setIsFirstToday] = useState(
+    () => getFirstToPlayDate() === new Date().toISOString().split('T')[0]
   )
 
   const [todayLeader, setTodayLeader] = useState<TodayLeader | null>(null)
@@ -681,7 +680,7 @@ function App() {
     setTimeout(() => {
       showSuccessAlert(message, { persist: true })
     }, 800)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // On page load: hydrate localStorage from cloud state if the remote snapshot is newer.
@@ -1022,33 +1021,37 @@ function App() {
     isSettingsModalOpen
 
   const onChar = (value: string) => {
-    const canAdd =
-      unicodeLength(`${currentGuess}${value}`) <= activeSolution.length &&
+    const canAddRegardlessOfLength =
       guesses.length < currentMaxChallenges &&
       !isGameWon &&
       !isClearing &&
       !isAnyModalOpen
 
-    if (canAdd) {
-      const newGuess = `${currentGuess}${value}`
-      setCurrentGuess(newGuess)
+    if (!canAddRegardlessOfLength) return
+
+    // Physical key presses come through a native window listener (see
+    // Keyboard.tsx) that can fire faster than this component re-renders with
+    // an updated `currentGuess` closure — fast typing was silently dropping
+    // letters. Use the functional updater so each keystroke always builds on
+    // the latest guess, not whatever was captured when the listener was
+    // (re-)subscribed.
+    setCurrentGuess((prev) => {
+      const canAdd = unicodeLength(`${prev}${value}`) <= activeSolution.length
+      if (!canAdd) return prev
       tracker.recordKeystroke()
-    }
+      return `${prev}${value}`
+    })
   }
 
   const onDelete = () => {
     if (isClearing || isAnyModalOpen) {
       return
     }
-    if (currentGuess.length === 0) {
-      return
-    }
-    const newGuess = new GraphemeSplitter()
-      .splitGraphemes(currentGuess)
-      .slice(0, -1)
-      .join('')
-    setCurrentGuess(newGuess)
-    tracker.recordDelete()
+    setCurrentGuess((prev) => {
+      if (prev.length === 0) return prev
+      tracker.recordDelete()
+      return new GraphemeSplitter().splitGraphemes(prev).slice(0, -1).join('')
+    })
   }
 
   const submitGame = async (won: boolean, guessCount: number) => {
@@ -1086,7 +1089,8 @@ function App() {
       : firstName
     if (!firstName) return // don't submit nameless games
     const gradeCleanRaw = getPlayerGrade()
-    let gradeClean = LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
+    let gradeClean =
+      LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
     // Legacy name/grade corrections (players who registered before certain features existed)
     const normalizePlayerKey = (name: string) =>
       String(name || '')
@@ -1507,8 +1511,8 @@ function App() {
                     ✓ Bonus Done
                   </span>
                 )}
-                {!isTeacherPlayer && (
-                  !hasTeachersBeenPlayedToday() ? (
+                {!isTeacherPlayer &&
+                  (!hasTeachersBeenPlayedToday() ? (
                     <button
                       type="button"
                       className="glisten-btn rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-700"
@@ -1520,8 +1524,7 @@ function App() {
                     <span className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-1.5 text-xs font-semibold text-emerald-600 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
                       ✓ Teachers Done
                     </span>
-                  )
-                )}
+                  ))}
                 {(() => {
                   const prereqsDone =
                     hasBonusBeenPlayedToday() &&
@@ -1569,28 +1572,28 @@ function App() {
               #{solutionIndex + 1}
             </span>
             {todayLeader &&
-            (() => {
-              // Redact leader name if any token is a valid guess for the active
-              // puzzle and the game isn't complete yet (spoiler prevention).
-              const gameComplete = isGameWon || isGameLost
-              const leaderNameHidden =
-                !gameComplete &&
-                String(todayLeader.name || '')
-                  .trim()
-                  .split(/\s+/)
-                  .some((token) => {
-                    const letters = token
-                      .replace(/[^a-zA-Z]/g, '')
-                      .toLowerCase()
-                    return (
-                      letters.length > 1 &&
-                      letters.length === activeSolution.length &&
-                      VALID_GUESSES.includes(letters)
-                    )
-                  })
-              return leaderNameHidden ? null : (
-                todayLeader.name.split(' ')[0].toLowerCase() !==
-                effectiveDailySolution.toLowerCase() ? (
+              (() => {
+                // Redact leader name if any token is a valid guess for the active
+                // puzzle and the game isn't complete yet (spoiler prevention).
+                const gameComplete = isGameWon || isGameLost
+                const leaderNameHidden =
+                  !gameComplete &&
+                  String(todayLeader.name || '')
+                    .trim()
+                    .split(/\s+/)
+                    .some((token) => {
+                      const letters = token
+                        .replace(/[^a-zA-Z]/g, '')
+                        .toLowerCase()
+                      return (
+                        letters.length > 1 &&
+                        letters.length === activeSolution.length &&
+                        VALID_GUESSES.includes(letters)
+                      )
+                    })
+                return leaderNameHidden ? null : todayLeader.name
+                    .split(' ')[0]
+                    .toLowerCase() !== effectiveDailySolution.toLowerCase() ? (
                   <span>
                     <span className="text-slate-500 dark:text-slate-400">
                       Today&apos;s leader:{' '}
@@ -1606,8 +1609,7 @@ function App() {
                 ) : (
                   <span className="italic">No winner yet — be first!</span>
                 )
-              )
-            })()} 
+              })()}
           </div>
           <InfoModal
             isOpen={isInfoModalOpen}

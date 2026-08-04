@@ -26,3 +26,7 @@ yarn-error.log*
 # Student directory seed — contains personal email data, keep off git
 supabase/seed-student-directory.sql
 supabase/seed-teacher-directory.sql
+
+# Ad-hoc Supabase table exports (CSV) — contain player emails/PII, keep off git
+supabasefoldersa/
+*.csv

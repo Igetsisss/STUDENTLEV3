@@ -1,5 +1,5 @@
-import { getPlayerGrade } from '../lib/localStorage'
 import { normalizeGrade } from '../lib/gradeUtils'
+import { getPlayerGrade } from '../lib/localStorage'
 import { TEACHER_WORDS } from '../teacherWords'
 
 const grade = normalizeGrade(getPlayerGrade())

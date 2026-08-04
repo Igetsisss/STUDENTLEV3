@@ -36,7 +36,13 @@ export const BannedScreen = () => {
       }}
     >
       <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚫</div>
-      <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+      <h1
+        style={{
+          fontSize: '1.75rem',
+          fontWeight: 700,
+          marginBottom: '0.75rem',
+        }}
+      >
         You've been banned.
       </h1>
       <p style={{ fontSize: '1rem', color: '#aaa', marginBottom: '2rem' }}>

@@ -10,8 +10,8 @@ export const InfoModal = ({ isOpen, handleClose }: Props) => {
   return (
     <BaseModal title="How to play" isOpen={isOpen} handleClose={handleClose}>
       <p className="text-sm text-gray-500 dark:text-gray-300">
-        Guess the student's name in 6 tries. Each guess must be a name from
-        your grade — tile colors show how close you are.
+        Guess the student's name in 6 tries. Each guess must be a name from your
+        grade — tile colors show how close you are.
       </p>
 
       <div className="mb-1 mt-4 flex justify-center">

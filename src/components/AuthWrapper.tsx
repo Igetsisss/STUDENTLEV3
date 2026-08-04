@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { lookupAccountByEmail } from '../lib/api'
 import { isSchoolEmail, signOutMicrosoft as signOut } from '../lib/auth'
+import { normalizeGrade } from '../lib/gradeUtils'
 import {
   clearPlayerGrade,
   clearPlayerLastInitial,
@@ -18,11 +19,14 @@ import {
   setPlayerName,
   setPlayerPrefix,
 } from '../lib/localStorage'
-import { normalizeGrade } from '../lib/gradeUtils'
 import { hasSupabaseConfig, supabase } from '../lib/supabase'
 import { LoginScreen } from './LoginScreen'
 
-type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'wrong-domain'
+type AuthStatus =
+  | 'loading'
+  | 'unauthenticated'
+  | 'authenticated'
+  | 'wrong-domain'
 
 const clearLocalIdentity = () => {
   clearPlayerName()
@@ -124,8 +128,6 @@ const shouldForceReauth = (): boolean => {
   }
   return FORCE_REAUTH_PLAYERS.includes(full)
 }
-
-
 
 /**
  * Gates the entire app behind Microsoft sign-in.

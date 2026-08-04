@@ -31,7 +31,9 @@ const BOARD_GUESS_COUNTS = [3, 5, 2, 4, 6, 3, 4, 2, 5, 3]
 const getHistoricIndex = (daysAgo: number) => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const elapsed = Math.floor((today.getTime() - FIRST_GAME_DATE.getTime()) / DAY_MS)
+  const elapsed = Math.floor(
+    (today.getTime() - FIRST_GAME_DATE.getTime()) / DAY_MS
+  )
   return Math.max(0, elapsed - daysAgo)
 }
 
@@ -77,32 +79,45 @@ const createBoardRows = (
 }
 
 // 4 strips ordered: Senior, Junior, Sophomore, Freshman (top → bottom on screen)
-const GRADE_STRIPS: Array<{ grade: 9 | 10 | 11 | 12; boards: GradeBoard[] }> = (() => {
-  const gradeSources: Array<{ grade: 9 | 10 | 11 | 12; words: string[] }> = [
-    { grade: 12, words: SENIOR },
-    { grade: 11, words: JUNIOR },
-    { grade: 10, words: SOPHOMORE },
-    { grade: 9, words: FRESHMAN },
-  ]
+const GRADE_STRIPS: Array<{ grade: 9 | 10 | 11 | 12; boards: GradeBoard[] }> =
+  (() => {
+    const gradeSources: Array<{ grade: 9 | 10 | 11 | 12; words: string[] }> = [
+      { grade: 12, words: SENIOR },
+      { grade: 11, words: JUNIOR },
+      { grade: 10, words: SOPHOMORE },
+      { grade: 9, words: FRESHMAN },
+    ]
 
-  return gradeSources.map(({ grade, words }) => ({
-    grade,
-    boards: BOARD_OFFSETS.map((daysAgo, boardIdx) => {
-      const index = getHistoricIndex(daysAgo)
-      const solution = words[index % words.length].toUpperCase()
-      return {
-        grade,
-        rows: createBoardRows(solution, words, index, BOARD_GUESS_COUNTS[boardIdx]),
-      }
-    }),
-  }))
-})()
+    return gradeSources.map(({ grade, words }) => ({
+      grade,
+      boards: BOARD_OFFSETS.map((daysAgo, boardIdx) => {
+        const index = getHistoricIndex(daysAgo)
+        const solution = words[index % words.length].toUpperCase()
+        return {
+          grade,
+          rows: createBoardRows(
+            solution,
+            words,
+            index,
+            BOARD_GUESS_COUNTS[boardIdx]
+          ),
+        }
+      }),
+    }))
+  })()
 
 type Props = {
   wrongDomain?: boolean
 }
 
-const FakeBoard = ({ board, uid }: { board: GradeBoard; uid: string; key?: string | number }) => {
+const FakeBoard = ({
+  board,
+  uid,
+}: {
+  board: GradeBoard
+  uid: string
+  key?: string | number
+}) => {
   return (
     <div className="login-board-wallpaper-card">
       <div className="login-board-wallpaper-card-grid">
@@ -143,9 +158,17 @@ const WallpaperStrip = ({
   // Duplicate for seamless infinite scroll loop
   const doubled = [...boards, ...boards]
   return (
-    <div className={`login-wallpaper-strip${reverse ? ' login-wallpaper-strip-reverse' : ''}`}>
+    <div
+      className={`login-wallpaper-strip${
+        reverse ? ' login-wallpaper-strip-reverse' : ''
+      }`}
+    >
       {doubled.map((board, i) => (
-        <FakeBoard key={`${stripId}-${i}`} board={board} uid={`${stripId}-${i}`} />
+        <FakeBoard
+          key={`${stripId}-${i}`}
+          board={board}
+          uid={`${stripId}-${i}`}
+        />
       ))}
     </div>
   )
@@ -159,8 +182,7 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
 
   const isDark =
     getTheme() === 'dark' ||
-    (!getTheme() &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches)
+    (!getTheme() && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -251,14 +273,19 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
+              <form
+                onSubmit={handleSubmit}
+                noValidate
+                className="flex flex-col gap-3"
+              >
                 <p className="text-center text-sm text-slate-500 dark:text-slate-400">
                   Enter your Bears Mail or HIES email to play
                 </p>
 
                 {(wrongDomain || error) && (
                   <p className="text-center text-sm font-semibold text-red-500">
-                    {error || `Only ${ALLOWED_DOMAINS_LABEL} emails are allowed.`}
+                    {error ||
+                      `Only ${ALLOWED_DOMAINS_LABEL} emails are allowed.`}
                   </p>
                 )}
 
@@ -294,4 +321,3 @@ export const LoginScreen = ({ wrongDomain = false }: Props) => {
     </div>
   )
 }
-

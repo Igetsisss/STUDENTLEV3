@@ -2,17 +2,6 @@ import { MAX_BONUS_CHALLENGES, MAX_CHALLENGES } from '../constants/settings'
 import { getGuessStatuses } from './statuses'
 import { solutionIndex, unicodeSplit } from './words'
 
-// Detect Firefox without ua-parser-js — Firefox Mobile has a broken Web Share API
-const isFirefoxBrowser = () => /Firefox/i.test(navigator.userAgent)
-
-// Detect mobile/smarttv/wearable devices that actually support Web Share
-const isShareCapableDevice = () =>
-  /Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  ) ||
-  /SmartTV|Tizen|webOS|Android TV/i.test(navigator.userAgent) ||
-  /WearOS|Wear OS|Galaxy Watch/i.test(navigator.userAgent)
-
 export type ShareOptions = {
   bonusSolution?: string
   bonusGuesses?: string[]
@@ -43,8 +32,12 @@ const buildEmailSubject = (
   const result = lost ? 'X' : `${guessCount}`
   const placement =
     rank !== null && total !== null
-      ? `I placed #${rank}/${total} students today in ${result} guess${guessCount === 1 && !lost ? '' : 'es'} on Studentle.org`
-      : `I got ${result} guess${guessCount === 1 && !lost ? '' : 'es'} today on Studentle.org`
+      ? `I placed #${rank}/${total} students today in ${result} guess${
+          guessCount === 1 && !lost ? '' : 'es'
+        } on Studentle.org`
+      : `I got ${result} guess${
+          guessCount === 1 && !lost ? '' : 'es'
+        } today on Studentle.org`
   return placement
 }
 
@@ -102,7 +95,9 @@ const buildEmailBody = (
     const teachersWon =
       teachersGuesses[teachersGuesses.length - 1] === teachersSolution
     body += `\n\n🍎 Teachers Round — ${
-      teachersWon ? `${teachersGuesses.length}/${MAX_CHALLENGES}` : `X/${MAX_CHALLENGES}`
+      teachersWon
+        ? `${teachersGuesses.length}/${MAX_CHALLENGES}`
+        : `X/${MAX_CHALLENGES}`
     }\n`
     body += generateEmojiGrid(teachersSolution, teachersGuesses, tiles)
   }
@@ -162,7 +157,9 @@ export const shareStatus = (
   const body = buildEmailBody(solution, guesses, lost, tiles, options)
 
   // Open the device's default email client
-  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  const mailtoUrl = `mailto:?subject=${encodeURIComponent(
+    subject
+  )}&body=${encodeURIComponent(body)}`
   window.location.href = mailtoUrl
 }
 
@@ -190,17 +187,6 @@ export const generateEmojiGrid = (
         .join('')
     })
     .join('\n')
-}
-
-const attemptShare = (shareData: object) => {
-  return (
-    // Deliberately exclude Firefox Mobile, because its Web Share API isn't working correctly
-    !isFirefoxBrowser() &&
-    isShareCapableDevice() &&
-    navigator.canShare &&
-    navigator.canShare(shareData) &&
-    !!navigator.share
-  )
 }
 
 const getEmojiTiles = (isDarkMode: boolean, isHighContrastMode: boolean) => {

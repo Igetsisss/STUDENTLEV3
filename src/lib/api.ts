@@ -1,3 +1,12 @@
+import {
+  getPlayerGrade,
+  getPlayerLastInitial,
+  getPlayerName,
+  getPlayerPrefix,
+} from './localStorage'
+import { hasSupabaseConfig, supabase } from './supabase'
+import { getSolutionForGrade } from './words'
+
 // Returns the top 10 MVPs by new Weighted Difficulty Score
 export const computeTopMvpList = (entries: LeaderboardEntry[]): MvpEntry[] => {
   const valid = entries.filter((e) => e.name && String(e.name).trim())
@@ -39,9 +48,7 @@ export const computeTopMvpList = (entries: LeaderboardEntry[]): MvpEntry[] => {
     const winRate = totalGames > 0 ? totalWins / totalGames : 0
     const avgGuesses = totalGames > 0 ? totalGuesses / totalGames : 0
     const score =
-      avgGuesses > 0
-        ? (totalWeightedPoints / avgGuesses) * winRate
-        : 0
+      avgGuesses > 0 ? (totalWeightedPoints / avgGuesses) * winRate : 0
     stats.push({
       name: games[0].name,
       grade: games[0].grade,
@@ -56,63 +63,55 @@ export const computeTopMvpList = (entries: LeaderboardEntry[]): MvpEntry[] => {
   stats.sort((a, b) => b.score - a.score)
   return stats.slice(0, 10)
 }
-import { hasSupabaseConfig, supabase } from './supabase'
-import {
-  getPlayerGrade,
-  getPlayerLastInitial,
-  getPlayerName,
-  getPlayerPrefix,
-} from './localStorage'
-import { getSolutionForGrade } from './words'
-  const stats: MvpEntry[] = []
-  map.forEach((games) => {
-    if (games.length < 3) return
 
-    // Calculate metrics
-    let totalWeightedPoints = 0
-    let totalWins = 0
-    let totalGuesses = 0
-    let totalGames = games.length
-    games.forEach((g) => {
-      let points = 0
-      if (g.won) {
-        if (g.gameType === 'bonus') {
-          points = 1.5
-        } else if (g.gameType === 'teachers') {
-          points = 1.2
-        } else if (
-          g.gameType === `grade${g.grade}` ||
-          (g.gameType === 'daily' && g.grade > 0)
-        ) {
-          points = 1.0
-        } else if (/^grade\d+$/.test(g.gameType)) {
-          points = 0.8
-        }
-        totalWins++
-      }
-      totalWeightedPoints += points
-      totalGuesses += g.guessCount
-    })
-    const winRate = totalGames > 0 ? totalWins / totalGames : 0
-    const avgGuesses = totalGames > 0 ? totalGuesses / totalGames : 0
-    const score =
-      avgGuesses > 0
-        ? (totalWeightedPoints / avgGuesses) * winRate
-        : 0
-    stats.push({
-      name: games[0].name,
-      grade: games[0].grade,
-      totalGames,
-      activeDays: getActiveDayCount(games),
-      wins: totalWins,
-      winRate,
-      avgGuesses,
-      score,
-    })
-  })
+const SUPABASE_TABLES = {
+  gameSubmissions: 'game_submissions',
+  keystrokeLogs: 'keystroke_logs',
+  playerProfiles: 'player_profiles',
+  playerStateSnapshots: 'player_state_snapshots',
+  signupEvents: 'signup_events',
+} as const
 
-  stats.sort((a, b) => b.score - a.score)
-  return stats.length > 0 ? stats[0] : null
+export type GuessData = {
+  word: string
+  timeSec: number
+  keystrokes: number
+  deletes: number
+}
+
+// ─── Live Keystroke Tracking ────────────────────────────────────────────────
+
+export type KeystrokeEvent = {
+  timestamp: string
+  keyType:
+    | 'char' // letter successfully added to current guess
+    | 'char_blocked' // letter pressed but couldn't be added
+    | 'delete' // backspace, removed a character
+    | 'delete_empty' // backspace pressed when input was already empty
+    | 'delete_blocked' // backspace blocked by modal/animation
+    | 'enter_submit' // valid guess submitted
+    | 'enter_blocked' // enter pressed but rejected
+  keyValue: string // the actual letter, 'BACKSPACE', or 'ENTER'
+  reason?: string // why blocked: 'word_full'|'game_over'|'clearing'|'modal_open'|'too_short'|'invalid_word'|'hard_mode'
+  guessNum: number // which guess row (0-based)
+  inputBefore: string // current guess before the keypress
+  inputAfter: string // current guess after the keypress
+}
+
+export type KeystrokeBatchPayload = {
+  action: 'keystrokes'
+  sessionId: string
+  playerName: string
+  grade: string
+  date: string
+  gameType: string
+  events: KeystrokeEvent[]
+}
+
+export const submitKeystrokeBatch = async (
+  sessionId: string,
+  meta: { playerName: string; grade: string; date: string; gameType: string },
+  events: KeystrokeEvent[]
 ): Promise<void> => {
   if (!events.length) return
   if (!hasSupabaseConfig || !supabase) return
@@ -346,18 +345,6 @@ const getExpectedDailyWord = (entry: LeaderboardEntry): string | null => {
 const isHistoricalPlaceholderEntry = (entry: LeaderboardEntry): boolean =>
   String(entry.date || '').startsWith('1970')
 
-const isDailyLikeGameType = (entry: LeaderboardEntry): boolean => {
-  const type = String(entry.gameType || '')
-    .toLowerCase()
-    .trim()
-  return (
-    type === 'daily' ||
-    type === 'teachers' ||
-    type === 'grade' ||
-    type === `grade${String(entry.grade)}`
-  )
-}
-
 const getAllTimeDayBucket = (
   entry: LeaderboardEntry,
   index: number
@@ -418,14 +405,6 @@ export const isTrueDailyEntry = (entry: LeaderboardEntry): boolean => {
   }
 
   return false
-}
-
-const isAllTimeCountableDailyEntry = (entry: LeaderboardEntry): boolean => {
-  if (isHistoricalPlaceholderEntry(entry)) {
-    return isDailyLikeGameType(entry)
-  }
-
-  return isTrueDailyEntry(entry)
 }
 
 export const computeMvp = (entries: LeaderboardEntry[]): MvpEntry | null => {
@@ -755,10 +734,6 @@ export type AllTimeEntry = {
   avgGuesses: number
 }
 
-const isOwnGradeDailyEntry = (e: LeaderboardEntry): boolean => {
-  return isAllTimeCountableDailyEntry(e)
-}
-
 const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
   if (a.won !== b.won) return a.won && !b.won
   if (a.guessCount !== b.guessCount) return a.guessCount < b.guessCount
@@ -1054,11 +1029,19 @@ export const lookupAccountByEmail = async (
     const parts = name.split(' ')
 
     if (TEACHER_PREFIXES.includes(parts[0])) {
-      return { playerName: parts.slice(1).join(' '), grade: gradeStr, prefix: parts[0] }
+      return {
+        playerName: parts.slice(1).join(' '),
+        grade: gradeStr,
+        prefix: parts[0],
+      }
     }
     const lastInitial = parts.length > 1 ? parts[parts.length - 1] : ''
     const firstName = lastInitial ? parts.slice(0, -1).join(' ') : name
-    return { playerName: firstName, grade: gradeStr, lastInitial: lastInitial || undefined }
+    return {
+      playerName: firstName,
+      grade: gradeStr,
+      lastInitial: lastInitial || undefined,
+    }
   } catch {
     return null
   }
@@ -1070,7 +1053,9 @@ export const lookupAccountByEmail = async (
  * Reads the current player identity from localStorage.
  * Safe to call fire-and-forget.
  */
-export const linkEmailToCurrentAccount = async (email: string): Promise<void> => {
+export const linkEmailToCurrentAccount = async (
+  email: string
+): Promise<void> => {
   if (!hasSupabaseConfig || !supabase) return
 
   const playerName = getPlayerName()
