@@ -10,6 +10,12 @@
 -- Grade values: 0 = Teacher, 9 = Freshman, 10 = Sophomore, 11 = Junior, 12 = Senior
 -- player_key format: '<player_name_key>|<grade>'  e.g. 'jack s|9'
 -- Historical-import rows use game_date = '1970-01-01' to stay out of daily views.
+--
+-- This file is the fresh-install baseline (safe to run top to bottom on an
+-- empty database). migrations/*.sql are dated, one-time patches for bringing
+-- an already-deployed database up to date with this file — run in order,
+-- once each. This baseline is kept in sync with every applied migration, so
+-- it's always the accurate "current schema," not just the original one.
 -- ──────────────────────────────────────────────────────────────────────────────
 
 create extension if not exists pgcrypto;
@@ -23,12 +29,35 @@ create table if not exists public.player_profiles (
   grade                integer     not null check (grade in (0, 9, 10, 11, 12)),
   source               text,
   registered_at_client timestamptz,
+  microsoft_email      text,
   updated_at           timestamptz not null default now(),
   created_at           timestamptz not null default now()
 );
 
 create index if not exists idx_player_profiles_player_name_key
   on public.player_profiles (player_name_key);
+
+-- One account per school email; NULLs (not-yet-linked players) are ignored.
+create unique index if not exists idx_player_profiles_microsoft_email
+  on public.player_profiles (microsoft_email)
+  where microsoft_email is not null;
+
+-- Email -> (player_name, grade) lookup for auto-login. SECURITY DEFINER so
+-- the app can resolve an email to an identity without a SELECT policy ever
+-- exposing the microsoft_email column itself.
+create or replace function public.lookup_player_by_email(p_email text)
+  returns table(player_name text, grade integer)
+  language sql
+  security definer
+  set search_path = public
+as $$
+  select player_name, grade
+  from   public.player_profiles
+  where  microsoft_email = lower(trim(p_email))
+  limit  1;
+$$;
+
+grant execute on function public.lookup_player_by_email(text) to anon, authenticated;
 
 -- ─── signup_events ────────────────────────────────────────────────────────────
 -- Append-only audit log. Includes partial registrations (source = 'name_step').
