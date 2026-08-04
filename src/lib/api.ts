@@ -1,3 +1,4 @@
+import { getTodayDateKey } from './dateutils'
 import {
   getPlayerGrade,
   getPlayerLastInitial,
@@ -731,14 +732,14 @@ export const fetchPlayerStateFromCloud = async (
 export type AllTimeEntry = {
   name: string
   grade: number
+  // True when this person no longer has a roster row (grade rollover
+  // removes graduated seniors) — their stored `grade` is just whatever it
+  // last was when they were still enrolled.
+  isAlum: boolean
   totalDays: number
   wins: number
   winRate: number
   avgGuesses: number
-  // Most recent submission across every game grouped into this row — lets
-  // the UI tell a graduated senior (last game predates the grade rollover)
-  // apart from a current senior with the same stored grade.
-  latestSubmittedAt: string
 }
 
 const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
@@ -747,8 +748,33 @@ const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
   return a.totalDurationSec < b.totalDurationSec
 }
 
+// Maps every currently-rostered player's name_key to their current grade.
+// game_submissions.grade is frozen at whatever it was the day that game was
+// played — a rising senior's sophomore-year games still say grade 10 — so
+// the all-time view needs this to show where everyone stands *now* instead
+// of a mix of stale historical grades.
+export const fetchCurrentRoster = async (): Promise<Record<string, number>> => {
+  if (!hasSupabaseConfig || !supabase) return {}
+  try {
+    const { data, error } = await supabase
+      .from(SUPABASE_TABLES.playerProfiles)
+      .select('player_name_key, grade')
+    if (error || !data) return {}
+    const roster: Record<string, number> = {}
+    for (const row of data) {
+      const key = row.player_name_key ? String(row.player_name_key) : ''
+      if (!key) continue
+      roster[key] = Number(row.grade) || 0
+    }
+    return roster
+  } catch {
+    return {}
+  }
+}
+
 export const computeAllTimeLeaderboard = (
-  entries: LeaderboardEntry[]
+  entries: LeaderboardEntry[],
+  currentGradeByNameKey: Record<string, number> = {}
 ): AllTimeEntry[] => {
   const map = new Map<string, LeaderboardEntry[]>()
   for (const e of entries) {
@@ -776,18 +802,18 @@ export const computeAllTimeLeaderboard = (
       wins.length > 0
         ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
         : 0
-    const latestSubmittedAt = games.reduce(
-      (latest, g) => (g.submittedAt > latest ? g.submittedAt : latest),
-      ''
-    )
+    const historicalGrade = games[0].grade
+    const nameKey = normalizeNameKey(games[0].name)
+    const currentGrade = currentGradeByNameKey[nameKey]
+    const isOnRoster = currentGrade !== undefined
     result.push({
       name: games[0].name,
-      grade: games[0].grade,
+      grade: isOnRoster ? currentGrade : historicalGrade,
+      isAlum: !isOnRoster && historicalGrade === 12,
       totalDays: dayResults.length,
       wins: wins.length,
       winRate: dayResults.length > 0 ? wins.length / dayResults.length : 0,
       avgGuesses,
-      latestSubmittedAt,
     })
   })
   return result.sort((a, b) => {
@@ -804,11 +830,7 @@ export const fetchLeaderboard = async (
 ): Promise<LeaderboardEntry[]> => {
   if (!hasSupabaseConfig || !supabase) return []
 
-  const _fd = new Date()
-  const localToday = `${_fd.getFullYear()}-${String(
-    _fd.getMonth() + 1
-  ).padStart(2, '0')}-${String(_fd.getDate()).padStart(2, '0')}`
-  const today = allTime ? '' : date || localToday
+  const today = allTime ? '' : date || getTodayDateKey()
   const selectedGrade = grade ? normalizeLegacyGrade(grade) : ''
 
   const processRows = (rows: any[]): LeaderboardEntry[] => {
@@ -957,22 +979,6 @@ export const fetchTodayLeader = async (
   }
   if (!data || data.length === 0) return null
 
-  const legacyAliases: Record<string, string> = {
-    'harvey m': 'Mrs. Harvey',
-    'mrs harvey': 'Mrs. Harvey',
-    'evan bassett': 'Dr. Bassett',
-    'bassett evan': 'Dr. Bassett',
-    'dr bassett': 'Dr. Bassett',
-    'evan basset': 'Dr. Bassett',
-    'dr basset': 'Dr. Bassett',
-    'katie cruce': 'Mrs. Cruce',
-    'katie c': 'Mrs. Cruce',
-    'mrs cruce': 'Mrs. Cruce',
-    'amanda adams': 'Mrs. Adams',
-    'mrs adams': 'Mrs. Adams',
-    'mr wimberly': 'Sam W',
-  }
-
   // Prefer a daily-type win; fall back to any won row if there's no daily yet
   const dailyGameType =
     normalizedGrade === '0' ? 'teachers' : `grade${normalizedGrade}`
@@ -980,9 +986,7 @@ export const fetchTodayLeader = async (
     data.find((r: any) => String(r.game_type || '') === dailyGameType) ??
     data[0]
 
-  const rawName = String(best.player_name || '')
-  const nameKey = normalizeNameKey(rawName)
-  const displayName = legacyAliases[nameKey] ?? rawName
+  const displayName = String(best.player_name || '')
 
   return { name: displayName, guessCount: Number(best.guess_count) }
 }

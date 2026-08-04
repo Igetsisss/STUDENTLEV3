@@ -1,13 +1,9 @@
 // Teacher last names — used for the Teachers daily game mode and Teachers bonus round
 // Rules: all-alphabetic (no hyphens/spaces), 5–8 letters only
 // so the board length is manageable and there are always enough valid guesses.
+import { getToday } from './lib/dateutils'
 
 const firstGameDate = new Date(2023, 2, 1)
-
-const getToday = () => {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
-}
 
 const getGameDate = () => getToday()
 

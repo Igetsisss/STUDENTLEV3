@@ -29,6 +29,7 @@ const PLAYER_STATS_CACHE_TTL_MS = 10 * 60 * 1000
 type CachedPlayerStats = {
   fetchedAt: string
   stats: GameStats
+  extraRounds?: ExtraRoundStats
   leaderboard?: {
     date: string
     rank: number | null
@@ -57,6 +58,36 @@ const isBetterEntry = (
   if (a.won !== b.won) return a.won && !b.won
   if (a.guessCount !== b.guessCount) return a.guessCount < b.guessCount
   return a.totalDurationSec < b.totalDurationSec
+}
+
+// Every game this player has ever submitted — across every device — bucketed
+// the same way the local-only recordExtraRoundResult() used to: bonus,
+// teachers (only when played as an extra round, not a teacher's own daily),
+// and grade rounds (any grade round that wasn't their own daily).
+const computeExtraRoundStatsFromEntries = (
+  mine: import('../../lib/api').LeaderboardEntry[]
+): ExtraRoundStats => {
+  const stats: ExtraRoundStats = {
+    bonus: { played: 0, won: 0 },
+    teachers: { played: 0, won: 0 },
+    grade: { played: 0, won: 0 },
+  }
+  for (const e of mine) {
+    const type = String(e.gameType || '')
+      .toLowerCase()
+      .trim()
+    if (type === 'bonus') {
+      stats.bonus.played += 1
+      if (e.won) stats.bonus.won += 1
+    } else if (type === 'teachers' && !isTrueDailyEntry(e)) {
+      stats.teachers.played += 1
+      if (e.won) stats.teachers.won += 1
+    } else if (/^grade\d+$/.test(type) && !isTrueDailyEntry(e)) {
+      stats.grade.played += 1
+      if (e.won) stats.grade.won += 1
+    }
+  }
+  return stats
 }
 
 type Props = {
@@ -184,6 +215,10 @@ export const StatsModal = ({
           setLeaderboardTotal(cachedPayload.leaderboard.total)
           setSolveRate(cachedPayload.leaderboard.solveRate)
         }
+
+        if (cachedPayload?.extraRounds) {
+          setExtraRoundStats(cachedPayload.extraRounds)
+        }
       } catch {
         // ignore malformed cache and refetch
       }
@@ -243,6 +278,8 @@ export const StatsModal = ({
 
         // Sync all-time per-player stats from API and cache to avoid repeated pulls
         const mine = entries.filter((e) => normalizeName(e.name) === myKey)
+        const syncedExtraRounds = computeExtraRoundStatsFromEntries(mine)
+        setExtraRoundStats(syncedExtraRounds)
         if (mine.length > 0) {
           const mineDaily = mine.filter(
             (e) => isTrueDailyEntry(e) && !String(e.date).startsWith('1970')
@@ -291,6 +328,7 @@ export const StatsModal = ({
             JSON.stringify({
               fetchedAt: new Date().toISOString(),
               stats: syncedStats,
+              extraRounds: syncedExtraRounds,
               leaderboard: {
                 date: today,
                 rank: nextRank,
@@ -309,6 +347,7 @@ export const StatsModal = ({
                 currentStreak: gameStats.currentStreak,
                 bestStreak: gameStats.bestStreak,
               },
+              extraRounds: syncedExtraRounds,
               leaderboard: {
                 date: today,
                 rank: nextRank,
@@ -366,76 +405,104 @@ export const StatsModal = ({
         isGameWon={isGameWon}
         numberOfGuessesMade={numberOfGuessesMade}
       />
-      {/* Personal bests card */}
+      {/* Lifetime stats — daily streak/best solve plus every extra mode
+          (Bonus/Teachers/Grade Rounds), synced from the database so it
+          reflects every game across every device, not just this one. */}
       {(() => {
         const bestIdx = displayStats.winDistribution.findIndex((c) => c > 0)
         const bestGuessCount = bestIdx >= 0 ? bestIdx + 1 : null
+        const totalAllModes =
+          displayStats.totalGames +
+          extraRoundStats.bonus.played +
+          extraRoundStats.teachers.played +
+          extraRoundStats.grade.played
+
+        type Tile = {
+          key: string
+          emoji: string
+          value: string | number
+          label: string
+        }
+        const tiles: Tile[] = [
+          {
+            key: 'streak',
+            emoji: '🔥',
+            value: displayStats.currentStreak,
+            label: 'Days Played',
+          },
+          ...(bestGuessCount !== null
+            ? [
+                {
+                  key: 'best',
+                  emoji: '🎯',
+                  value: bestGuessCount,
+                  label: 'Best Solve',
+                },
+              ]
+            : []),
+          ...(extraRoundStats.bonus.played > 0
+            ? [
+                {
+                  key: 'bonus',
+                  emoji: '🎁',
+                  value: `${extraRoundStats.bonus.won}/${extraRoundStats.bonus.played}`,
+                  label: 'Bonus',
+                },
+              ]
+            : []),
+          ...(extraRoundStats.teachers.played > 0
+            ? [
+                {
+                  key: 'teachers',
+                  emoji: '🍎',
+                  value: `${extraRoundStats.teachers.won}/${extraRoundStats.teachers.played}`,
+                  label: 'Teachers',
+                },
+              ]
+            : []),
+          ...(extraRoundStats.grade.played > 0
+            ? [
+                {
+                  key: 'grade',
+                  emoji: '🎓',
+                  value: `${extraRoundStats.grade.won}/${extraRoundStats.grade.played}`,
+                  label: 'Grade Rounds',
+                },
+              ]
+            : []),
+        ]
+
         return (
-          <div className="mt-4 flex justify-around rounded-lg border border-gray-200 bg-gray-50 px-2 py-3 dark:border-slate-600 dark:bg-slate-800">
-            <div className="text-center">
-              <div className="text-xl font-bold text-orange-500">
-                🔥 {displayStats.currentStreak}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                Days Played
-              </div>
+          <div className="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50 dark:border-amber-500/30 dark:from-amber-900/10 dark:via-slate-800 dark:to-amber-900/10">
+            <div className="flex items-center justify-between px-3 pt-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-300">
+                Your Stats
+              </p>
+              {totalAllModes > 0 && (
+                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+                  {totalAllModes} games all-time
+                </p>
+              )}
             </div>
-            {bestGuessCount !== null && (
-              <div className="text-center">
-                <div className="text-xl font-bold text-green-600 dark:text-green-400">
-                  🎯 {bestGuessCount}
+            <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-5">
+              {tiles.map((t) => (
+                <div
+                  key={t.key}
+                  className="rounded-lg bg-white/70 py-2 text-center shadow-sm dark:bg-slate-900/40"
+                >
+                  <div className="text-lg leading-none">{t.emoji}</div>
+                  <div className="mt-1 text-sm font-extrabold text-gray-800 dark:text-gray-100">
+                    {t.value}
+                  </div>
+                  <div className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">
+                    {t.label}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Best Solve
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         )
-      })()}{' '}
-      {/* Extra rounds summary */}
-      {(extraRoundStats.bonus.played > 0 ||
-        extraRoundStats.teachers.played > 0 ||
-        extraRoundStats.grade.played > 0) && (
-        <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-800">
-          <p className="mb-1.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
-            Extra Rounds
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {extraRoundStats.bonus.played > 0 && (
-              <div className="text-center">
-                <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                  {extraRoundStats.bonus.won}/{extraRoundStats.bonus.played}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Bonus
-                </div>
-              </div>
-            )}
-            {extraRoundStats.teachers.played > 0 && (
-              <div className="text-center">
-                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                  {extraRoundStats.teachers.won}/
-                  {extraRoundStats.teachers.played}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Teachers
-                </div>
-              </div>
-            )}
-            {extraRoundStats.grade.played > 0 && (
-              <div className="text-center">
-                <div className="text-sm font-bold text-purple-600 dark:text-purple-400">
-                  {extraRoundStats.grade.won}/{extraRoundStats.grade.played}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Grade Rounds
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}{' '}
+      })()}
       {/* Hard word difficulty */}
       {solveRate !== null && (isGameWon || isGameLost) && (
         <div

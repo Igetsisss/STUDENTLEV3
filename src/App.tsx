@@ -52,6 +52,7 @@ import {
   syncPlayerStateToCloud,
 } from './lib/api'
 import { isInAppBrowser } from './lib/browser'
+import { formatDateKey, getTodayDateKey } from './lib/dateutils'
 import {
   clearShouldShowInfoAfterReload,
   clearShouldShowWelcomeAfterReload,
@@ -143,12 +144,6 @@ const LEGACY_TEACHER_KEYS = [
   'bassett evan',
   'amanda adams',
 ]
-
-const formatDateKey = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-    2,
-    '0'
-  )}-${String(date.getDate()).padStart(2, '0')}`
 
 const MIGRATION_RECOVERY_NOTICE_DATE =
   process.env.REACT_APP_MIGRATION_NOTICE_DATE || '2026-04-16'
@@ -571,12 +566,9 @@ function App() {
   useEffect(() => {
     const rawGrade = getPlayerGrade()
     if (!rawGrade) return
-    // Use local date to match how game_date is stored in game_submissions
-    const d = new Date()
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      '0'
-    )}-${String(d.getDate()).padStart(2, '0')}`
+    // Matches how game_date is stored in game_submissions — the school's
+    // Eastern-time calendar day, not the visitor's local time zone.
+    const today = getTodayDateKey()
     fetchTodayLeader(rawGrade, today).then((leader) => {
       setTodayLeader(leader)
     })
@@ -837,7 +829,7 @@ function App() {
   }, [showErrorAlert])
 
   useEffect(() => {
-    if (formatDateKey(new Date()) !== MIGRATION_RECOVERY_NOTICE_DATE) {
+    if (getTodayDateKey() !== MIGRATION_RECOVERY_NOTICE_DATE) {
       return
     }
 
@@ -1085,34 +1077,15 @@ function App() {
     const firstName = getPlayerName()
     const lastInitial = getPlayerLastInitial()
     const prefix = getPlayerPrefix()
-    let playerName = prefix
+    const playerName = prefix
       ? `${prefix} ${firstName}`
       : lastInitial
       ? `${firstName} ${lastInitial}`
       : firstName
     if (!firstName) return // don't submit nameless games
     const gradeCleanRaw = getPlayerGrade()
-    let gradeClean =
+    const gradeClean =
       LEGACY_GRADE_NORMALIZATION_MAP[gradeCleanRaw] || gradeCleanRaw
-    // Legacy name/grade corrections (players who registered before certain features existed)
-    const normalizePlayerKey = (name: string) =>
-      String(name || '')
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .trim()
-    const legacyNameFixes: Record<string, { name: string; grade: string }> = {
-      'harvey m': { name: 'Mrs. Harvey', grade: '0' },
-      'evan bassett': { name: 'Dr. Bassett', grade: '0' },
-      'bassett evan': { name: 'Dr. Bassett', grade: '0' },
-      'katie cruce': { name: 'Mrs. Cruce', grade: '0' },
-      'katie c': { name: 'Mrs. Cruce', grade: '0' },
-      'amanda adams': { name: 'Mrs. Adams', grade: '0' },
-    }
-    const legacyFix = legacyNameFixes[normalizePlayerKey(playerName)]
-    if (legacyFix) {
-      playerName = legacyFix.name
-      gradeClean = legacyFix.grade
-    }
     const trackingData = tracker.getSubmissionData()
     const d = solutionGameDate
     const puzzleDateStr = formatDateKey(d)

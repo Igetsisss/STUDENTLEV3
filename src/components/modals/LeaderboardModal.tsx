@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { BONUS_WORDS } from '../../bonusRoundWords'
 import { VALID_GUESSES } from '../../constants/validGuesses'
@@ -10,8 +10,10 @@ import {
   computeAllTimeLeaderboard,
   computeMvp,
   computeStreaks,
+  fetchCurrentRoster,
   fetchLeaderboard,
 } from '../../lib/api'
+import { getTodayDateKey } from '../../lib/dateutils'
 import {
   getPlayerLastInitial,
   getPlayerName,
@@ -51,17 +53,18 @@ const ALL_NAME_WORDS = [
 ].map((w) => w.toLowerCase())
 
 // ── In-memory leaderboard cache ──────────────────────────────────────────────
-// Keyed by "<viewMode>:<filterGrade>" (e.g. "today:", "alltime:11").
-// Today data is kept for 2 min (scores change as players submit throughout the
-// day). All-time data is kept for 5 min (rarely changes mid-session).
-const TODAY_TTL_MS = 2 * 60 * 1000
-const ALLTIME_TTL_MS = 5 * 60 * 1000
-
+// Keyed by "<viewMode>:<filterGrade>" (e.g. "today:", "alltime:11"). Once
+// fetched, a key stays cached indefinitely — opening the leaderboard never
+// re-fetches on its own. The only thing that invalidates it is the player
+// finishing a game (see the effect below): standings only change when
+// someone submits a result, so there's nothing to gain from polling on a
+// timer, just a slower modal.
 type LeaderboardCacheEntry = {
   fetchedAt: number
   raw: LeaderboardEntry[]
 }
 const leaderboardCache = new Map<string, LeaderboardCacheEntry>()
+let currentRosterCache: Record<string, number> | null = null
 
 type Props = {
   isOpen: boolean
@@ -94,24 +97,29 @@ const gradeShort: Record<string, string> = {
   '12': 'SR',
 }
 
-// The exact moment the outgoing senior class was removed from the roster
-// (Fall 2026 rollover — see supabase/migrations/005-fall-2026-grade-rollover.sql).
-// A grade-12 submission from before this instant is a graduated alum's old
-// game, not a current senior's — grade alone can't tell them apart since
-// game_submissions keeps its grade as a historical fact, never updated.
+// Today's entries are submitted live, using whatever grade the player is
+// registered as right now, so they can't belong to someone already removed
+// from the roster — this cutoff is just a defensive fallback in case a
+// "played today" flag hasn't finished writing by the time the leaderboard
+// re-fetches. Fall 2026 rollover — see
+// supabase/migrations/005-fall-2026-grade-rollover.sql.
 const SENIOR_ALUM_CUTOFF = '2026-08-04T12:19:50.813937Z'
 
-const isAlumEntry = (grade: number, submittedAt?: string): boolean =>
+const isAlumByTimestamp = (grade: number, submittedAt?: string): boolean =>
   grade === 12 && !!submittedAt && submittedAt < SENIOR_ALUM_CUTOFF
 
-const gradeLabelFor = (grade: number, submittedAt?: string): string =>
-  isAlumEntry(grade, submittedAt) ? 'Alum' : gradeLabels[String(grade)]
+// All-time entries can be years old, so instead of guessing from a date
+// cutoff, the caller passes whether this person is still on the current
+// roster (computeAllTimeLeaderboard already resolved that against
+// player_profiles) — a graduated senior is simply missing from it.
+const gradeLabelFor = (grade: number, isAlum: boolean): string =>
+  isAlum ? 'Alum' : gradeLabels[String(grade)]
 
-const gradeShortFor = (grade: number, submittedAt?: string): string =>
-  isAlumEntry(grade, submittedAt) ? 'ALM' : gradeShort[String(grade)]
+const gradeShortFor = (grade: number, isAlum: boolean): string =>
+  isAlum ? 'ALM' : gradeShort[String(grade)]
 
-const gradeBadgeClassFor = (grade: number, submittedAt?: string): string =>
-  isAlumEntry(grade, submittedAt)
+const gradeBadgeClassFor = (grade: number, isAlum: boolean): string =>
+  isAlum
     ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
     : gradeBadgeClass[String(grade)]
 
@@ -379,29 +387,32 @@ export const LeaderboardModal = ({
     return new Set(ALL_NAME_WORDS.filter((w) => protectedLengths.has(w.length)))
   }, [protectedLengths])
 
-  const _ld = new Date()
-  const today = `${_ld.getFullYear()}-${String(_ld.getMonth() + 1).padStart(
-    2,
-    '0'
-  )}-${String(_ld.getDate()).padStart(2, '0')}`
+  const today = getTodayDateKey()
+
+  // Bumped after a game finishes (see the effect below) to force a refetch
+  // even though isOpen/viewMode/filterGrade haven't changed — covers the
+  // case where the leaderboard is already open when the game completes.
+  const [refreshTick, setRefreshTick] = useState(0)
 
   // Fetch raw data from Supabase.
   // For "today" we always fetch ALL game types so switching between Daily /
   // Bonus / Teachers / Grade Round tabs is instant (client-side filter only —
   // no new network request).  Grade filter still applies server-side so users
   // only wait once when they change the grade dropdown.
-  // For "all-time" we pass the grade filter so the paginated query stays lean.
+  // For "all-time" we pass the grade filter so the paginated query stays lean,
+  // plus the current roster so grades reflect who's promoted/graduated since.
   useEffect(() => {
     if (!isOpen) return
     const cacheKey = `${viewMode}:${filterGrade}`
-    const ttl = viewMode === 'today' ? TODAY_TTL_MS : ALLTIME_TTL_MS
     const cached = leaderboardCache.get(cacheKey)
-    if (cached && Date.now() - cached.fetchedAt < ttl) {
+    if (cached) {
       const data = cached.raw
       if (viewMode === 'today') {
         setEntries(data)
       } else {
-        setAllTimeEntries(computeAllTimeLeaderboard(data))
+        setAllTimeEntries(
+          computeAllTimeLeaderboard(data, currentRosterCache ?? {})
+        )
       }
       setMvp(computeMvp(data))
       setStreaks(computeStreaks(data))
@@ -418,16 +429,40 @@ export const LeaderboardModal = ({
         })
         .finally(() => setLoading(false))
     } else {
-      fetchLeaderboard(undefined, filterGrade, true)
-        .then((data) => {
+      Promise.all([
+        fetchLeaderboard(undefined, filterGrade, true),
+        currentRosterCache
+          ? Promise.resolve(currentRosterCache)
+          : fetchCurrentRoster(),
+      ])
+        .then(([data, roster]) => {
+          currentRosterCache = roster
           leaderboardCache.set(cacheKey, { fetchedAt: Date.now(), raw: data })
-          setAllTimeEntries(computeAllTimeLeaderboard(data))
+          setAllTimeEntries(computeAllTimeLeaderboard(data, roster))
           setMvp(computeMvp(data))
           setStreaks(computeStreaks(data))
         })
         .finally(() => setLoading(false))
     }
-  }, [isOpen, filterGrade, viewMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, filterGrade, viewMode, refreshTick]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Invalidate the cache when a game finishes — that's the only time
+  // standings actually change, so it's the only time worth re-fetching.
+  // Waits a few seconds first so the just-submitted game has actually landed
+  // in the database before we go ask it for "current standing" — fetching
+  // immediately can race the insert and still show the pre-game numbers.
+  const wasGameCompleteRef = useRef(isGameComplete)
+  useEffect(() => {
+    const justCompleted = isGameComplete && !wasGameCompleteRef.current
+    wasGameCompleteRef.current = isGameComplete
+    if (!justCompleted) return
+    const timer = window.setTimeout(() => {
+      leaderboardCache.clear()
+      currentRosterCache = null
+      setRefreshTick((n) => n + 1)
+    }, 3000)
+    return () => window.clearTimeout(timer)
+  }, [isGameComplete])
 
   const filtered = (() => {
     const byType = entries.filter((e) => {
@@ -727,16 +762,12 @@ export const LeaderboardModal = ({
                         <td className="py-1.5 pr-1 text-center">
                           <span
                             className={`inline-block rounded px-1 py-0.5 text-xs font-bold ${
-                              gradeBadgeClassFor(
-                                entry.grade,
-                                entry.latestSubmittedAt
-                              ) ?? 'bg-gray-100 text-gray-600'
+                              gradeBadgeClassFor(entry.grade, entry.isAlum) ??
+                              'bg-gray-100 text-gray-600'
                             }`}
                           >
-                            {gradeShortFor(
-                              entry.grade,
-                              entry.latestSubmittedAt
-                            ) ?? String(entry.grade)}
+                            {gradeShortFor(entry.grade, entry.isAlum) ??
+                              String(entry.grade)}
                           </span>
                         </td>
                         <td className="py-1.5 pr-1 text-center">
@@ -843,12 +874,14 @@ export const LeaderboardModal = ({
                           className={`inline-block rounded px-1 py-0.5 text-xs font-bold ${
                             gradeBadgeClassFor(
                               entry.grade,
-                              entry.submittedAt
+                              isAlumByTimestamp(entry.grade, entry.submittedAt)
                             ) ?? 'bg-gray-100 text-gray-600'
                           }`}
                         >
-                          {gradeShortFor(entry.grade, entry.submittedAt) ??
-                            String(entry.grade)}
+                          {gradeShortFor(
+                            entry.grade,
+                            isAlumByTimestamp(entry.grade, entry.submittedAt)
+                          ) ?? String(entry.grade)}
                         </span>
                       </td>
                       <td className="py-1.5 pr-1 text-center font-mono">
@@ -890,8 +923,10 @@ export const LeaderboardModal = ({
                 </span>
               </p>
               <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
-                {gradeLabelFor(todayLeader.grade, todayLeader.submittedAt) ||
-                  `Grade ${todayLeader.grade}`}
+                {gradeLabelFor(
+                  todayLeader.grade,
+                  isAlumByTimestamp(todayLeader.grade, todayLeader.submittedAt)
+                ) || `Grade ${todayLeader.grade}`}
                 {mvp && samePlayer(todayLeader.name, mvp.name)
                   ? ' • All-Time MVP'
                   : ''}
@@ -915,104 +950,127 @@ export const LeaderboardModal = ({
         </div>
       )}
 
-      {viewMode === 'alltime' && mvp && (
-        <div
-          className="relative mt-4 overflow-hidden rounded-xl px-4 py-3"
-          style={{
-            background:
-              'linear-gradient(145deg, #1a1200 0%, #2e1f00 50%, #1a1200 100%)',
-            boxShadow: '0 0 0 2px #b8860b, 0 0 22px 3px #f5c51888',
-          }}
-        >
-          {/* shimmer top */}
-          <div
-            className="absolute inset-x-0 top-0 h-0.5"
-            style={{
-              background:
-                'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)',
-            }}
-          />
-          {/* Header */}
-          <p
-            className="mb-2 text-center text-xs font-bold uppercase tracking-widest"
-            style={{ color: '#c9a227' }}
-          >
-            🏆 All-Time{' '}
-            <button
-              onClick={() => setIsMvpExplainerOpen(true)}
-              className="underline decoration-dotted underline-offset-2"
-              style={{ color: '#f5c518' }}
-              title="What is MVP? Click to learn more"
+      {viewMode === 'alltime' &&
+        mvp &&
+        (() => {
+          const mvpKey = mvp.name.toLowerCase().trim()
+          const mvpCurrentGrade = currentRosterCache?.[mvpKey]
+          const mvpIsAlum = mvpCurrentGrade === undefined && mvp.grade === 12
+          const mvpGrade = mvpCurrentGrade ?? mvp.grade
+          return (
+            <div
+              className="relative mt-3 overflow-hidden rounded-xl px-3 py-2.5"
+              style={{
+                background:
+                  'linear-gradient(145deg, #1a1200 0%, #2e1f00 50%, #1a1200 100%)',
+                boxShadow: '0 0 0 2px #b8860b, 0 0 16px 2px #f5c51888',
+              }}
             >
-              MVP
-            </button>
-          </p>
+              {/* shimmer top */}
+              <div
+                className="absolute inset-x-0 top-0 h-0.5"
+                style={{
+                  background:
+                    'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)',
+                }}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <button
+                    onClick={() => setIsMvpExplainerOpen(true)}
+                    className="text-[10px] font-bold uppercase tracking-widest underline decoration-dotted underline-offset-2"
+                    style={{ color: '#c9a227' }}
+                    title="What is MVP? Click to learn more"
+                  >
+                    🏆 All-Time MVP
+                  </button>
+                  <p
+                    className="all-time-mvp-name truncate text-base font-extrabold leading-tight"
+                    style={{ textShadow: '0 0 10px #f5c51888' }}
+                  >
+                    {toTitleCase(mvp.name)}
+                  </p>
+                </div>
+                <span
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
+                  style={{ color: '#1a1200', background: '#f5c518' }}
+                >
+                  {mvpIsAlum ? 'ALM' : gradeShort[String(mvpGrade)] ?? mvpGrade}
+                </span>
+              </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <p
-                className="all-time-mvp-name text-lg font-extrabold"
-                style={{ textShadow: '0 0 10px #f5c51888' }}
+              <div
+                className="mt-1.5 grid grid-cols-4 gap-1 rounded-lg py-1.5 text-center"
+                style={{ background: 'rgba(245,197,24,0.08)' }}
               >
-                {toTitleCase(mvp.name)}
-              </p>
-              <p className="text-xs" style={{ color: '#a07820' }}>
-                {gradeLabels[String(mvp.grade)] || `Grade ${mvp.grade}`}
-              </p>
+                <div>
+                  <p
+                    className="text-xs font-bold leading-tight"
+                    style={{ color: '#f5c518' }}
+                  >
+                    {Math.round(mvp.winRate * 100)}%
+                  </p>
+                  <p
+                    className="text-[9px] leading-tight"
+                    style={{ color: '#c9a227' }}
+                  >
+                    Win Rate
+                  </p>
+                </div>
+                <div>
+                  <p
+                    className="text-xs font-bold leading-tight"
+                    style={{ color: '#f5c518' }}
+                  >
+                    {mvp.avgGuesses > 0 ? mvp.avgGuesses.toFixed(1) : '-'}
+                  </p>
+                  <p
+                    className="text-[9px] leading-tight"
+                    style={{ color: '#c9a227' }}
+                  >
+                    Avg Guess
+                  </p>
+                </div>
+                <div>
+                  <p
+                    className="text-xs font-bold leading-tight"
+                    style={{ color: '#f5c518' }}
+                  >
+                    {mvp.totalGames}
+                  </p>
+                  <p
+                    className="text-[9px] leading-tight"
+                    style={{ color: '#c9a227' }}
+                  >
+                    Games
+                  </p>
+                </div>
+                <div>
+                  <p
+                    className="text-xs font-bold leading-tight"
+                    style={{ color: '#f5c518' }}
+                  >
+                    {mvp.wins}
+                  </p>
+                  <p
+                    className="text-[9px] leading-tight"
+                    style={{ color: '#c9a227' }}
+                  >
+                    Wins
+                  </p>
+                </div>
+              </div>
+              {/* shimmer bottom */}
+              <div
+                className="absolute inset-x-0 bottom-0 h-0.5"
+                style={{
+                  background:
+                    'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)',
+                }}
+              />
             </div>
-            <div className="flex gap-4 text-center text-xs">
-              <div>
-                <p className="font-bold" style={{ color: '#f5c518' }}>
-                  {Math.round(mvp.winRate * 100)}%
-                </p>
-                <p style={{ color: '#c9a227' }}>Win Rate</p>
-              </div>
-              <div>
-                <p className="font-bold" style={{ color: '#f5c518' }}>
-                  {mvp.avgGuesses > 0 ? mvp.avgGuesses.toFixed(1) : '-'}
-                </p>
-                <p style={{ color: '#c9a227' }}>Avg Guesses</p>
-              </div>
-              <div>
-                <p className="font-bold" style={{ color: '#f5c518' }}>
-                  {mvp.totalGames}
-                </p>
-                <p style={{ color: '#c9a227' }}>Games</p>
-              </div>
-              <div>
-                <p className="font-bold" style={{ color: '#f5c518' }}>
-                  {mvp.wins}
-                </p>
-                <p style={{ color: '#c9a227' }}>Wins</p>
-              </div>
-            </div>
-          </div>
-
-          <p
-            className="mt-2 text-center text-xs italic"
-            style={{ color: '#7b5800' }}
-          >
-            One school-wide MVP is calculated from all-time games across all
-            modes. The crown row stays pinned to the top so the MVP is always
-            unmistakable.{' '}
-            <button
-              onClick={() => setIsMvpExplainerOpen(true)}
-              className="underline decoration-dotted underline-offset-2"
-              style={{ color: '#a07820' }}
-            >
-              How is this calculated?
-            </button>
-          </p>
-          {/* shimmer bottom */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-0.5"
-            style={{
-              background:
-                'linear-gradient(90deg, #7b5800, #f5c518, #ffe066, #f5c518, #7b5800)',
-            }}
-          />
-        </div>
-      )}
+          )
+        })()}
 
       <MvpExplainerModal
         isOpen={isMvpExplainerOpen}
