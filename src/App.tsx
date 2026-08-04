@@ -412,7 +412,6 @@ function App() {
   const hasSubmittedRef = useRef(false)
   const alreadyCompleteOnLoadRef = useRef(false)
   const cloudHydrationAttemptedRef = useRef(false)
-  const cloudSyncTimerRef = useRef<number | null>(null)
   const titleTapCountRef = useRef(0)
   const titleTapTimerRef = useRef<number | null>(null)
   const isSpaceHeldRef = useRef(false)
@@ -911,8 +910,14 @@ function App() {
     }
   }, [guesses, isBonusRound, isTeachersRound, isGradeRound, gradeRoundGrade]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounced full-state sync for seamless cross-device continuity.
-  useEffect(() => {
+  // Full-state sync for seamless cross-device continuity — pushed when it
+  // actually matters (the tab is being backgrounded/closed, or a game just
+  // finished) rather than ~800ms after every single guess. Syncing on every
+  // keystroke-adjacent change fired a network request mid-guess constantly,
+  // which was the source of the "laggy while typing" complaint; resuming on
+  // a new device only ever needs whatever was last pushed before the player
+  // actually left, so tying the push to visibility/completion loses nothing.
+  const syncStateToCloud = () => {
     const firstName = getPlayerName()
     const lastInitial = getPlayerLastInitial()
     const prefix = getPlayerPrefix()
@@ -925,73 +930,71 @@ function App() {
     const gradeRaw = getPlayerGrade()
     if (!displayName || !gradeRaw) return
 
-    if (cloudSyncTimerRef.current !== null) {
-      window.clearTimeout(cloudSyncTimerRef.current)
+    const baseKeys = [
+      'roundStateSchemaVersion',
+      'gradeNumber',
+      'playerName',
+      'playerLastInitial',
+      'playerPrefix',
+      'gameState',
+      'archiveGameState',
+      'bonusGameState',
+      'teachersGameState',
+      'activeRoundState',
+      'gameStats',
+      'bonusRoundPlayedDate',
+      'teachersRoundPlayedDate',
+      'firstToPlayDate',
+      'theme',
+      'highContrast',
+      'historicalStatsSubmitted',
+      'hasSeenInfo',
+    ]
+
+    const dynamicKeys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (!k) continue
+      if (
+        k.startsWith('gradeRoundGameState_') ||
+        k.startsWith('gradeRoundPlayedDate_')
+      ) {
+        dynamicKeys.push(k)
+      }
     }
 
-    cloudSyncTimerRef.current = window.setTimeout(() => {
-      const baseKeys = [
-        'roundStateSchemaVersion',
-        'gradeNumber',
-        'playerName',
-        'playerLastInitial',
-        'playerPrefix',
-        'gameState',
-        'archiveGameState',
-        'bonusGameState',
-        'teachersGameState',
-        'activeRoundState',
-        'gameStats',
-        'bonusRoundPlayedDate',
-        'teachersRoundPlayedDate',
-        'firstToPlayDate',
-        'theme',
-        'highContrast',
-        'historicalStatsSubmitted',
-        'hasSeenInfo',
-      ]
+    const state: Record<string, string> = {}
+    for (const key of Array.from(new Set([...baseKeys, ...dynamicKeys]))) {
+      const val = localStorage.getItem(key)
+      if (val !== null) state[key] = val
+    }
 
-      const dynamicKeys: string[] = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i)
-        if (!k) continue
-        if (
-          k.startsWith('gradeRoundGameState_') ||
-          k.startsWith('gradeRoundPlayedDate_')
-        ) {
-          dynamicKeys.push(k)
-        }
-      }
+    syncPlayerStateToCloud(displayName, gradeRaw, state).catch(() => {
+      // Keep local gameplay fully offline-first.
+    })
+  }
 
-      const state: Record<string, string> = {}
-      for (const key of Array.from(new Set([...baseKeys, ...dynamicKeys]))) {
-        const val = localStorage.getItem(key)
-        if (val !== null) state[key] = val
-      }
-
-      syncPlayerStateToCloud(displayName, gradeRaw, state).catch(() => {
-        // Keep local gameplay fully offline-first.
-      })
-    }, 800)
-
+  // Primary trigger: push right before the player actually leaves — tab
+  // switch, minimize, backgrounding on mobile, or closing the tab (which
+  // fires 'hidden' just before unload in every modern browser).
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') syncStateToCloud()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
-      if (cloudSyncTimerRef.current !== null) {
-        window.clearTimeout(cloudSyncTimerRef.current)
-      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [
-    guesses,
-    stats,
-    isGameWon,
-    isGameLost,
-    isBonusRound,
-    isTeachersRound,
-    isGradeRound,
-    gradeRoundGrade,
-    gradeRoundsPlayed,
-    isDarkMode,
-    isHighContrastMode,
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Secondary trigger: push immediately on a completed game — a meaningful
+  // checkpoint worth saving right away rather than waiting for a tab switch.
+  useEffect(() => {
+    if (!isGameWon && !isGameLost) return
+    syncStateToCloud()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGameWon, isGameLost])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {

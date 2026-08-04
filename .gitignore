@@ -30,3 +30,6 @@ supabase/seed-teacher-directory.sql
 # Ad-hoc Supabase table exports (CSV) — contain player emails/PII, keep off git
 supabasefoldersa/
 *.csv
+
+# Supabase CLI local link state (project ref, pooler URL) — machine-local, not shared config
+supabase/.temp/

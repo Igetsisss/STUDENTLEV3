@@ -311,6 +311,9 @@ export type LeaderboardEntry = {
   totalDurationSec: number
   gameStartTime: string
   playerKey?: string
+  // Server insert time — used to tell a graduated senior's old submissions
+  // (made before that grade's rollover) apart from a current senior's.
+  submittedAt: string
 }
 
 export type MvpEntry = {
@@ -732,6 +735,10 @@ export type AllTimeEntry = {
   wins: number
   winRate: number
   avgGuesses: number
+  // Most recent submission across every game grouped into this row — lets
+  // the UI tell a graduated senior (last game predates the grade rollover)
+  // apart from a current senior with the same stored grade.
+  latestSubmittedAt: string
 }
 
 const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
@@ -769,6 +776,10 @@ export const computeAllTimeLeaderboard = (
       wins.length > 0
         ? wins.reduce((s, g) => s + g.guessCount, 0) / wins.length
         : 0
+    const latestSubmittedAt = games.reduce(
+      (latest, g) => (g.submittedAt > latest ? g.submittedAt : latest),
+      ''
+    )
     result.push({
       name: games[0].name,
       grade: games[0].grade,
@@ -776,6 +787,7 @@ export const computeAllTimeLeaderboard = (
       wins: wins.length,
       winRate: dayResults.length > 0 ? wins.length / dayResults.length : 0,
       avgGuesses,
+      latestSubmittedAt,
     })
   })
   return result.sort((a, b) => {
@@ -799,27 +811,6 @@ export const fetchLeaderboard = async (
   const today = allTime ? '' : date || localToday
   const selectedGrade = grade ? normalizeLegacyGrade(grade) : ''
 
-  // Legacy display-name / grade corrections
-  // Key: normalized lowercase name, irrespective of stored grade.
-  const legacyNameAliases: Record<string, { name: string; grade: number }> = {
-    'harvey m': { name: 'Mrs. Harvey', grade: 0 },
-    'mrs harvey': { name: 'Mrs. Harvey', grade: 0 },
-    'mrs. harvey': { name: 'Mrs. Harvey', grade: 0 },
-    'evan bassett': { name: 'Dr. Bassett', grade: 0 },
-    'bassett evan': { name: 'Dr. Bassett', grade: 0 },
-    'dr bassett': { name: 'Dr. Bassett', grade: 0 },
-    'dr. bassett': { name: 'Dr. Bassett', grade: 0 },
-    'evan basset': { name: 'Dr. Bassett', grade: 0 },
-    'dr basset': { name: 'Dr. Bassett', grade: 0 },
-    'dr. basset': { name: 'Dr. Bassett', grade: 0 },
-    'katie cruce': { name: 'Mrs. Cruce', grade: 0 },
-    'katie c': { name: 'Mrs. Cruce', grade: 0 },
-    'mrs cruce': { name: 'Mrs. Cruce', grade: 0 },
-    'mrs. cruce': { name: 'Mrs. Cruce', grade: 0 },
-    'amanda adams': { name: 'Mrs. Adams', grade: 0 },
-    'mrs adams': { name: 'Mrs. Adams', grade: 0 },
-    'mrs. adams': { name: 'Mrs. Adams', grade: 0 },
-  }
   const processRows = (rows: any[]): LeaderboardEntry[] => {
     const results: LeaderboardEntry[] = []
     for (const row of rows) {
@@ -829,9 +820,8 @@ export const fetchLeaderboard = async (
         .trim()
       const rowGrade =
         row.grade != null ? normalizeLegacyGrade(String(row.grade)) : ''
-      const alias = legacyNameAliases[normalizeNameKey(rawName)]
-      const finalName = alias ? alias.name : rawName
-      const finalGrade = alias ? String(alias.grade) : rowGrade
+      const finalName = rawName
+      const finalGrade = rowGrade
 
       if (rowType === 'signup') continue
       if (selectedGrade && finalGrade !== selectedGrade) continue
@@ -848,6 +838,7 @@ export const fetchLeaderboard = async (
         totalDurationSec: Number(row.total_duration_sec) || 0,
         gameStartTime: row.game_start_time ? String(row.game_start_time) : '',
         playerKey: row.player_key ? String(row.player_key) : '',
+        submittedAt: row.created_at ? String(row.created_at) : '',
       })
     }
     return results
@@ -866,7 +857,7 @@ export const fetchLeaderboard = async (
         let pageQuery = supabase
           .from(SUPABASE_TABLES.gameSubmissions)
           .select(
-            'player_key, player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
+            'player_key, player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time, created_at'
           )
           .order('id', { ascending: true })
           .range(from, from + PAGE_SIZE - 1)
@@ -901,7 +892,7 @@ export const fetchLeaderboard = async (
     let query = supabase
       .from(SUPABASE_TABLES.gameSubmissions)
       .select(
-        'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time'
+        'player_name, grade, game_date, word, won, guess_count, game_type, total_duration_sec, game_start_time, created_at'
       )
 
     if (today) {

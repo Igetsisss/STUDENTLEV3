@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { BONUS_WORDS } from '../../bonusRoundWords'
 import { VALID_GUESSES } from '../../constants/validGuesses'
+import { FRESHMAN, JUNIOR, SENIOR, SOPHOMORE } from '../../constants/wordlist'
 import {
   AllTimeEntry,
   LeaderboardEntry,
@@ -15,7 +17,38 @@ import {
   getPlayerName,
   getPlayerPrefix,
 } from '../../lib/localStorage'
+import {
+  TEACHER_WORDS,
+  TEACHER_WORDS_FULL,
+  getTeachersBonusSolution,
+} from '../../teacherWords'
+import {
+  getBonusSolution,
+  hasBonusBeenPlayedToday,
+} from '../../utils/bonusRound'
+import {
+  getGradeRoundSolution,
+  hasGradeRoundBeenPlayedToday,
+} from '../../utils/gradeRound'
+import {
+  getTeachersSolution,
+  hasTeachersBeenPlayedToday,
+} from '../../utils/teachersRound'
 import { BaseModal } from './BaseModal'
+
+// Every word that could ever be a puzzle answer, across every mode and every
+// grade — the redaction universe. A leaderboard name that exactly matches one
+// of these, at a length that's still secret to the viewer today, gets hidden.
+const ALL_NAME_WORDS = [
+  ...VALID_GUESSES,
+  ...TEACHER_WORDS,
+  ...TEACHER_WORDS_FULL,
+  ...SENIOR,
+  ...JUNIOR,
+  ...SOPHOMORE,
+  ...FRESHMAN,
+  ...BONUS_WORDS,
+].map((w) => w.toLowerCase())
 
 // ── In-memory leaderboard cache ──────────────────────────────────────────────
 // Keyed by "<viewMode>:<filterGrade>" (e.g. "today:", "alltime:11").
@@ -61,6 +94,27 @@ const gradeShort: Record<string, string> = {
   '12': 'SR',
 }
 
+// The exact moment the outgoing senior class was removed from the roster
+// (Fall 2026 rollover — see supabase/migrations/005-fall-2026-grade-rollover.sql).
+// A grade-12 submission from before this instant is a graduated alum's old
+// game, not a current senior's — grade alone can't tell them apart since
+// game_submissions keeps its grade as a historical fact, never updated.
+const SENIOR_ALUM_CUTOFF = '2026-08-04T12:19:50.813937Z'
+
+const isAlumEntry = (grade: number, submittedAt?: string): boolean =>
+  grade === 12 && !!submittedAt && submittedAt < SENIOR_ALUM_CUTOFF
+
+const gradeLabelFor = (grade: number, submittedAt?: string): string =>
+  isAlumEntry(grade, submittedAt) ? 'Alum' : gradeLabels[String(grade)]
+
+const gradeShortFor = (grade: number, submittedAt?: string): string =>
+  isAlumEntry(grade, submittedAt) ? 'ALM' : gradeShort[String(grade)]
+
+const gradeBadgeClassFor = (grade: number, submittedAt?: string): string =>
+  isAlumEntry(grade, submittedAt)
+    ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+    : gradeBadgeClass[String(grade)]
+
 const formatTime = (sec: number): string => {
   if (!sec || sec <= 0) return '-'
   const m = Math.floor(sec / 60)
@@ -92,8 +146,9 @@ const NAME_PREFIXES = new Set([
 
 // Returns true when any "real" word in the name (not a prefix or single-letter
 // initial) exactly matches one of the valid solution words — meaning the player
-// may have set their name to the current answer and it should be hidden.
-// Only called while the game is still in progress; once complete, names are shown.
+// may have set their name to today's answer for some still-unplayed mode/grade
+// and it should be hidden. validWords already excludes lengths the viewer has
+// completed today, so this stays accurate as they play more modes.
 const shouldRedactName = (name: string, validWords: Set<string>): boolean => {
   if (validWords.size === 0) return false
   const tokens = String(name || '')
@@ -285,17 +340,44 @@ export const LeaderboardModal = ({
   const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
-  // Build a set of valid guesses whose letter count matches the active puzzle.
-  // Used to redact leaderboard names that are valid guesses — spoiler prevention.
-  // When the game is already complete the set is empty so nothing gets hidden.
+  // Every puzzle length that's still a secret to this player today, across
+  // every mode — not just whatever happens to be active on the main board.
+  // Recomputed each time the modal opens so a round finished elsewhere (e.g.
+  // a Grade Round played, then this modal reopened) unlocks promptly.
+  const protectedLengths = useMemo(() => {
+    const lengths = new Set<number>()
+    ;['9', '10', '11', '12'].forEach((g) => {
+      if (!hasGradeRoundBeenPlayedToday(g)) {
+        const len = getGradeRoundSolution(g).length
+        if (len > 0) lengths.add(len)
+      }
+    })
+    if (!hasTeachersBeenPlayedToday()) {
+      const len = getTeachersSolution().length
+      if (len > 0) lengths.add(len)
+    }
+    if (!hasBonusBeenPlayedToday()) {
+      const bonusLen = getBonusSolution().length
+      if (bonusLen > 0) lengths.add(bonusLen)
+      const teacherBonusLen = getTeachersBonusSolution().length
+      if (teacherBonusLen > 0) lengths.add(teacherBonusLen)
+    }
+    // Defensive fallback for whatever's active on the main board right now,
+    // in case its "played today" flag hasn't finished writing yet.
+    if (!isGameComplete && solutionLength > 0) {
+      lengths.add(solutionLength)
+    }
+    return lengths
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, solutionLength, isGameComplete])
+
+  // Names that exactly match a real answer word at a still-secret length —
+  // redacted everywhere in the leaderboard (Today and All-Time alike) so a
+  // player can't cheat by setting their display name to today's answer.
   const validWordsForLength = useMemo(() => {
-    if (isGameComplete) return new Set<string>()
-    return new Set(
-      VALID_GUESSES.filter((w) => w.length === solutionLength).map((w) =>
-        w.toLowerCase()
-      )
-    )
-  }, [solutionLength, isGameComplete])
+    if (protectedLengths.size === 0) return new Set<string>()
+    return new Set(ALL_NAME_WORDS.filter((w) => protectedLengths.has(w.length)))
+  }, [protectedLengths])
 
   const _ld = new Date()
   const today = `${_ld.getFullYear()}-${String(_ld.getMonth() + 1).padStart(
@@ -645,12 +727,16 @@ export const LeaderboardModal = ({
                         <td className="py-1.5 pr-1 text-center">
                           <span
                             className={`inline-block rounded px-1 py-0.5 text-xs font-bold ${
-                              gradeBadgeClass[String(entry.grade)] ??
-                              'bg-gray-100 text-gray-600'
+                              gradeBadgeClassFor(
+                                entry.grade,
+                                entry.latestSubmittedAt
+                              ) ?? 'bg-gray-100 text-gray-600'
                             }`}
                           >
-                            {gradeShort[String(entry.grade)] ??
-                              String(entry.grade)}
+                            {gradeShortFor(
+                              entry.grade,
+                              entry.latestSubmittedAt
+                            ) ?? String(entry.grade)}
                           </span>
                         </td>
                         <td className="py-1.5 pr-1 text-center">
@@ -755,11 +841,13 @@ export const LeaderboardModal = ({
                       <td className="py-1.5 pr-1 text-center">
                         <span
                           className={`inline-block rounded px-1 py-0.5 text-xs font-bold ${
-                            gradeBadgeClass[String(entry.grade)] ??
-                            'bg-gray-100 text-gray-600'
+                            gradeBadgeClassFor(
+                              entry.grade,
+                              entry.submittedAt
+                            ) ?? 'bg-gray-100 text-gray-600'
                           }`}
                         >
-                          {gradeShort[String(entry.grade)] ??
+                          {gradeShortFor(entry.grade, entry.submittedAt) ??
                             String(entry.grade)}
                         </span>
                       </td>
@@ -802,7 +890,7 @@ export const LeaderboardModal = ({
                 </span>
               </p>
               <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
-                {gradeLabels[String(todayLeader.grade)] ||
+                {gradeLabelFor(todayLeader.grade, todayLeader.submittedAt) ||
                   `Grade ${todayLeader.grade}`}
                 {mvp && samePlayer(todayLeader.name, mvp.name)
                   ? ' • All-Time MVP'

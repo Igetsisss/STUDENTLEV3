@@ -101,17 +101,7 @@ async function applyValidSession(email: string): Promise<void> {
 
 // Players who must re-authenticate via email — their local identity is cleared
 // on load so they hit the login screen regardless of what's in localStorage.
-const FORCE_REAUTH_PLAYERS = [
-  'vanna n',
-  'parker t',
-  'payton t',
-  'cdub w',
-  'wimberly',
-  'lowcountryd d',
-  'strick b',
-  'mrs. b',
-  'frye f',
-]
+const FORCE_REAUTH_PLAYERS = ['parker t', 'strick b', 'mrs. b', 'frye f']
 
 const shouldForceReauth = (): boolean => {
   const name = getPlayerName()

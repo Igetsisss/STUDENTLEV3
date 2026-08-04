@@ -152,7 +152,7 @@ const isBetterDailyResult = (
   return a.totalDurationSec < b.totalDurationSec
 }
 
-type Step = 'grade' | 'name' | 'initial' | 'prefix' | 'checking' | 'confirm'
+type Step = 'grade' | 'name' | 'initial' | 'checking' | 'confirm'
 
 type ExistingAccount = {
   displayName: string
@@ -189,7 +189,11 @@ export const GradeModal = ({
     const grd = getPlayerGrade()
     if (!grd) return false
     if (!getPlayerName()) return false
-    return grd === '0' ? !!getPlayerPrefix() : !!getPlayerLastInitial()
+    // Teachers used to register with a title (Mr./Mrs./Dr./"Prof.") instead
+    // of a last-initial. New registrations no longer collect one, but a
+    // still-cached prefix from before this change should still count as
+    // "already registered" rather than re-prompting them.
+    return !!getPlayerLastInitial() || !!getPlayerPrefix()
   })()
 
   // If they already have a grade + name, go straight to nothing (shouldn't open)
@@ -200,7 +204,6 @@ export const GradeModal = ({
   const [selectedGrade, setSelectedGrade] = useState<string>('')
   const [playerName, setPlayerName] = useState('')
   const [lastInitial, setLastInitial] = useState('')
-  const [selectedPrefix, setSelectedPrefix] = useState('')
 
   // Pre-fill name/initial from the Microsoft sign-in email for first-time registrations.
   // Only runs when the fields are still empty (i.e. the player hasn't typed anything yet).
@@ -238,52 +241,7 @@ export const GradeModal = ({
     const capitalized = capitalizeName(playerName)
     setPlayerName(capitalized)
     setNameError('')
-    const gradeRawValEarly = getPlayerGrade()
-    const isTeacher = gradeRawValEarly === '0' || selectedGrade === '0'
-    setStep(isTeacher ? 'prefix' : 'initial')
-  }
-
-  const handlePrefixDone = async () => {
-    if (!selectedPrefix) return
-    const lastName = capitalizeName(playerName)
-    const displayName = `${selectedPrefix} ${lastName}`
-    const gradeRawVal = getPlayerGrade()
-    const gradeRaw = normalizeGrade(gradeRawVal)
-    lsSetPlayerName(lastName)
-    setPlayerPrefix(selectedPrefix)
-    clearPlayerLastInitial()
-
-    const sessionEmail = getMsAuthEmail()
-    // Await both writes so the page reload doesn't cancel the in-flight requests.
-    await Promise.all([
-      sessionEmail
-        ? linkEmailToCurrentAccount(sessionEmail).catch(() => {})
-        : Promise.resolve(),
-      submitSignupEvent(displayName, gradeRaw),
-    ])
-    submitNameStepRegistration(displayName, gradeRaw)
-    if (!hasSeenInfoModal()) {
-      setShouldShowInfoAfterReload()
-    }
-    // One-time welcome banner on the very first login
-    if (!hasCompletedRegistration) {
-      setShouldShowWelcomeAfterReload()
-    }
-    if (!hasSubmittedHistoricalStats()) {
-      const stats = loadStatsFromLocalStorage()
-      if (stats && stats.totalGames > 0 && gradeRaw) {
-        setHistoricalStatsSubmitted()
-        submitHistoricalStats(
-          displayName,
-          gradeRaw,
-          stats.winDistribution,
-          stats.gamesFailed
-        )
-      }
-    }
-    setPendingAccountCheck(displayName)
-    handleClose()
-    window.location.reload()
+    setStep('initial')
   }
 
   const handleInitialDone = async () => {
@@ -292,7 +250,9 @@ export const GradeModal = ({
       setNameError('This name is not allowed.')
       return
     }
-    // Student only: "Jack S"
+    // "First Last-Initial" for students (e.g. "Jack S"), "Last First-Initial"
+    // for teachers (e.g. "Lozier W") — playerName already holds whichever
+    // name they were asked for on the previous step.
     const displayName = lastInitial.trim()
       ? `${capitalizeName(playerName)} ${lastInitial.trim().toUpperCase()}`
       : capitalizeName(playerName)
@@ -624,10 +584,10 @@ export const GradeModal = ({
           ? isTeacherFlow
             ? 'What is your last name?'
             : 'What is your first name?'
-          : step === 'prefix'
-          ? 'What is your title?'
           : step === 'initial'
-          ? 'Last name initial?'
+          ? isTeacherFlow
+            ? 'First name initial?'
+            : 'Last name initial?'
           : 'Is this you?'
       }
       isOpen={isOpen || forceOpen}
@@ -720,7 +680,7 @@ export const GradeModal = ({
         </>
       )}
 
-      {!isSaving && step === 'initial' && !isTeacherFlow && (
+      {!isSaving && step === 'initial' && (
         <>
           <div className="mb-4">
             <input
@@ -741,43 +701,15 @@ export const GradeModal = ({
             />
           </div>
           <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-            Your last initial helps tell apart players with the same first name
-            on the leaderboard (e.g. "Jack S"). We never store your full last
-            name.
+            {isTeacherFlow
+              ? 'Your first initial helps tell apart players with the same last name on the leaderboard (e.g. "Lozier W"). We never store your full first name.'
+              : 'Your last initial helps tell apart players with the same first name on the leaderboard (e.g. "Jack S"). We never store your full last name.'}
           </p>
           {nameError && (
             <p className="mb-2 text-center text-sm text-red-500">{nameError}</p>
           )}
           <div className="enterbutton" onClick={handleInitialDone}>
             <button disabled={!lastInitial.trim()}>Done</button>
-          </div>
-        </>
-      )}
-
-      {!isSaving && step === 'prefix' && (
-        <>
-          <form>
-            <div className="select">
-              <select
-                value={selectedPrefix}
-                onChange={(e) => setSelectedPrefix(e.target.value)}
-              >
-                <option hidden disabled value="">
-                  Choose Your Title
-                </option>
-                <option value="Mr.">Mr.</option>
-                <option value="Mrs.">Mrs.</option>
-                <option value="Ms.">Ms.</option>
-                <option value="Miss">Miss</option>
-                <option value="Dr.">Dr.</option>
-                <option value="Coach">Coach</option>
-                <option value="Prof.">Prof.</option>
-              </select>
-            </div>
-          </form>
-          <br />
-          <div className="enterbutton" onClick={handlePrefixDone}>
-            <button disabled={!selectedPrefix}>Done</button>
           </div>
         </>
       )}
