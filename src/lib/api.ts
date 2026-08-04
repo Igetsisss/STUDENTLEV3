@@ -753,12 +753,17 @@ const isBetterResult = (a: LeaderboardEntry, b: LeaderboardEntry): boolean => {
 // played — a rising senior's sophomore-year games still say grade 10 — so
 // the all-time view needs this to show where everyone stands *now* instead
 // of a mix of stale historical grades.
+//
+// Goes through the get_current_roster() RPC rather than a direct SELECT:
+// player_profiles has RLS enabled with only INSERT/UPDATE policies (no
+// SELECT policy), specifically so a broad SELECT can never expose the
+// microsoft_email column — a plain .from(...).select(...) here would
+// silently return zero rows, not an error, since RLS denies by default
+// when no policy matches. See supabase/migrations/007-current-roster-rpc.sql.
 export const fetchCurrentRoster = async (): Promise<Record<string, number>> => {
   if (!hasSupabaseConfig || !supabase) return {}
   try {
-    const { data, error } = await supabase
-      .from(SUPABASE_TABLES.playerProfiles)
-      .select('player_name_key, grade')
+    const { data, error } = await supabase.rpc('get_current_roster')
     if (error || !data) return {}
     const roster: Record<string, number> = {}
     for (const row of data) {

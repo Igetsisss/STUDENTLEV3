@@ -348,36 +348,71 @@ export const LeaderboardModal = ({
   const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
-  // Every puzzle length that's still a secret to this player today, across
-  // every mode — not just whatever happens to be active on the main board.
-  // Recomputed each time the modal opens so a round finished elsewhere (e.g.
-  // a Grade Round played, then this modal reopened) unlocks promptly.
+  // Which puzzle length(s) are still a secret, scoped to whatever the
+  // leaderboard is actually showing right now — not every mode at once.
+  // Switching tabs (Daily/Bonus/Teachers/Grade Rounds, or which grade)
+  // recomputes this immediately, and finishing that specific mode clears its
+  // protection right away. All-Time is the one exception: it can surface
+  // today's rows from any grade/mode mixed together, so it protects
+  // everything still-unsolved rather than guessing which one applies.
   const protectedLengths = useMemo(() => {
     const lengths = new Set<number>()
-    ;['9', '10', '11', '12'].forEach((g) => {
-      if (!hasGradeRoundBeenPlayedToday(g)) {
-        const len = getGradeRoundSolution(g).length
-        if (len > 0) lengths.add(len)
-      }
-    })
-    if (!hasTeachersBeenPlayedToday()) {
-      const len = getTeachersSolution().length
-      if (len > 0) lengths.add(len)
-    }
-    if (!hasBonusBeenPlayedToday()) {
+
+    const addBonusLengths = () => {
+      if (hasBonusBeenPlayedToday()) return
       const bonusLen = getBonusSolution().length
       if (bonusLen > 0) lengths.add(bonusLen)
       const teacherBonusLen = getTeachersBonusSolution().length
       if (teacherBonusLen > 0) lengths.add(teacherBonusLen)
     }
+    const addTeachersLength = () => {
+      if (hasTeachersBeenPlayedToday()) return
+      const len = getTeachersSolution().length
+      if (len > 0) lengths.add(len)
+    }
+    const addGradeLength = (g: string) => {
+      if (hasGradeRoundBeenPlayedToday(g)) return
+      const len = getGradeRoundSolution(g).length
+      if (len > 0) lengths.add(len)
+    }
+
+    if (viewMode === 'alltime') {
+      ;['9', '10', '11', '12'].forEach(addGradeLength)
+      addTeachersLength()
+      addBonusLengths()
+    } else if (filterType === 'bonus') {
+      addBonusLengths()
+    } else if (filterType === 'teachers') {
+      addTeachersLength()
+    } else if (filterType === 'graderound') {
+      addGradeLength(gradeRoundFilter)
+    } else {
+      // Daily — "All Grades" genuinely mixes every grade's own daily
+      // results into one table, so all of them apply; a specific grade
+      // filter narrows it to just that one.
+      ;(filterGrade ? [filterGrade] : ['9', '10', '11', '12']).forEach(
+        addGradeLength
+      )
+    }
+
     // Defensive fallback for whatever's active on the main board right now,
     // in case its "played today" flag hasn't finished writing yet.
     if (!isGameComplete && solutionLength > 0) {
       lengths.add(solutionLength)
     }
     return lengths
+    // isOpen is intentionally in the deps but unused in the body — it forces
+    // a fresh read of the "played today" flags each time the modal reopens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, solutionLength, isGameComplete])
+  }, [
+    isOpen,
+    viewMode,
+    filterType,
+    filterGrade,
+    gradeRoundFilter,
+    solutionLength,
+    isGameComplete,
+  ])
 
   // Names that exactly match a real answer word at a still-secret length —
   // redacted everywhere in the leaderboard (Today and All-Time alike) so a
