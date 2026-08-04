@@ -46,13 +46,27 @@ delete from public.player_profiles where grade = 12;
 -- ─── 2. Promote everyone else up one grade ─────────────────────────────────
 -- player_key encodes the grade ('<name key>|<grade>'), so it has to be
 -- rebuilt alongside the grade column or it goes stale.
+--
+-- Done as three separate statements, highest grade first, instead of one
+-- combined UPDATE. player_key is uniquely constrained, and when the same
+-- "First LastInitial" exists in two adjacent grades (real case hit while
+-- testing this: a "Madeline B" in both grade 9 and grade 10), a single
+-- combined UPDATE can transiently collide mid-statement before every row
+-- finishes moving. Processing 11->12 first fully vacates grade 12 (already
+-- emptied by the delete above) before 10->11 arrives there, and likewise
+-- 10->11 before 9->10 arrives — so no destination grade is ever occupied
+-- by an old value when a promoted row lands on it.
 update public.player_profiles
-set
-  grade      = case grade when 11 then 12 when 10 then 11 when 9 then 10 else grade end,
-  player_key = player_name_key || '|' ||
-               (case grade when 11 then 12 when 10 then 11 when 9 then 10 else grade end)::text,
-  updated_at = now()
-where grade in (9, 10, 11);
+set grade = 12, player_key = player_name_key || '|12', updated_at = now()
+where grade = 11;
+
+update public.player_profiles
+set grade = 11, player_key = player_name_key || '|11', updated_at = now()
+where grade = 10;
+
+update public.player_profiles
+set grade = 10, player_key = player_name_key || '|10', updated_at = now()
+where grade = 9;
 
 -- ─── 3. Seed the incoming freshman class (Class of 2030) ───────────────────
 -- Name rule applied below: the quoted nickname in the school directory is
