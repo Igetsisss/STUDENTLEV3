@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { BONUS_WORDS } from '../../bonusRoundWords'
-import { VALID_GUESSES } from '../../constants/validGuesses'
-import { FRESHMAN, JUNIOR, SENIOR, SOPHOMORE } from '../../constants/wordlist'
 import {
   AllTimeEntry,
   LeaderboardEntry,
@@ -19,38 +17,14 @@ import {
   getPlayerName,
   getPlayerPrefix,
 } from '../../lib/localStorage'
+import { TEACHER_WORDS, TEACHER_WORDS_FULL } from '../../teacherWords'
+import { hasBonusBeenPlayedToday } from '../../utils/bonusRound'
 import {
-  TEACHER_WORDS,
-  TEACHER_WORDS_FULL,
-  getTeachersBonusSolution,
-} from '../../teacherWords'
-import {
-  getBonusSolution,
-  hasBonusBeenPlayedToday,
-} from '../../utils/bonusRound'
-import {
-  getGradeRoundSolution,
+  GRADE_WORD_LISTS,
   hasGradeRoundBeenPlayedToday,
 } from '../../utils/gradeRound'
-import {
-  getTeachersSolution,
-  hasTeachersBeenPlayedToday,
-} from '../../utils/teachersRound'
+import { hasTeachersBeenPlayedToday } from '../../utils/teachersRound'
 import { BaseModal } from './BaseModal'
-
-// Every word that could ever be a puzzle answer, across every mode and every
-// grade — the redaction universe. A leaderboard name that exactly matches one
-// of these, at a length that's still secret to the viewer today, gets hidden.
-const ALL_NAME_WORDS = [
-  ...VALID_GUESSES,
-  ...TEACHER_WORDS,
-  ...TEACHER_WORDS_FULL,
-  ...SENIOR,
-  ...JUNIOR,
-  ...SOPHOMORE,
-  ...FRESHMAN,
-  ...BONUS_WORDS,
-].map((w) => w.toLowerCase())
 
 // ── In-memory leaderboard cache ──────────────────────────────────────────────
 // Keyed by "<viewMode>:<filterGrade>" (e.g. "today:", "alltime:11"). Once
@@ -348,79 +322,62 @@ export const LeaderboardModal = ({
   const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
-  // Which puzzle length(s) are still a secret, scoped to whatever the
-  // leaderboard is actually showing right now — not every mode at once.
+  // Words that are still a secret, scoped to the *specific* puzzle(s) the
+  // leaderboard is actually showing right now — not every word from every
+  // mode and grade matched by length. Pulling in the whole universe of
+  // words and filtering by length alone meant a teacher whose name happened
+  // to be 5 letters got redacted while a student was mid-way through an
+  // unrelated 5-letter daily puzzle, since both draw from completely
+  // different word lists. Each puzzle's own valid-guess list is the only
+  // thing checked against for that puzzle, matching how the game itself
+  // validates guesses per mode.
   // Switching tabs (Daily/Bonus/Teachers/Grade Rounds, or which grade)
   // recomputes this immediately, and finishing that specific mode clears its
   // protection right away. All-Time is the one exception: it can surface
   // today's rows from any grade/mode mixed together, so it protects
   // everything still-unsolved rather than guessing which one applies.
-  const protectedLengths = useMemo(() => {
-    const lengths = new Set<number>()
+  const validWordsForLength = useMemo(() => {
+    const words = new Set<string>()
 
-    const addBonusLengths = () => {
-      if (hasBonusBeenPlayedToday()) return
-      const bonusLen = getBonusSolution().length
-      if (bonusLen > 0) lengths.add(bonusLen)
-      const teacherBonusLen = getTeachersBonusSolution().length
-      if (teacherBonusLen > 0) lengths.add(teacherBonusLen)
-    }
-    const addTeachersLength = () => {
-      if (hasTeachersBeenPlayedToday()) return
-      const len = getTeachersSolution().length
-      if (len > 0) lengths.add(len)
-    }
-    const addGradeLength = (g: string) => {
+    const addGradeWords = (g: string) => {
       if (hasGradeRoundBeenPlayedToday(g)) return
-      const len = getGradeRoundSolution(g).length
-      if (len > 0) lengths.add(len)
+      const list = GRADE_WORD_LISTS[g] || []
+      list.forEach((w) => words.add(w.toLowerCase()))
+    }
+    const addTeachersWords = () => {
+      if (hasTeachersBeenPlayedToday()) return
+      TEACHER_WORDS.forEach((w) => words.add(w.toLowerCase()))
+    }
+    const addBonusWords = () => {
+      if (hasBonusBeenPlayedToday()) return
+      BONUS_WORDS.forEach((w) => words.add(w.toLowerCase()))
+      TEACHER_WORDS_FULL.forEach((w) => words.add(w.toLowerCase()))
     }
 
     if (viewMode === 'alltime') {
-      ;['9', '10', '11', '12'].forEach(addGradeLength)
-      addTeachersLength()
-      addBonusLengths()
+      ;['9', '10', '11', '12'].forEach(addGradeWords)
+      addTeachersWords()
+      addBonusWords()
     } else if (filterType === 'bonus') {
-      addBonusLengths()
+      addBonusWords()
     } else if (filterType === 'teachers') {
-      addTeachersLength()
+      addTeachersWords()
     } else if (filterType === 'graderound') {
-      addGradeLength(gradeRoundFilter)
+      addGradeWords(gradeRoundFilter)
     } else {
       // Daily — "All Grades" genuinely mixes every grade's own daily
       // results into one table, so all of them apply; a specific grade
       // filter narrows it to just that one.
       ;(filterGrade ? [filterGrade] : ['9', '10', '11', '12']).forEach(
-        addGradeLength
+        addGradeWords
       )
     }
 
-    // Defensive fallback for whatever's active on the main board right now,
-    // in case its "played today" flag hasn't finished writing yet.
-    if (!isGameComplete && solutionLength > 0) {
-      lengths.add(solutionLength)
-    }
-    return lengths
+    return words
     // isOpen is intentionally in the deps but unused in the body — it forces
     // a fresh read of the "played today" flags each time the modal reopens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isOpen,
-    viewMode,
-    filterType,
-    filterGrade,
-    gradeRoundFilter,
-    solutionLength,
-    isGameComplete,
-  ])
-
-  // Names that exactly match a real answer word at a still-secret length —
-  // redacted everywhere in the leaderboard (Today and All-Time alike) so a
-  // player can't cheat by setting their display name to today's answer.
-  const validWordsForLength = useMemo(() => {
-    if (protectedLengths.size === 0) return new Set<string>()
-    return new Set(ALL_NAME_WORDS.filter((w) => protectedLengths.has(w.length)))
-  }, [protectedLengths])
+  }, [isOpen, viewMode, filterType, filterGrade, gradeRoundFilter])
 
   const today = getTodayDateKey()
 
