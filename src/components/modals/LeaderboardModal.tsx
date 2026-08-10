@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { BONUS_WORDS } from '../../bonusRoundWords'
 import {
   AllTimeEntry,
   LeaderboardEntry,
@@ -17,13 +16,6 @@ import {
   getPlayerName,
   getPlayerPrefix,
 } from '../../lib/localStorage'
-import { TEACHER_WORDS, TEACHER_WORDS_FULL } from '../../teacherWords'
-import { hasBonusBeenPlayedToday } from '../../utils/bonusRound'
-import {
-  GRADE_WORD_LISTS,
-  hasGradeRoundBeenPlayedToday,
-} from '../../utils/gradeRound'
-import { hasTeachersBeenPlayedToday } from '../../utils/teachersRound'
 import { BaseModal } from './BaseModal'
 
 // ── In-memory leaderboard cache ──────────────────────────────────────────────
@@ -45,6 +37,7 @@ type Props = {
   handleClose: () => void
   solutionLength: number
   isGameComplete: boolean
+  activeGuessWords: readonly string[]
 }
 
 const gradeLabels: Record<string, string> = {
@@ -308,6 +301,7 @@ export const LeaderboardModal = ({
   handleClose,
   solutionLength,
   isGameComplete,
+  activeGuessWords,
 }: Props) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [allTimeEntries, setAllTimeEntries] = useState<AllTimeEntry[]>([])
@@ -322,62 +316,17 @@ export const LeaderboardModal = ({
   const [viewMode, setViewMode] = useState<'today' | 'alltime'>('today')
   const [isMvpExplainerOpen, setIsMvpExplainerOpen] = useState(false)
 
-  // Words that are still a secret, scoped to the *specific* puzzle(s) the
-  // leaderboard is actually showing right now — not every word from every
-  // mode and grade matched by length. Pulling in the whole universe of
-  // words and filtering by length alone meant a teacher whose name happened
-  // to be 5 letters got redacted while a student was mid-way through an
-  // unrelated 5-letter daily puzzle, since both draw from completely
-  // different word lists. Each puzzle's own valid-guess list is the only
-  // thing checked against for that puzzle, matching how the game itself
-  // validates guesses per mode.
-  // Switching tabs (Daily/Bonus/Teachers/Grade Rounds, or which grade)
-  // recomputes this immediately, and finishing that specific mode clears its
-  // protection right away. All-Time is the one exception: it can surface
-  // today's rows from any grade/mode mixed together, so it protects
-  // everything still-unsolved rather than guessing which one applies.
+  // Words that are still a secret: exactly the valid-guess list for the ONE
+  // game currently active on the main board (whatever mode/grade the player
+  // is actually mid-puzzle on), passed down from App.tsx. This is not tab-
+  // or filter-dependent — it doesn't matter which leaderboard tab you're
+  // looking at, only whether the name you're looking at could be the answer
+  // to the game you're actively playing. Once that game is complete there's
+  // nothing left to protect.
   const validWordsForLength = useMemo(() => {
-    const words = new Set<string>()
-
-    const addGradeWords = (g: string) => {
-      if (hasGradeRoundBeenPlayedToday(g)) return
-      const list = GRADE_WORD_LISTS[g] || []
-      list.forEach((w) => words.add(w.toLowerCase()))
-    }
-    const addTeachersWords = () => {
-      if (hasTeachersBeenPlayedToday()) return
-      TEACHER_WORDS.forEach((w) => words.add(w.toLowerCase()))
-    }
-    const addBonusWords = () => {
-      if (hasBonusBeenPlayedToday()) return
-      BONUS_WORDS.forEach((w) => words.add(w.toLowerCase()))
-      TEACHER_WORDS_FULL.forEach((w) => words.add(w.toLowerCase()))
-    }
-
-    if (viewMode === 'alltime') {
-      ;['9', '10', '11', '12'].forEach(addGradeWords)
-      addTeachersWords()
-      addBonusWords()
-    } else if (filterType === 'bonus') {
-      addBonusWords()
-    } else if (filterType === 'teachers') {
-      addTeachersWords()
-    } else if (filterType === 'graderound') {
-      addGradeWords(gradeRoundFilter)
-    } else {
-      // Daily — "All Grades" genuinely mixes every grade's own daily
-      // results into one table, so all of them apply; a specific grade
-      // filter narrows it to just that one.
-      ;(filterGrade ? [filterGrade] : ['9', '10', '11', '12']).forEach(
-        addGradeWords
-      )
-    }
-
-    return words
-    // isOpen is intentionally in the deps but unused in the body — it forces
-    // a fresh read of the "played today" flags each time the modal reopens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, viewMode, filterType, filterGrade, gradeRoundFilter])
+    if (isGameComplete) return new Set<string>()
+    return new Set(activeGuessWords.map((w) => w.toLowerCase()))
+  }, [isGameComplete, activeGuessWords])
 
   const today = getTodayDateKey()
 

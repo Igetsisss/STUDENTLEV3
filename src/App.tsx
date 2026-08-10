@@ -3,7 +3,7 @@ import './App.css'
 import { ClockIcon } from '@heroicons/react/outline'
 import { format } from 'date-fns'
 import { default as GraphemeSplitter } from 'grapheme-splitter'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Div100vh from 'react-div-100vh'
 
 import { BONUS_WORDS } from './bonusRoundWords'
@@ -561,6 +561,37 @@ function App() {
   })()
   // grade is a clean plain string: '0' for teachers, '9'/'10'/'11'/'12' for students.
   const isTeacherPlayer = grade === '0'
+
+  // The exact word list that is a valid guess for the game currently on
+  // screen. Reused by the leaderboard's spoiler redaction so it only ever
+  // hides names that could actually appear in THIS game, not every name
+  // that shares a letter count across every mode/grade.
+  const activeGuessWords = useMemo(() => {
+    if (isBonusRound && isTeacherPlayer) {
+      return TEACHER_WORDS_FULL
+    }
+
+    if (isBonusRound) {
+      return BONUS_WORDS
+    }
+
+    if (isGradeRound && gradeRoundGrade) {
+      return GRADE_WORD_LISTS[gradeRoundGrade]
+    }
+
+    if (isTeachersRound || isTeacherPlayer) {
+      return TEACHER_WORDS
+    }
+
+    // Daily: restrict to the player's own grade list
+    return VALID_GUESSES
+  }, [
+    isBonusRound,
+    isTeacherPlayer,
+    isGradeRound,
+    gradeRoundGrade,
+    isTeachersRound,
+  ])
 
   // Fetch today's grade leader on mount (fire-and-forget)
   useEffect(() => {
@@ -1122,28 +1153,7 @@ function App() {
       })
     }
 
-    const allowedGuessWords = (() => {
-      if (isBonusRound && isTeacherPlayer) {
-        return TEACHER_WORDS_FULL
-      }
-
-      if (isBonusRound) {
-        return BONUS_WORDS
-      }
-
-      if (isGradeRound && gradeRoundGrade) {
-        return GRADE_WORD_LISTS[gradeRoundGrade]
-      }
-
-      if (isTeachersRound || isTeacherPlayer) {
-        return TEACHER_WORDS
-      }
-
-      // Daily: restrict to the player's own grade list
-      return VALID_GUESSES
-    })()
-
-    if (!isWordInWordList(currentGuess, allowedGuessWords)) {
+    if (!isWordInWordList(currentGuess, activeGuessWords)) {
       setCurrentRowClass('jiggle')
       return showErrorAlert(
         isTeacherPlayer ? TEACHER_NOT_FOUND_MESSAGE : WORD_NOT_FOUND_MESSAGE,
@@ -1668,6 +1678,7 @@ function App() {
             handleClose={() => setIsLeaderboardModalOpen(false)}
             solutionLength={activeSolution.length}
             isGameComplete={isGameWon || isGameLost}
+            activeGuessWords={activeGuessWords}
           />
           <SettingsModal
             isOpen={isSettingsModalOpen}
