@@ -57,6 +57,28 @@ const restoreAccountToLocalStorage = (account: {
   clearPlayerLastInitial()
 }
 
+// Background grade/name sync against the roster, keyed by email rather than
+// a live session — lookup_player_by_email is granted to anon as well as
+// authenticated, so this works even when there's no active Supabase session
+// (a very common case: reopening a tab, an expired token, etc). Without
+// this, a promoted or graduated player whose session simply isn't live
+// right now would keep whatever grade was cached locally *forever* — no
+// amount of reloading would ever re-check it. Reloads automatically when
+// the grade actually changed so the correction (word list, leaderboard,
+// everything keyed off getPlayerGrade()) takes effect immediately instead
+// of silently sitting in localStorage until some unrelated future reload.
+const refreshIdentityInBackground = (email: string): void => {
+  const gradeBefore = getPlayerGrade()
+  lookupAccountByEmail(email).then((account) => {
+    if (!account) return
+    restoreAccountToLocalStorage(account)
+    const gradeAfter = normalizeGrade(account.grade)
+    if (gradeAfter !== gradeBefore) {
+      window.location.reload()
+    }
+  })
+}
+
 /**
  * Runs once we confirm a valid @bearsmail.org session.
  *
@@ -77,9 +99,7 @@ async function applyValidSession(email: string): Promise<void> {
   if (isReturningUser) {
     // Identity already verified on a previous load for this email.
     // Refresh in the background without blocking app render.
-    lookupAccountByEmail(email).then((account) => {
-      if (account) restoreAccountToLocalStorage(account)
-    })
+    refreshIdentityInBackground(email)
     return
   }
 
@@ -153,6 +173,15 @@ export const AuthWrapper = ({ children }: Props) => {
         // straight into the app — no need to re-verify via email every session.
         if (getPlayerName() && getPlayerGrade()) {
           setStatus('authenticated')
+          // No live Supabase session doesn't mean their grade is still
+          // correct — a promoted/graduated player reopening a tab with no
+          // active session would otherwise never get re-checked. Refresh
+          // by the last-known email in the background; it works without a
+          // session since lookup_player_by_email is granted to anon too.
+          const cachedEmail = getMsAuthEmail()
+          if (cachedEmail) {
+            refreshIdentityInBackground(cachedEmail)
+          }
         } else {
           setStatus('unauthenticated')
         }
